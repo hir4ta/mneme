@@ -15,6 +15,27 @@ Claude Codeの長期記憶を実現するプラグイン。
 
 ## インストール
 
+### 前提条件
+
+- **jq**: フックでJSON処理に使用します
+
+```bash
+# macOS
+brew install jq
+
+# Ubuntu/Debian
+sudo apt-get install jq
+
+# Windows (Chocolatey)
+choco install jq
+
+# Windows (Scoop)
+scoop install jq
+
+# Windows (winget)
+winget install jqlang.jq
+```
+
 ### Claude Code プラグインとしてインストール
 
 ```bash
@@ -25,18 +46,6 @@ Claude Codeの長期記憶を実現するプラグイン。
 /plugin install memoria@memoria-marketplace
 ```
 
-### 前提条件
-
-- **jq**: フックでJSON処理に使用します
-
-```bash
-# macOS
-brew install jq
-
-# Ubuntu/Debian
-apt-get install jq
-```
-
 ## 使い方
 
 ### Hooks（自動動作）
@@ -44,7 +53,7 @@ apt-get install jq
 | Hook | タイミング | 動作 |
 |------|-----------|------|
 | session-start | セッション開始時 | 関連セッションの提案、memoriaの使い方を注入 |
-| session-end | セッション終了時 | 会話履歴を自動保存、要約生成 |
+| session-end | セッション終了時 | 会話履歴を自動保存 |
 | pre-compact | 圧縮前 | 進行中のセッションを保存 |
 
 ### Skills（コマンド）
@@ -55,22 +64,21 @@ apt-get install jq
 | `/memoria:save` | 現在のセッションを手動保存 |
 | `/memoria:decision "タイトル"` | 設計決定を記録 |
 | `/memoria:search "クエリ"` | セッション・決定を検索 |
-| `/memoria:dashboard` | ダッシュボードURLを表示 |
 
 ### ダッシュボード
 
+プロジェクトディレクトリで以下を実行:
+
 ```bash
-# プラグインディレクトリに移動
-cd ~/.claude/plugins/cache/memoria-marketplace/memoria/<version>
-
-# 依存関係をインストール
-npm install
-
-# 開発サーバーを起動
-npm run dev
+npx @hir4ta/memoria --dashboard
 ```
 
-ブラウザで http://localhost:3000 を開く。
+ブラウザで http://localhost:7777 を開く。
+
+ポート変更:
+```bash
+npx @hir4ta/memoria --dashboard --port 8080
+```
 
 #### 画面一覧
 
@@ -78,7 +86,6 @@ npm run dev
 - **Decisions**: 設計決定の一覧・作成・編集・削除
 - **Patterns**: 開発者パターンの一覧・追加・削除
 - **Rules**: コーディングルールの一覧・追加・編集・削除
-- **Settings**: 設定情報の表示
 
 ## データ保存
 
@@ -108,31 +115,39 @@ cd memoria
 # 依存関係をインストール
 npm install
 
-# ダッシュボード開発サーバー
+# フロントエンド開発サーバー (localhost:5173)
 npm run dev
+
+# API開発サーバー (localhost:7777)
+npm run dev:server
 
 # ビルド
 npm run build
+
+# プレビュー
+npm run preview
 ```
 
 ## 技術スタック
 
-- **ダッシュボード**: Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui
+- **Server**: Hono (Node.js)
+- **Frontend**: React 18, Vite, React Router v7
+- **UI**: shadcn/ui, Tailwind CSS v4
 - **Hooks**: Bash, jq
 - **Skills**: Markdown
 
 ## アーキテクチャ
 
 ```
-[Claude Code] → [hooks (bash)] → [.memoria/*.json]
-                                        ↑
-[/memoria:* commands] → [skills] ───────┘
-                                        ↓
-                        [dashboard] ← [.memoria/*.json]
+[Claude Code] → [hooks (bash/jq)] → [.memoria/*.json]
+                                          ↑
+[/memoria:* commands] → [skills] ─────────┘
+                                          ↓
+                  [dashboard (Hono)] ← [.memoria/*.json]
 ```
 
 - **ビルド不要**: フックはbash、スキルはmarkdown
-- **外部依存なし**: MCPサーバー不要、jqのみ必要
+- **外部依存なし**: jqのみ必要、ダッシュボードはnpxで実行
 - **Git互換**: すべてのデータをJSONで保存、バージョン管理可能
 
 ## ライセンス

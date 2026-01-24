@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/memoria",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Claude Code の長期記憶プラグイン - セッション自動保存、設計決定の記録、Webダッシュボード",
   "keywords": [
     "claude",
