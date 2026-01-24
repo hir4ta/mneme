@@ -60,11 +60,11 @@ if [ ! -f "$transcript_path" ]; then
 fi
 
 # Parse transcript and extract messages
-# JSONL format: each line is a JSON object
+# JSONL format: each line is a JSON object with type "user" or "assistant"
 messages=$(jq -s '
-    [.[] | select(.type == "message" and .message != null) |
+    [.[] | select((.type == "user" or .type == "assistant") and .message != null) |
     {
-        type: (if .message.role == "user" then "user" else "assistant" end),
+        type: .type,
         timestamp: (.timestamp // now | tostring),
         content: (
             if .message.content | type == "string" then
@@ -77,7 +77,7 @@ messages=$(jq -s '
         ),
         thinking: (
             if .message.content | type == "array" then
-                [.message.content[] | select(.type == "thinking") | .text] | join("") | if . == "" then null else . end
+                [.message.content[] | select(.type == "thinking") | .thinking] | join("") | if . == "" then null else . end
             else
                 null
             end
