@@ -1,0 +1,44 @@
+{
+  "name": "memoria",
+  "version": "0.1.0",
+  "description": "Claude Codeの長期記憶を実現するプラグイン。セッション履歴、設計決定、開発者パターンを保存・検索できます。",
+  "hooks": {
+    "session_end": "hooks/session-end.sh",
+    "pre_compact": "hooks/pre-compact.sh",
+    "session_start": "hooks/session-start.sh"
+  },
+  "skills": [
+    {
+      "name": "resume",
+      "path": "skills/resume",
+      "description": "セッションを再開する。ID省略で一覧表示。"
+    },
+    {
+      "name": "save",
+      "path": "skills/save",
+      "description": "現在のセッションを手動保存する。"
+    },
+    {
+      "name": "decision",
+      "path": "skills/decision",
+      "description": "設計決定を記録する。"
+    },
+    {
+      "name": "search",
+      "path": "skills/search",
+      "description": "ナレッジを検索する。"
+    },
+    {
+      "name": "dashboard",
+      "path": "skills/dashboard",
+      "description": "WebダッシュボードのURLを表示する。"
+    }
+  ],
+  "mcp_servers": [
+    {
+      "name": "memoria",
+      "command": "node",
+      "args": ["mcp-server/dist/index.js"]
+    }
+  ]
+}

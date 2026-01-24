@@ -1,49 +1,50 @@
-# Dependencies
-node_modules/
-.pnp/
-.pnp.js
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Build outputs
-dist/
-build/
-*.tsbuildinfo
+# dependencies
+/node_modules
+/mcp-server/node_modules
+/hooks/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Bun
-bun.lockb
+# testing
+/coverage
 
-# Environment
-.env
-.env.local
-.env.*.local
+# next.js
+/.next/
+/out/
 
-# IDE
-.idea/
-*.swp
-*.swo
-*~
+# production
+/build
+/mcp-server/dist
+/hooks/dist
 
-# OS
+# misc
 .DS_Store
-Thumbs.db
+*.pem
 
-# Logs
-*.log
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
-# Test coverage
-coverage/
-.nyc_output/
+# env files (can opt-in for committing if needed)
+.env*
 
-# Temp files
-*.tmp
-*.temp
-.cache/
+# vercel
+.vercel
 
-# VSCode extension
-apps/vscode-extension/*.vsix
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-# Memoria data (optional - uncomment if you don't want to track)
-# .memoria/store/
-# .memoria/sessions/
+# docs
+/docs
+CLAUDE.md
+.claude
