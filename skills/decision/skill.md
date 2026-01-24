@@ -7,6 +7,18 @@ description: 設計決定を記録する。
 
 設計決定（ADR: Architecture Decision Record）を記録するスキルです。
 
+## 自動保存 vs 手動保存
+
+| 保存方式 | タイミング | ステータス |
+|---------|-----------|-----------|
+| **自動** | セッション終了時 | `draft`（要レビュー） |
+| **手動** | `/memoria:decision` 実行時 | `active`（確定） |
+
+- **自動保存**: セッション終了時に会話から設計決定を自動検出・保存（`status: draft`）
+- **手動保存**: このコマンドで明示的に記録（`status: active`）
+
+自動検出された決定はダッシュボードでレビュー・編集できます。
+
 ## 使い方
 
 ```
@@ -18,7 +30,7 @@ description: 設計決定を記録する。
 ## 実行手順
 
 1. タイトルを受け取る（引数から、または対話で入力）
-2. 以下の情報を対話で収集:
+2. 以下の情報を会話コンテキストから抽出（または対話で収集）:
    - decision: 何を決定したか
    - reasoning: なぜその決定をしたか
    - alternatives: 検討した代替案（オプション）
@@ -57,9 +69,28 @@ Write: .memoria/decisions/jwt-auth-001.json
   "context": {
     "branch": "feature/auth",
     "projectDir": "/path/to/project"
-  }
+  },
+  "relatedSessions": ["2026-01-24_abc123"],
+  "source": "manual",
+  "status": "active"
 }
 ```
+
+### status フィールド
+
+| 値 | 説明 |
+|---|------|
+| `draft` | 自動検出（要レビュー） |
+| `active` | 確定済み |
+| `superseded` | 後の決定で置き換え |
+| `deprecated` | 非推奨 |
+
+### source フィールド
+
+| 値 | 説明 |
+|---|------|
+| `auto` | セッション終了時に自動検出 |
+| `manual` | `/memoria:decision` で手動記録 |
 
 ## ID生成ルール
 
@@ -90,6 +121,22 @@ Write: .memoria/decisions/jwt-auth-001.json
 
 タグを入力してください（カンマ区切り）:
 > auth, architecture, jwt
+```
+
+### 会話コンテキストからの自動抽出
+
+現在の会話で設計決定がすでに議論されている場合、Claudeがコンテキストから自動的に抽出して記録します。
+
+```
+> /memoria:decision "認証方式の選択"
+
+会話コンテキストから以下の情報を抽出しました:
+
+- 決定: セッション管理にJWTを採用する
+- 理由: マイクロサービス間での認証共有が容易
+- 代替案: セッションCookie（却下理由: スケールしにくい）
+
+この内容で保存しますか？（修正する場合は内容を入力）
 ```
 
 ## 出力フォーマット

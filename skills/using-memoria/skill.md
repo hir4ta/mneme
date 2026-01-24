@@ -11,9 +11,19 @@ memoriaはClaude Codeに長期記憶を与えるプラグインです。
 
 1. **セッション自動保存**: セッション終了時・コンパクト時に会話履歴を自動保存
 2. **セッション再開**: `/memoria:resume` で過去のセッションを復元
-3. **設計決定記録**: `/memoria:decision` でADRを記録
+3. **設計決定記録**: セッション終了時に自動検出 + `/memoria:decision` で手動記録
 4. **ナレッジ検索**: `/memoria:search` で保存した情報を検索
 5. **Webダッシュボード**: セッション・決定・パターンを視覚的に管理
+
+## 設計決定の自動保存
+
+| 保存方式 | タイミング | ステータス |
+|---------|-----------|-----------|
+| **自動** | セッション終了時 | `draft`（要レビュー） |
+| **手動** | `/memoria:decision` 実行時 | `active`（確定） |
+
+セッション終了時に、会話から設計決定を自動検出して保存します（`status: draft`）。
+自動検出された決定はダッシュボードでレビュー・編集できます。
 
 ## コマンド
 
@@ -21,8 +31,9 @@ memoriaはClaude Codeに長期記憶を与えるプラグインです。
 |---------|------|
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧） |
 | `/memoria:save` | 現在のセッションを手動保存 |
-| `/memoria:decision "タイトル"` | 設計決定を記録 |
+| `/memoria:decision "タイトル"` | 設計決定を記録（確定） |
 | `/memoria:search <query>` | ナレッジを検索 |
+| `/memoria:dashboard` | ダッシュボードURL表示 |
 
 ## ダッシュボード
 
@@ -86,6 +97,24 @@ npx @hir4ta/memoria --dashboard
   "alternatives": ["Session Cookie", "OAuth2"],
   "tags": ["auth", "architecture"],
   "createdAt": "2026-01-24T10:00:00Z",
-  "user": { "name": "user" }
+  "user": { "name": "user" },
+  "source": "manual",
+  "status": "active"
 }
 ```
+
+### status フィールド
+
+| 値 | 説明 |
+|---|------|
+| `draft` | 自動検出（要レビュー） |
+| `active` | 確定済み |
+| `superseded` | 後の決定で置き換え |
+| `deprecated` | 非推奨 |
+
+### source フィールド
+
+| 値 | 説明 |
+|---|------|
+| `auto` | セッション終了時に自動検出 |
+| `manual` | `/memoria:decision` で手動記録 |

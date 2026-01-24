@@ -61,7 +61,8 @@ export interface Decision {
   alternatives: Alternative[];
   relatedSessions: string[];
   tags: string[];
-  status: "active" | "superseded" | "deprecated";
+  source?: "auto" | "manual";
+  status: "draft" | "active" | "superseded" | "deprecated";
 }
 
 // Pattern types

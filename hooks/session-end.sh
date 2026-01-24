@@ -179,4 +179,105 @@ echo "$session_json" > "$session_path"
 # Log to stderr (not shown to user but helpful for debugging)
 echo "[memoria] Session saved to ${session_path}" >&2
 
+# ============================================
+# Auto-detect design decisions from conversation
+# ============================================
+
+decisions_dir="${memoria_dir}/decisions"
+mkdir -p "$decisions_dir"
+
+# Extract potential decisions from assistant messages
+# Look for patterns indicating design decisions
+detected_decisions=$(echo "$messages" | jq -r '
+    # Get all assistant messages with thinking or content
+    [.[] | select(.type == "assistant")] |
+
+    # Combine thinking and content for analysis
+    map({
+        thinking: (.thinking // ""),
+        content: (.content // ""),
+        timestamp: .timestamp
+    }) |
+
+    # Filter messages that contain decision-related keywords
+    map(select(
+        (.thinking + " " + .content) | test(
+            "決定|採用|選択|することにした|ことにする|方針|architecture|decision|approach|strategy|instead of|rather than|選んだ|使うことに|実装方針|設計判断";
+            "i"
+        )
+    )) |
+
+    # Extract decision-like sentences
+    map({
+        timestamp: .timestamp,
+        text: ((.thinking // "") + "\n" + (.content // ""))
+    })
+')
+
+decision_count=$(echo "$detected_decisions" | jq 'length')
+
+if [ "$decision_count" -gt 0 ]; then
+    # Process each detected decision
+    decision_index=0
+    echo "$detected_decisions" | jq -c '.[]' | while read -r decision_data; do
+        decision_index=$((decision_index + 1))
+
+        timestamp=$(echo "$decision_data" | jq -r '.timestamp')
+        text=$(echo "$decision_data" | jq -r '.text')
+
+        # Generate decision ID
+        decision_id="${date_part}-auto-${session_short_id}-$(printf "%03d" $decision_index)"
+
+        # Extract a title from the text (first significant sentence)
+        title=$(echo "$text" | head -c 500 | grep -oE '(決定|採用|選択|方針|実装)[^。．\n]{5,50}' | head -1 || echo "Auto-detected decision")
+        if [ -z "$title" ] || [ "$title" = "Auto-detected decision" ]; then
+            title=$(echo "$text" | head -c 100 | tr '\n' ' ' | sed 's/^[[:space:]]*//' | cut -c1-50)
+            [ -n "$title" ] && title="${title}..."
+        fi
+
+        # Extract key decision content (sentences with decision keywords)
+        decision_content=$(echo "$text" | grep -oE '[^。．\n]*?(決定|採用|選択|することにした|ことにする|方針)[^。．\n]*[。．]?' | head -3 | tr '\n' ' ' || echo "$text" | head -c 200)
+
+        # Build decision JSON
+        decision_json=$(jq -n \
+            --arg id "$decision_id" \
+            --arg title "$title" \
+            --arg decision "$decision_content" \
+            --arg createdAt "$timestamp" \
+            --arg userName "$git_user_name" \
+            --arg userEmail "$git_user_email" \
+            --arg branch "$current_branch" \
+            --arg projectDir "$cwd" \
+            --arg sessionId "$file_id" \
+            --arg source "auto" \
+            '{
+                id: $id,
+                title: $title,
+                decision: $decision,
+                reasoning: "Auto-detected from session conversation",
+                alternatives: [],
+                tags: ["auto-detected"],
+                createdAt: $createdAt,
+                user: {
+                    name: $userName,
+                    email: (if $userEmail == "" then null else $userEmail end)
+                } | with_entries(select(.value != null)),
+                context: {
+                    branch: (if $branch == "" then null else $branch end),
+                    projectDir: $projectDir
+                } | with_entries(select(.value != null)),
+                relatedSessions: [$sessionId],
+                source: $source,
+                status: "draft"
+            }')
+
+        # Save decision (only if not duplicate)
+        decision_path="${decisions_dir}/${decision_id}.json"
+        if [ ! -f "$decision_path" ]; then
+            echo "$decision_json" > "$decision_path"
+            echo "[memoria] Decision auto-detected: ${decision_path}" >&2
+        fi
+    done
+fi
+
 exit 0

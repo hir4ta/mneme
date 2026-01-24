@@ -34,6 +34,7 @@ function DecisionCard({
   const date = new Date(decision.createdAt).toLocaleDateString("ja-JP");
 
   const statusColors = {
+    draft: "outline",
     active: "default",
     superseded: "secondary",
     deprecated: "destructive",
@@ -48,6 +49,11 @@ function DecisionCard({
               {decision.title}
             </CardTitle>
             <div className="flex items-center gap-2">
+              {decision.source === "auto" && (
+                <Badge variant="outline" className="text-xs">
+                  auto
+                </Badge>
+              )}
               <Badge variant={statusColors[decision.status]}>
                 {decision.status}
               </Badge>

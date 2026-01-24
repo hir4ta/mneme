@@ -82,6 +82,7 @@ export function DecisionDetailPage() {
   const date = new Date(decision.createdAt).toLocaleString("ja-JP");
 
   const statusColors = {
+    draft: "outline",
     active: "default",
     superseded: "secondary",
     deprecated: "destructive",
@@ -153,6 +154,7 @@ export function DecisionDetailPage() {
                   }
                   className="border rounded px-2 py-1 text-sm"
                 >
+                  <option value="draft">Draft</option>
                   <option value="active">Active</option>
                   <option value="superseded">Superseded</option>
                   <option value="deprecated">Deprecated</option>
@@ -163,6 +165,14 @@ export function DecisionDetailPage() {
                 </Badge>
               )}
             </div>
+            {decision.source && (
+              <div>
+                <span className="text-muted-foreground">Source:</span>{" "}
+                <Badge variant="outline">
+                  {decision.source === "auto" ? "Auto-detected" : "Manual"}
+                </Badge>
+              </div>
+            )}
           </div>
 
           <div>

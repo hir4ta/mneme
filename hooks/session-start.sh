@@ -53,10 +53,34 @@ if [ -d "$sessions_dir" ]; then
     fi
 fi
 
+# Find draft decisions (auto-detected but not reviewed)
+decisions_dir="${memoria_dir}/decisions"
+draft_decisions=""
+if [ -d "$decisions_dir" ] && command -v jq &> /dev/null; then
+    decision_files=$(find "$decisions_dir" -name "*.json" -type f 2>/dev/null)
+
+    for file in $decision_files; do
+        if [ -f "$file" ]; then
+            # Check if it's a draft (auto-detected)
+            is_draft=$(jq -r 'select(.status == "draft") | .id' "$file" 2>/dev/null || echo "")
+            if [ -n "$is_draft" ]; then
+                decision_info=$(jq -r '"\(.id): \(.title // "no title")"' "$file" 2>/dev/null || echo "")
+                if [ -n "$decision_info" ]; then
+                    draft_decisions="${draft_decisions}  - ${decision_info}\n"
+                fi
+            fi
+        fi
+    done
+fi
+
 # Build context message
 context_parts=""
 if [ -n "$related_sessions" ]; then
     context_parts="[memoria] 関連セッションが見つかりました:\n\n${related_sessions}\n\`/memoria:resume <id>\` で過去のセッションを再開できます。"
+fi
+
+if [ -n "$draft_decisions" ]; then
+    context_parts="${context_parts}\n\n[memoria] 未レビューの設計決定（自動検出）:\n\n${draft_decisions}\nダッシュボードで確認・編集できます: \`npx @hir4ta/memoria --dashboard\`"
 fi
 
 # Escape for JSON
