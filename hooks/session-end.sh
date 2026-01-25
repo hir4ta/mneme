@@ -124,7 +124,7 @@ files_modified=$(jq -s '
 
 # Extract explicit user requests
 user_requests=$(echo "$messages" | jq -c '
-    def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def normalize: (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
     def clean_markdown:
         gsub("`"; "") | gsub("^@"; "") | gsub("^#+\\s*"; "") |
         gsub("^[-*•]\\s+"; "") | gsub("\\*\\*"; "");
@@ -166,7 +166,7 @@ user_requests=$(echo "$messages" | jq -c '
 
 # Summary title from explicit request or first user message
 summary_title=$(echo "$messages" | jq -r '
-    def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def normalize: (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
     def clean_markdown:
         gsub("`"; "") | gsub("^@"; "") | gsub("^#+\\s*"; "") |
         gsub("^[-*•]\\s+"; "") | gsub("\\*\\*"; "");
@@ -262,7 +262,7 @@ assistant_actions_from_tools=$(jq -s -c '
 
 # Assistant actions from assistant messages
 assistant_actions_from_messages=$(echo "$messages" | jq -c '
-    def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def normalize: (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
     def clean_line:
         normalize | gsub("^[-*•]\\s+"; "") | gsub("^#+\\s*"; "") |
         gsub("`"; "") | gsub("\\*\\*"; "") | gsub("^@"; "") |
@@ -346,7 +346,7 @@ web_links=$(jq -c -n --argjson a "$links_from_messages" --argjson b "$links_from
 
 # Extract tags from message content
 tags=$(echo "$messages" | jq -r '
-    [.[] | .content // ""] | join(" ") | ascii_downcase |
+    [.[] | (.content // "" | tostring)] | join(" ") | ascii_downcase |
     (
         (if test("auth") then ["auth"] else [] end) +
         (if test("api") then ["api"] else [] end) +
@@ -570,7 +570,7 @@ update_rules_file() {
     local updated
     updated=$(jq --argjson candidates "$candidates" --arg updatedAt "$rules_timestamp" '
         def normalize($t):
-            ($t | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; ""));
+            ($t | (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; ""));
         def key($t):
             (normalize($t) | ascii_downcase);
         def tokens($t):
@@ -657,7 +657,7 @@ init_rules_file "${rules_dir}/review-guidelines.json"
 init_rules_file "${rules_dir}/dev-rules.json"
 
 dev_candidates=$(echo "$user_requests" | jq -c '
-    def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def normalize: (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
     def scope($t):
         if $t | test("dashboard|ui|frontend|react|vite"; "i") then "dashboard"
         elif $t | test("hooks?|bash|jq"; "i") then "hooks"
@@ -682,7 +682,7 @@ dev_candidates=$(echo "$user_requests" | jq -c '
 ')
 
 review_candidates=$(echo "$user_requests" | jq -c '
-    def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def normalize: (if . == null then "" elif type == "string" then . else tostring end) | gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
     def scope($t):
         if $t | test("dashboard|ui|frontend|react|vite"; "i") then "dashboard"
         elif $t | test("hooks?|bash|jq"; "i") then "hooks"

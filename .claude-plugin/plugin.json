@@ -1,18 +1,13 @@
 {
   "name": "memoria",
   "description": "Claude Codeに長期記憶を与えるプラグイン。auto-compactで失われるコンテキストを自動保存し、セッション復元、技術的な判断の記録、開発者パターンの学習機能を提供。",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "author": {
     "name": "hir4ta"
   },
   "homepage": "https://github.com/hir4ta/memoria",
   "repository": "https://github.com/hir4ta/memoria",
   "license": "MIT",
-  "keywords": [
-    "memory",
-    "sessions",
-    "decisions",
-    "patterns",
-    "dashboard"
-  ]
+  "keywords": ["memory", "sessions", "decisions", "patterns", "dashboard"]
 }
+
