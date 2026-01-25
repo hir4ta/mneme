@@ -80,7 +80,7 @@ if [ -n "$related_sessions" ]; then
 fi
 
 if [ -n "$draft_decisions" ]; then
-    context_parts="${context_parts}\n\n[memoria] 未レビューの設計決定（自動検出）:\n\n${draft_decisions}\nダッシュボードで確認・編集できます: \`npx @hir4ta/memoria --dashboard\`"
+    context_parts="${context_parts}\n\n[memoria] 未レビューの技術的な判断（自動検出）:\n\n${draft_decisions}\nダッシュボードで確認・編集できます: \`npx @hir4ta/memoria --dashboard\`"
 fi
 
 # Escape for JSON

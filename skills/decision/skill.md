@@ -1,11 +1,11 @@
 ---
 name: decision
-description: 設計決定を記録する。
+description: 技術的な判断を記録する。
 ---
 
 # /memoria:decision
 
-設計決定（ADR: Architecture Decision Record）を記録するスキルです。
+技術的な判断（ADR: Architecture Decision Record）を記録するスキルです。
 
 ## 自動保存 vs 手動保存
 
@@ -14,7 +14,7 @@ description: 設計決定を記録する。
 | **自動** | セッション終了時 | `draft`（要レビュー） |
 | **手動** | `/memoria:decision` 実行時 | `active`（確定） |
 
-- **自動保存**: セッション終了時に会話から設計決定を自動検出・保存（`status: draft`）
+- **自動保存**: セッション終了時に会話から技術的な判断を自動検出・保存（`status: draft`）
 - **手動保存**: このコマンドで明示的に記録（`status: active`）
 
 自動検出された決定はダッシュボードでレビュー・編集できます。
@@ -25,7 +25,7 @@ description: 設計決定を記録する。
 /memoria:decision "タイトル"
 ```
 
-対話形式で設計決定を記録します。
+対話形式で技術的な判断を記録します。
 
 ## 実行手順
 
@@ -47,7 +47,7 @@ mkdir -p .memoria/decisions
 Write: .memoria/decisions/jwt-auth-001.json
 ```
 
-## 設計決定JSONスキーマ
+## 技術的な判断JSONスキーマ
 
 ```json
 {
@@ -108,7 +108,7 @@ Write: .memoria/decisions/jwt-auth-001.json
 ```
 > /memoria:decision "認証方式の選択"
 
-設計決定を記録します。
+技術的な判断を記録します。
 
 決定内容を入力してください:
 > セッション管理にJWTを採用する
@@ -125,7 +125,7 @@ Write: .memoria/decisions/jwt-auth-001.json
 
 ### 会話コンテキストからの自動抽出
 
-現在の会話で設計決定がすでに議論されている場合、Claudeがコンテキストから自動的に抽出して記録します。
+現在の会話で技術的な判断がすでに議論されている場合、Claudeがコンテキストから自動的に抽出して記録します。
 
 ```
 > /memoria:decision "認証方式の選択"
@@ -142,7 +142,7 @@ Write: .memoria/decisions/jwt-auth-001.json
 ## 出力フォーマット
 
 ```
-設計決定を保存しました。
+技術的な判断を保存しました。
 
 ID: jwt-auth-001
 タイトル: 認証方式の選択

@@ -5,7 +5,7 @@ description: ナレッジを検索する。
 
 # /memoria:search
 
-保存されたセッション、設計決定、パターンを検索するスキルです。
+保存されたセッション、技術的な判断、パターンを検索するスキルです。
 
 ## 使い方
 
@@ -58,7 +58,7 @@ Read: .memoria/{type}/{filename}.json
 - `messages[].content` - メッセージ内容
 - `tags` - タグ
 
-### 設計決定 (.memoria/decisions/*.json)
+### 技術的な判断 (.memoria/decisions/*.json)
 - `title` - タイトル
 - `decision` - 決定内容
 - `reasoning` - 理由
