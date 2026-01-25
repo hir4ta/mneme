@@ -50,3 +50,8 @@ docs/
 # claude
 .claude
 CLAUDE.md
+
+# codex
+.codex
+AGENTS.md
+**/AGENTS.override.md
