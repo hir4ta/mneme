@@ -1,3 +1,7 @@
+// dashboard/server/index.ts
+import fs from "node:fs";
+import path from "node:path";
+
 // node_modules/@hono/node-server/dist/index.mjs
 import { createServer as createServerHTTP } from "http";
 import { Http2ServerRequest as Http2ServerRequest2 } from "http2";
@@ -2874,14 +2878,71 @@ var cors = (options) => {
 };
 
 // dashboard/server/index.ts
-import fs from "fs";
-import path from "path";
 var app = new Hono2();
 var getProjectRoot = () => {
   return process.env.MEMORIA_PROJECT_ROOT || process.cwd();
 };
 var getMemoriaDir = () => {
   return path.join(getProjectRoot(), ".memoria");
+};
+var listJsonFiles = (dir) => {
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return listJsonFiles(fullPath);
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      return [fullPath];
+    }
+    return [];
+  });
+};
+var listDatedJsonFiles = (dir) => {
+  const files = listJsonFiles(dir);
+  return files.filter((filePath) => {
+    const rel = path.relative(dir, filePath);
+    const parts = rel.split(path.sep);
+    if (parts.length < 3) {
+      return false;
+    }
+    return /^\d{4}$/.test(parts[0]) && /^\d{2}$/.test(parts[1]);
+  });
+};
+var findJsonFileById = (dir, id) => {
+  const target = `${id}.json`;
+  const queue = [dir];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || !fs.existsSync(current)) {
+      continue;
+    }
+    const entries = fs.readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(fullPath);
+      } else if (entry.isFile() && entry.name === target) {
+        const rel = path.relative(dir, fullPath);
+        const parts = rel.split(path.sep);
+        if (parts.length >= 3 && /^\d{4}$/.test(parts[0]) && /^\d{2}$/.test(parts[1])) {
+          return fullPath;
+        }
+      }
+    }
+  }
+  return null;
+};
+var rulesDir = () => path.join(getMemoriaDir(), "rules");
+var getYearMonthDir = (baseDir, isoDate) => {
+  const parsed = new Date(isoDate);
+  const date = Number.isNaN(parsed.getTime()) ? /* @__PURE__ */ new Date() : parsed;
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return path.join(baseDir, String(year), month);
 };
 app.use(
   "/api/*",
@@ -2892,12 +2953,12 @@ app.use(
 app.get("/api/sessions", async (c) => {
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
-    if (!fs.existsSync(sessionsDir)) {
+    const files = listDatedJsonFiles(sessionsDir);
+    if (files.length === 0) {
       return c.json([]);
     }
-    const files = fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".json"));
-    const sessions = files.map((file) => {
-      const content = fs.readFileSync(path.join(sessionsDir, file), "utf-8");
+    const sessions = files.map((filePath) => {
+      const content = fs.readFileSync(filePath, "utf-8");
       return JSON.parse(content);
     });
     sessions.sort(
@@ -2912,8 +2973,8 @@ app.get("/api/sessions/:id", async (c) => {
   const id = c.req.param("id");
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
-    const filePath = path.join(sessionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
     const content = fs.readFileSync(filePath, "utf-8");
@@ -2926,8 +2987,8 @@ app.put("/api/sessions/:id", async (c) => {
   const id = c.req.param("id");
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
-    const filePath = path.join(sessionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
     const body = await c.req.json();
@@ -2941,8 +3002,8 @@ app.delete("/api/sessions/:id", async (c) => {
   const id = c.req.param("id");
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
-    const filePath = path.join(sessionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
     fs.unlinkSync(filePath);
@@ -2955,8 +3016,8 @@ app.post("/api/sessions/:id/comments", async (c) => {
   const id = c.req.param("id");
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
-    const filePath = path.join(sessionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
     const session = JSON.parse(fs.readFileSync(filePath, "utf-8"));
@@ -2978,12 +3039,12 @@ app.post("/api/sessions/:id/comments", async (c) => {
 app.get("/api/decisions", async (c) => {
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
-    if (!fs.existsSync(decisionsDir)) {
+    const files = listDatedJsonFiles(decisionsDir);
+    if (files.length === 0) {
       return c.json([]);
     }
-    const files = fs.readdirSync(decisionsDir).filter((f) => f.endsWith(".json"));
-    const decisions = files.map((file) => {
-      const content = fs.readFileSync(path.join(decisionsDir, file), "utf-8");
+    const decisions = files.map((filePath) => {
+      const content = fs.readFileSync(filePath, "utf-8");
       return JSON.parse(content);
     });
     decisions.sort(
@@ -2998,8 +3059,8 @@ app.get("/api/decisions/:id", async (c) => {
   const id = c.req.param("id");
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
-    const filePath = path.join(decisionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
     const content = fs.readFileSync(filePath, "utf-8");
@@ -3011,14 +3072,13 @@ app.get("/api/decisions/:id", async (c) => {
 app.post("/api/decisions", async (c) => {
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
-    if (!fs.existsSync(decisionsDir)) {
-      fs.mkdirSync(decisionsDir, { recursive: true });
-    }
     const body = await c.req.json();
     const id = body.id || `decision-${Date.now()}`;
     body.id = id;
     body.createdAt = body.createdAt || (/* @__PURE__ */ new Date()).toISOString();
-    const filePath = path.join(decisionsDir, `${id}.json`);
+    const targetDir = getYearMonthDir(decisionsDir, body.createdAt);
+    fs.mkdirSync(targetDir, { recursive: true });
+    const filePath = path.join(targetDir, `${id}.json`);
     fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
     return c.json(body, 201);
   } catch {
@@ -3029,8 +3089,8 @@ app.put("/api/decisions/:id", async (c) => {
   const id = c.req.param("id");
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
-    const filePath = path.join(decisionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
     const body = await c.req.json();
@@ -3045,8 +3105,8 @@ app.delete("/api/decisions/:id", async (c) => {
   const id = c.req.param("id");
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
-    const filePath = path.join(decisionsDir, `${id}.json`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
     fs.unlinkSync(filePath);
@@ -3063,6 +3123,36 @@ app.get("/api/info", async (c) => {
     memoriaDir,
     exists: fs.existsSync(memoriaDir)
   });
+});
+app.get("/api/rules/:id", async (c) => {
+  const id = c.req.param("id");
+  const dir = rulesDir();
+  try {
+    const filePath = path.join(dir, `${id}.json`);
+    if (!fs.existsSync(filePath)) {
+      return c.json({ error: "Rules not found" }, 404);
+    }
+    const content = fs.readFileSync(filePath, "utf-8");
+    return c.json(JSON.parse(content));
+  } catch {
+    return c.json({ error: "Failed to read rules" }, 500);
+  }
+});
+app.put("/api/rules/:id", async (c) => {
+  const id = c.req.param("id");
+  const dir = rulesDir();
+  try {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const filePath = path.join(dir, `${id}.json`);
+    const body = await c.req.json();
+    body.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    return c.json(body);
+  } catch {
+    return c.json({ error: "Failed to update rules" }, 500);
+  }
 });
 var distPath = path.join(import.meta.dirname, "public");
 if (fs.existsSync(distPath)) {
