@@ -120,31 +120,114 @@ files_modified=$(jq -s '
 # Extract explicit user requests
 user_requests=$(echo "$messages" | jq -c '
     def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def clean_markdown:
+        gsub("`"; "") | gsub("^@"; "") | gsub("^#+\\s*"; "") |
+        gsub("^[-*•]\\s+"; "") | gsub("\\*\\*"; "");
+    def extract_files($text):
+        ($text | scan("@?[A-Za-z0-9._/-]+\\.[A-Za-z0-9]+") | map(gsub("^@"; "")));
+    def split_sentences:
+        gsub("。"; "。\n") | gsub("？"; "？\n") | gsub("\\?"; "?\n") | split("\n");
     def is_request:
-        test("してほしい|して欲しい|にしてほしい|にして欲しい|してください|でお願いします|やって|やってください|対応して|使って|利用して|採用|にする|にして|方針|必須|前提|禁止|変更して|追加して|削除して"; "i");
+        test("してほしい|して欲しい|にしてほしい|にして欲しい|してください|でお願いします|お願いします|お願い|やって|やってください|対応して|使って|利用して|採用|にする|にして|方針|必須|前提|禁止|変更して|追加して|削除して|確認して|見て|レビュー|チェック|不要|いらない|必要ない"; "i");
+    def clip($s; $max):
+        if ($s | length) > $max then ($s[0:$max] + "...") else $s end;
+    def normalize_request:
+        clean_markdown
+        | gsub("(?i)(お願いします|お願い|してください|してほしい|して欲しい|して下さい|やってください|やって|対応して|実施して)"; "")
+        | gsub("(?i)(確認してほしい|確認してください|確認して|確認)"; "確認")
+        | gsub("(?i)(不要かな|不要です|不要|いらない|必要ない)"; "削除")
+        | gsub("[。．.!！?？]+$"; "")
+        | normalize
+        | if test("は削除$") then gsub("(.+)は削除$"; "削除: \\1") else . end
+        | if test("確認$") then gsub("(.+)確認$"; "確認: \\1") else . end;
+    def unique_ordered:
+        reduce .[] as $item ([]; if index($item) then . else . + [$item] end);
 
+    (
     [
         .[] |
         select(.type == "user" and (.content // "") != "") |
-        (.content | normalize) |
+        (.content | split_sentences[]) |
+        normalize |
         select(length > 0) |
-        select(is_request)
-    ] | unique
+        select(is_request) |
+        normalize_request |
+        select(length > 0) |
+        clip(.; 120)
+    ] | unique_ordered | .[0:8]
+    ) as $requests
+    | $requests
 ')
 
 # Summary title from explicit request or first user message
 summary_title=$(echo "$messages" | jq -r '
     def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
+    def clean_markdown:
+        gsub("`"; "") | gsub("^@"; "") | gsub("^#+\\s*"; "") |
+        gsub("^[-*•]\\s+"; "") | gsub("\\*\\*"; "");
+    def extract_files($text):
+        ($text | scan("@?[A-Za-z0-9._/-]+\\.[A-Za-z0-9]+") | map(gsub("^@"; "")));
+    def split_sentences:
+        gsub("。"; "。\n") | gsub("？"; "？\n") | gsub("\\?"; "?\n") | split("\n");
     def is_request:
-        test("してほしい|して欲しい|にしてほしい|にして欲しい|してください|でお願いします|やって|やってください|対応して|使って|利用して|採用|にする|にして|方針|必須|前提|禁止|変更して|追加して|削除して"; "i");
-    def clip($s): if ($s | length) > 80 then ($s[0:80] + "...") else $s end;
+        test("してほしい|して欲しい|にしてほしい|にして欲しい|してください|でお願いします|お願いします|お願い|やって|やってください|対応して|使って|利用して|採用|にする|にして|方針|必須|前提|禁止|変更して|追加して|削除して|確認して|見て|レビュー|チェック|不要|いらない|必要ない"; "i");
+    def clip($s; $max):
+        if ($s | length) > $max then ($s[0:$max] + "...") else $s end;
+    def normalize_request:
+        clean_markdown
+        | gsub("(?i)(お願いします|お願い|してください|してほしい|して欲しい|して下さい|やってください|やって|対応して|実施して)"; "")
+        | gsub("(?i)(確認してほしい|確認してください|確認して|確認)"; "確認")
+        | gsub("(?i)(不要かな|不要です|不要|いらない|必要ない)"; "削除")
+        | gsub("[。．.!！?？]+$"; "")
+        | normalize
+        | if test("は削除$") then gsub("(.+)は削除$"; "削除: \\1") else . end
+        | if test("確認$") then gsub("(.+)確認$"; "確認: \\1") else . end;
+    def unique_ordered:
+        reduce .[] as $item ([]; if index($item) then . else . + [$item] end);
+    def request_candidates:
+        [
+            .[] |
+            select(.type == "user" and (.content // "") != "") |
+            (.content | split_sentences[]) |
+            normalize |
+            select(length > 0) |
+            select(is_request) |
+            normalize_request |
+            select(length > 0)
+        ] | unique_ordered;
+    def file_candidates:
+        [
+            .[] |
+            select(.type == "user" and (.content // "") != "") |
+            (.content | extract_files(.))[]
+        ] | unique_ordered;
+    def first_user_line:
+        [
+            .[] |
+            select(.type == "user" and (.content // "") != "") |
+            (.content | split_sentences[]) |
+            normalize |
+            select(length > 0) |
+            clean_markdown |
+            gsub("[。．.!！?？]+$"; "") |
+            select(length > 0)
+        ][0];
 
-    def first_request:
-        [ .[] | select(.type == "user" and (.content // "") != "") | (.content | normalize) | select(is_request) ][0];
-    def first_user:
-        [ .[] | select(.type == "user" and (.content // "") != "") | (.content | normalize) ][0];
-
-    (first_request // first_user // "Session in progress") | clip(.)
+    (request_candidates) as $reqs |
+    (file_candidates) as $files |
+    if ($reqs | length) > 0 then
+        ($reqs[0:2] | join(" / ")) as $base
+        | if ($files | length) > 0 and ($base | contains($files[0]) | not) then
+            ($files[0] + " " + $base)
+          else
+            $base
+          end
+        | clip(.; 50)
+    elif ($files | length) > 0 then
+        ($files[0] + " 作業") | clip(.; 50)
+    else
+        (first_user_line // "セッションまとめ") | clip(.; 50)
+    end
 ')
 
 # Assistant actions from tool results
@@ -175,20 +258,59 @@ assistant_actions_from_tools=$(jq -s -c '
 # Assistant actions from assistant messages
 assistant_actions_from_messages=$(echo "$messages" | jq -c '
     def normalize: gsub("\\s+"; " ") | gsub("^\\s+|\\s+$"; "");
-    def is_action:
-        test("修正|変更|追加|削除|更新|実装|対応|改善|整理|移行|統一|調整|作成|対応済み|修正済み|更新済み|fix|fixed|update|updated|add|added|remove|removed|refactor|refactored|improve|improved"; "i");
+    def clean_line:
+        normalize | gsub("^[-*•]\\s+"; "") | gsub("^#+\\s*"; "") |
+        gsub("`"; "") | gsub("\\*\\*"; "") | gsub("^@"; "") |
+        gsub("[。．.!！?？]+$"; "");
+    def is_heading($line):
+        ($line | test("^#+\\s+")) or ($line | test("^\\*\\*"));
+    def heading_mode($line):
+        if $line | test("削除|remove"; "i") then "削除"
+        elif $line | test("追加|改善|更新|変更|修正|整理|移行|統一|調整|add|improve|update|refactor|fix"; "i") then "更新"
+        else null end;
+    def is_boring($line):
+        $line | test("完了しました|対応します|確認しました|確認済み|確認した|わかりました|承知しました|了解しました|進めます|やります|します$|します。$|します！$");
+    def is_action_line($line):
+        ($line | test("修正|変更|追加|削除|更新|実装|対応|改善|整理|移行|統一|調整|作成|導入|削減|簡略化|統合|分割|置換|改名|rename|remove|add|update|fix|refactor|improve|implement|clean|optimi|確認|レビュー|チェック"; "i"))
+        and (
+            $line | test("\\.[A-Za-z0-9]+") or
+            $line | test("セクション|項目|設定|構成|UI|API|ルール|セッション|ダッシュボード|README|docs|USAGE|MD|JSON|TS|JS|CSS|ファイル"; "i")
+        );
+    def extract_actions($text):
+        ($text | split("\n")) as $lines
+        | reduce $lines[] as $raw ({mode: null, actions: []};
+            ($raw | normalize) as $line
+            | if $line == "" then .
+              elif is_heading($line) then . + {mode: heading_mode($line)}
+              elif $line | test("^[-*•]\\s+") then
+                ($line | clean_line) as $item
+                | if $item == "" then .
+                  elif .mode != null then .actions += ["\(.mode): \($item)"]
+                  elif is_action_line($item) and (is_boring($item) | not) then .actions += [$item]
+                  else .
+                  end
+              else
+                ($line | clean_line) as $plain
+                | if is_action_line($plain) and (is_boring($plain) | not) then .actions += [$plain] else . end
+              end
+        )
+        | .actions;
+    def unique_ordered:
+        reduce .[] as $item ([]; if index($item) then . else . + [$item] end);
+
     [
         .[] |
         select(.type == "assistant") |
         (.content // "") |
-        split("\n")[] |
-        normalize |
-        select(length > 4) |
-        select(is_action)
-    ] | unique
+        extract_actions(.)
+    ] | add // [] | unique_ordered
 ')
 
-assistant_actions=$(jq -c -n --argjson a "$assistant_actions_from_tools" --argjson b "$assistant_actions_from_messages" '$a + $b | unique')
+assistant_actions=$(jq -c -n --argjson a "$assistant_actions_from_tools" --argjson b "$assistant_actions_from_messages" '
+    def unique_ordered:
+        reduce .[] as $item ([]; if index($item) then . else . + [$item] end);
+    ($a + $b) | unique_ordered
+')
 
 # Web links from assistant messages and tool results
 links_from_messages=$(echo "$messages" | jq -c '

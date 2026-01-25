@@ -155,7 +155,7 @@ export function DecisionDetailPage() {
                   onChange={(e) =>
                     setEditStatus(e.target.value as Decision["status"])
                   }
-                  className="border rounded px-2 py-1 text-sm"
+                  className="border border-border/70 bg-white/80 rounded-sm px-3 py-1 text-sm"
                 >
                   <option value="draft">Draft</option>
                   <option value="active">Active</option>

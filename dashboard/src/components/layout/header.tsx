@@ -2,12 +2,11 @@ import { Link } from "react-router";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-14 items-center px-4 gap-4">
-        <Link to="/" className="flex items-center gap-2 font-semibold">
-          <span className="text-xl">memoria</span>
+    <header className="fixed top-4 left-4 right-4 z-50">
+      <div className="flex h-12 items-center justify-between rounded-xl border border-border/70 bg-white/70 px-4 backdrop-blur-md">
+        <Link to="/" className="flex items-center font-semibold">
+          <span className="text-2xl tracking-tight">memoria dashboard</span>
         </Link>
-        <div className="flex-1" />
       </div>
     </header>
   );

@@ -1,10 +1,18 @@
 import { Link, useLocation } from "react-router";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/", label: "Sessions", icon: "folder" },
-  { href: "/decisions", label: "Decisions", icon: "lightbulb" },
-  { href: "/rules", label: "Rules", icon: "check" },
+const navGroups = [
+  {
+    label: "Platform",
+    items: [
+      { href: "/", label: "Sessions", icon: "folder" },
+      { href: "/decisions", label: "Decisions", icon: "lightbulb" },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [{ href: "/rules", label: "Rules", icon: "check" }],
+  },
 ];
 
 const icons: Record<string, React.ReactNode> = {
@@ -62,30 +70,42 @@ export function Sidebar() {
   const location = useLocation();
 
   return (
-    <aside className="w-56 border-r bg-muted/40 min-h-[calc(100vh-3.5rem)]">
-      <nav className="flex flex-col gap-1 p-4">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? location.pathname === "/"
-              : location.pathname.startsWith(item.href);
+    <aside className="w-60 shrink-0 rounded-xl border border-border/70 bg-white/60 px-4 py-6 backdrop-blur-md">
+      <nav className="flex flex-col gap-6">
+        {navGroups.map((group) => (
+          <div key={group.label} className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              {group.label}
+            </p>
+            <div className="flex flex-col gap-1">
+              {group.items.map((item) => {
+                const isActive =
+                  item.href === "/"
+                    ? location.pathname === "/"
+                    : location.pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {icons[item.icon]}
-              {item.label}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      "relative flex items-center gap-4 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "text-foreground pl-8"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute left-3 h-2 w-2 rounded-full bg-orange-400" />
+                    )}
+                    {icons[item.icon]}
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </aside>
   );

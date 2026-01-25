@@ -184,7 +184,7 @@ export function SessionsPage() {
                   e.target.value as "all" | "completed" | "in_progress",
                 )
               }
-              className="border rounded px-3 py-2 text-sm"
+              className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
             >
               <option value="all">All Status</option>
               <option value="completed">Completed</option>

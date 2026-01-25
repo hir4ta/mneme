@@ -303,7 +303,7 @@ export function RulesPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as RuleType | "all")}
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Types</option>
             {RULE_TYPES.map((type) => (
@@ -317,7 +317,7 @@ export function RulesPage() {
             onChange={(e) =>
               setStatusFilter(e.target.value as RuleItem["status"] | "all")
             }
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Status</option>
             <option value="active">active</option>
@@ -330,7 +330,7 @@ export function RulesPage() {
                 e.target.value as NonNullable<RuleItem["priority"]> | "all",
               )
             }
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Priority</option>
             <option value="p0">p0</option>
@@ -340,7 +340,7 @@ export function RulesPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Categories</option>
             {categories.map((category) => (
@@ -352,7 +352,7 @@ export function RulesPage() {
           <select
             value={scopeFilter}
             onChange={(e) => setScopeFilter(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Scopes</option>
             {scopes.map((scope) => (
@@ -364,7 +364,7 @@ export function RulesPage() {
           <select
             value={tagFilter}
             onChange={(e) => setTagFilter(e.target.value)}
-            className="border rounded px-3 py-2 text-sm"
+            className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
           >
             <option value="all">All Tags</option>
             {tags.map((tag) => (
@@ -464,7 +464,7 @@ export function RulesPage() {
                         </label>
                         <textarea
                           id={`${fieldIdBase}-text`}
-                          className="mt-1 w-full min-h-[80px] rounded border px-3 py-2 text-sm"
+                          className="mt-1 w-full min-h-[80px] rounded-lg border border-border/70 bg-white/80 px-3 py-2 text-sm"
                           value={currentDraft.text}
                           onChange={(e) => updateDraft("text", e.target.value)}
                         />
@@ -485,7 +485,7 @@ export function RulesPage() {
                               e.target.value as RuleItem["status"],
                             )
                           }
-                          className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                          className="mt-1 w-full border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
                         >
                           <option value="active">active</option>
                           <option value="deprecated">deprecated</option>
@@ -509,7 +509,7 @@ export function RulesPage() {
                               >,
                             )
                           }
-                          className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                          className="mt-1 w-full border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
                         >
                           <option value="p0">p0</option>
                           <option value="p1">p1</option>
@@ -573,7 +573,7 @@ export function RulesPage() {
                         </label>
                         <textarea
                           id={`${fieldIdBase}-rationale`}
-                          className="mt-1 w-full min-h-[60px] rounded border px-3 py-2 text-sm"
+                          className="mt-1 w-full min-h-[60px] rounded-lg border border-border/70 bg-white/80 px-3 py-2 text-sm"
                           value={currentDraft.rationale ?? ""}
                           onChange={(e) =>
                             updateDraft("rationale", e.target.value)
