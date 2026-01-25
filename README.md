@@ -9,6 +9,8 @@ Claude Codeの長期記憶を実現するプラグイン
 - **セッション自動保存**: セッション終了時・圧縮前に会話履歴を自動保存
 - **セッション再開**: `/memoria:resume` で過去のセッションを再開
 - **技術的な判断の記録**: セッション終了時に自動検出・保存（手動記録も可能）
+- **ルールベースレビュー**: `dev-rules.json` / `review-guidelines.json` に基づくレビュー
+- **週次レポート**: レビュー結果を集計したMarkdownレポートを自動生成
 - **Webダッシュボード**: セッション・判断記録の閲覧・編集
 
 ## 課題と解決（導入メリット）
@@ -24,6 +26,8 @@ Claude Codeの長期記憶を実現するプラグイン
 - **自動保存 + 再開**で、セッションを跨いだ文脈の継続が可能
 - **判断記録（自動/手動）**で、理由・代替案を後から追跡
 - **検索とダッシュボード**で、過去の記録を素早く参照
+- **レビュー機能**で、リポジトリ固有の観点に基づいて指摘
+- **週次レポート**で、レビュー観点の改善と共有が容易
 
 ### チーム利用のメリット
 
@@ -101,6 +105,8 @@ Claude Codeを再起動
 | `/memoria:save` | 現在のセッションを手動保存 |
 | `/memoria:decision "タイトル"` | 技術的な判断を記録 |
 | `/memoria:search "クエリ"` | セッション・判断記録を検索 |
+| `/memoria:review [--staged|--all|--diff=branch]` | ルールに基づくレビュー |
+| `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | 週次レビューレポート |
 
 ### ダッシュボード
 
@@ -122,6 +128,7 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 - **Sessions**: セッション一覧・詳細・編集・削除
 - **Decisions**: 技術的な判断の一覧・作成・編集・削除
+- **Rules**: 開発ルール・レビュー観点の閲覧・編集
 
 ## 仕組み
 
@@ -146,6 +153,15 @@ flowchart TB
         K["memoria:search"] --> L[セッションと判断を検索]
     end
 
+    subgraph review [レビュー]
+        P["memoria:review"] --> Q[ルールに基づく指摘]
+        Q --> R[レビュー結果を保存]
+    end
+
+    subgraph report [週次レポート]
+        S["memoria:report"] --> T[レビュー集計レポート]
+    end
+
     subgraph dashboard [ダッシュボード]
         M["npx @hir4ta/memoria -d"] --> N[ブラウザで表示]
         N --> O[閲覧・編集・削除]
@@ -155,6 +171,8 @@ flowchart TB
     E --> H
     C --> K
     G --> K
+    B --> R
+    R --> T
     B --> M
     C --> M
 ```
@@ -165,8 +183,11 @@ flowchart TB
 
 ```text
 .memoria/
-├── sessions/       # セッション履歴
-└── decisions/      # 技術的な判断
+├── sessions/       # セッション履歴 (YYYY/MM)
+├── decisions/      # 技術的な判断 (YYYY/MM)
+├── rules/          # 開発ルール / レビュー観点
+├── reviews/        # レビュー結果 (YYYY/MM)
+└── reports/        # 週次レポート (YYYY-MM)
 ```
 
 Gitでバージョン管理可能です。`.gitignore` に追加するかはプロジェクトに応じて判断してください。

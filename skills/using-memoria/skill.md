@@ -13,7 +13,9 @@ memoriaはClaude Codeに長期記憶を与えるプラグインです。
 2. **セッション再開**: `/memoria:resume` で過去のセッションを復元
 3. **技術的な判断の記録**: セッション終了時に自動検出 + `/memoria:decision` で手動記録
 4. **ナレッジ検索**: `/memoria:search` で保存した情報を検索
-5. **Webダッシュボード**: セッション・判断記録を視覚的に管理
+5. **ルールベースレビュー**: `/memoria:review` でルールに基づくレビュー
+6. **週次レポート**: `/memoria:report` でレビュー集計レポート生成
+7. **Webダッシュボード**: セッション・判断記録を視覚的に管理
 
 ## 技術的な判断の自動保存
 
@@ -33,6 +35,8 @@ memoriaはClaude Codeに長期記憶を与えるプラグインです。
 | `/memoria:save` | 現在のセッションを手動保存 |
 | `/memoria:decision "タイトル"` | 技術的な判断を記録（確定） |
 | `/memoria:search <query>` | ナレッジを検索 |
+| `/memoria:review [--staged|--all|--diff=branch]` | ルールに基づくレビュー |
+| `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | 週次レビューレポート |
 
 ## ダッシュボード
 
@@ -49,7 +53,10 @@ npx @hir4ta/memoria --dashboard
 ```
 .memoria/
 ├── sessions/     # セッション履歴
-└── decisions/    # 技術的な判断
+├── decisions/    # 技術的な判断
+├── rules/        # 開発ルール / レビュー観点
+├── reviews/      # レビュー結果
+└── reports/      # 週次レポート
 ```
 
 ## 重要: ファイル操作方法
@@ -72,7 +79,20 @@ npx @hir4ta/memoria --dashboard
   "context": { "branch": "main", "projectDir": "/path/to/project" },
   "tags": ["auth", "api"],
   "status": "completed",
-  "summary": "認証機能の実装",
+  "summary": {
+    "title": "認証機能のJWT実装",
+    "userRequests": ["JWTで認証機能を実装したい"],
+    "assistantActions": ["Write: src/auth/jwt.ts"],
+    "webLinks": ["https://example.com/doc"],
+    "filesModified": ["src/auth/jwt.ts"],
+    "keyDecisions": ["jwt-auth-decision-001"],
+    "stats": {
+      "messageCount": 12,
+      "userMessageCount": 5,
+      "assistantMessageCount": 7,
+      "toolUseCount": 3
+    }
+  },
   "messages": [
     { "type": "user", "timestamp": "...", "content": "..." },
     { "type": "assistant", "timestamp": "...", "content": "...", "thinking": "..." }
