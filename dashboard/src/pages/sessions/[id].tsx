@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router";
-import { getSession, updateSession, deleteSession } from "@/lib/api";
-import type { Session } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { deleteSession, getSession, updateSession } from "@/lib/api";
+import type { Session } from "@/lib/types";
 
 export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +36,10 @@ export function SessionDetailPage() {
       const updated = await updateSession(id, {
         ...session,
         summary: editSummary,
-        tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
+        tags: editTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       });
       setSession(updated);
       setIsEditing(false);
@@ -70,9 +73,9 @@ export function SessionDetailPage() {
     );
   }
 
-  const date = new Date(
-    session.endedAt || session.createdAt
-  ).toLocaleString("ja-JP");
+  const date = new Date(session.endedAt || session.createdAt).toLocaleString(
+    "ja-JP",
+  );
 
   return (
     <div className="space-y-6">
@@ -178,8 +181,11 @@ export function SessionDetailPage() {
           </CardHeader>
           <CardContent>
             <ul className="space-y-1 text-sm font-mono">
-              {session.filesModified.map((file, i) => (
-                <li key={i} className="flex items-center gap-2">
+              {session.filesModified.map((file) => (
+                <li
+                  key={`${file.action}:${file.path}`}
+                  className="flex items-center gap-2"
+                >
                   <Badge
                     variant={
                       file.action === "created"
@@ -208,18 +214,22 @@ export function SessionDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {session.messages.map((msg, i) => (
+            {session.messages.map((msg) => (
               <div
-                key={i}
+                key={`${msg.type}-${msg.timestamp}`}
                 className={`p-4 rounded-lg ${
                   msg.type === "user" ? "bg-muted" : "bg-card border"
                 }`}
               >
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Badge variant={msg.type === "user" ? "outline" : "secondary"}>
+                  <Badge
+                    variant={msg.type === "user" ? "outline" : "secondary"}
+                  >
                     {msg.type}
                   </Badge>
-                  <span>{new Date(msg.timestamp).toLocaleTimeString("ja-JP")}</span>
+                  <span>
+                    {new Date(msg.timestamp).toLocaleTimeString("ja-JP")}
+                  </span>
                 </div>
                 {msg.thinking && (
                   <details className="mb-2">

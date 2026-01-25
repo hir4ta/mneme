@@ -1,4 +1,4 @@
-import type { Session, Decision } from "./types";
+import type { Decision, Session } from "./types";
 
 const API_BASE = "/api";
 
@@ -17,7 +17,7 @@ export async function getSession(id: string): Promise<Session> {
 
 export async function updateSession(
   id: string,
-  data: Partial<Session>
+  data: Partial<Session>,
 ): Promise<Session> {
   const res = await fetch(`${API_BASE}/sessions/${id}`, {
     method: "PUT",
@@ -47,7 +47,7 @@ export async function getDecision(id: string): Promise<Decision> {
 }
 
 export async function createDecision(
-  data: Omit<Decision, "id" | "createdAt">
+  data: Omit<Decision, "id" | "createdAt">,
 ): Promise<Decision> {
   const res = await fetch(`${API_BASE}/decisions`, {
     method: "POST",
@@ -60,7 +60,7 @@ export async function createDecision(
 
 export async function updateDecision(
   id: string,
-  data: Partial<Decision>
+  data: Partial<Decision>,
 ): Promise<Decision> {
   const res = await fetch(`${API_BASE}/decisions/${id}`, {
     method: "PUT",

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { fork } from "child_process";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+import { fork } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +34,7 @@ function checkMemoriaDir() {
   if (!fs.existsSync(memoriaDir)) {
     console.log(`\nWARNING: .memoria directory not found: ${projectRoot}`);
     console.log(
-      "         Run a Claude Code session with the memoria plugin installed"
+      "         Run a Claude Code session with the memoria plugin installed",
     );
     console.log("         in this project to create the data directory.");
   }

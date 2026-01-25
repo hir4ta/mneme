@@ -14,6 +14,7 @@ const icons: Record<string, React.ReactNode> = {
       stroke="currentColor"
       viewBox="0 0 24 24"
     >
+      <title>Sessions</title>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -29,6 +30,7 @@ const icons: Record<string, React.ReactNode> = {
       stroke="currentColor"
       viewBox="0 0 24 24"
     >
+      <title>Decisions</title>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -59,7 +61,7 @@ export function Sidebar() {
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {icons[item.icon]}

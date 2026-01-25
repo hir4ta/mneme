@@ -64,4 +64,3 @@ export interface Decision {
   source?: "auto" | "manual";
   status: "draft" | "active" | "superseded" | "deprecated";
 }
-

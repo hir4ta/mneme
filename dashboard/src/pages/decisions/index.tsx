@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { getDecisions, deleteDecision } from "@/lib/api";
-import type { Decision } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { deleteDecision, getDecisions } from "@/lib/api";
+import type { Decision } from "@/lib/types";
 
 function DecisionCard({
   decision,
@@ -98,7 +98,7 @@ export function DecisionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDecisions = async () => {
+  const fetchDecisions = useCallback(async () => {
     try {
       const data = await getDecisions();
       setDecisions(data);
@@ -108,11 +108,11 @@ export function DecisionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDecisions();
-  }, []);
+  }, [fetchDecisions]);
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;

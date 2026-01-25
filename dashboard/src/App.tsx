@@ -1,10 +1,10 @@
-import { Routes, Route } from "react-router";
+import { Route, Routes } from "react-router";
 import { MainLayout } from "./components/layout/main-layout";
-import { SessionsPage } from "./pages/sessions";
-import { SessionDetailPage } from "./pages/sessions/[id]";
 import { DecisionsPage } from "./pages/decisions";
 import { DecisionDetailPage } from "./pages/decisions/[id]";
 import { NotFoundPage } from "./pages/not-found";
+import { SessionsPage } from "./pages/sessions";
+import { SessionDetailPage } from "./pages/sessions/[id]";
 
 export default function App() {
   return (

@@ -1,9 +1,9 @@
+import fs from "node:fs";
+import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import fs from "fs";
-import path from "path";
 
 const app = new Hono();
 
@@ -21,7 +21,7 @@ app.use(
   "/api/*",
   cors({
     origin: ["http://localhost:5173", "http://localhost:7777"],
-  })
+  }),
 );
 
 // API Routes
@@ -33,7 +33,9 @@ app.get("/api/sessions", async (c) => {
     if (!fs.existsSync(sessionsDir)) {
       return c.json([]);
     }
-    const files = fs.readdirSync(sessionsDir).filter((f) => f.endsWith(".json"));
+    const files = fs
+      .readdirSync(sessionsDir)
+      .filter((f) => f.endsWith(".json"));
     const sessions = files.map((file) => {
       const content = fs.readFileSync(path.join(sessionsDir, file), "utf-8");
       return JSON.parse(content);
@@ -41,7 +43,7 @@ app.get("/api/sessions", async (c) => {
     // Sort by createdAt descending
     sessions.sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     return c.json(sessions);
   } catch {
@@ -136,7 +138,7 @@ app.get("/api/decisions", async (c) => {
     });
     decisions.sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     return c.json(decisions);
   } catch {

@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { getSessions, deleteSession } from "@/lib/api";
-import type { Session } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { deleteSession, getSessions } from "@/lib/api";
+import type { Session } from "@/lib/types";
 
 function SessionCard({
   session,
@@ -33,7 +33,7 @@ function SessionCard({
   };
 
   const date = new Date(
-    session.endedAt || session.createdAt
+    session.endedAt || session.createdAt,
   ).toLocaleDateString("ja-JP");
 
   return (
@@ -102,7 +102,7 @@ export function SessionsPage() {
     "all" | "completed" | "in_progress"
   >("all");
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       const data = await getSessions();
       setSessions(data);
@@ -112,11 +112,11 @@ export function SessionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [fetchSessions]);
 
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -127,7 +127,7 @@ export function SessionsPage() {
         const query = searchQuery.toLowerCase();
         const matchesSummary = session.summary.toLowerCase().includes(query);
         const matchesTags = session.tags.some((tag) =>
-          tag.toLowerCase().includes(query)
+          tag.toLowerCase().includes(query),
         );
         const matchesUser = session.user.name.toLowerCase().includes(query);
         if (!matchesSummary && !matchesTags && !matchesUser) {
@@ -176,7 +176,7 @@ export function SessionsPage() {
               value={statusFilter}
               onChange={(e) =>
                 setStatusFilter(
-                  e.target.value as "all" | "completed" | "in_progress"
+                  e.target.value as "all" | "completed" | "in_progress",
                 )
               }
               className="border rounded px-3 py-2 text-sm"

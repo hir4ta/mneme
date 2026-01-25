@@ -25,7 +25,9 @@
     "build": "vite build && npm run build:server",
     "build:server": "esbuild dashboard/server/index.ts --bundle --platform=node --outfile=dist/server.js --format=esm --external:fsevents",
     "preview": "npm run build && node dist/server.js",
-    "lint": "eslint"
+    "lint": "biome check .",
+    "format": "biome format . --write",
+    "lint:fix": "biome check . --write"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -45,19 +47,13 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@biomejs/biome": "2.3.12",
     "@tailwindcss/vite": "^4.0.7",
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@typescript-eslint/eslint-plugin": "^8.53.1",
-    "@typescript-eslint/parser": "^8.53.1",
     "@vitejs/plugin-react": "^4.3.4",
     "esbuild": "^0.24.2",
-    "eslint": "^9",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "globals": "^17.1.0",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
     "typescript": "^5",

@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router";
-import { getDecision, updateDecision, deleteDecision } from "@/lib/api";
-import type { Decision } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { deleteDecision, getDecision, updateDecision } from "@/lib/api";
+import type { Decision } from "@/lib/types";
 
 export function DecisionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +44,10 @@ export function DecisionDetailPage() {
         title: editTitle,
         decision: editDecision,
         reasoning: editReasoning,
-        tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
+        tags: editTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
         status: editStatus,
       });
       setDecision(updated);
@@ -211,8 +214,8 @@ export function DecisionDetailPage() {
                 Alternatives Considered
               </h3>
               <ul className="space-y-2">
-                {decision.alternatives.map((alt, i) => (
-                  <li key={i} className="text-sm">
+                {decision.alternatives.map((alt) => (
+                  <li key={`${alt.option}-${alt.rejected}`} className="text-sm">
                     <span className="font-medium">{alt.option}</span>
                     <span className="text-muted-foreground">
                       {" "}
