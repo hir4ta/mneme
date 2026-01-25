@@ -1,7 +1,7 @@
 {
   "name": "memoria",
   "description": "Claude Codeに長期記憶を与えるプラグイン。auto-compactで失われるコンテキストを自動保存し、セッション復元、技術的な判断の記録、開発者パターンの学習機能を提供。",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "author": {
     "name": "hir4ta"
   },
