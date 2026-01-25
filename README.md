@@ -1,17 +1,15 @@
 # memoria
 
-Claude Codeの長期記憶を実現するプラグイン。
+Claude Codeの長期記憶を実現するプラグイン
 
-セッションの自動保存、設計決定の記録、開発者パターンの学習、Webダッシュボードでの管理を提供します。
+セッションの自動保存、技術的な判断の記録、Webダッシュボードでの管理を提供します
 
 ## 機能
 
-- **セッション自動保存**: SessionEnd/PreCompact時に会話履歴を自動保存
+- **セッション自動保存**: セッション終了時・圧縮前に会話履歴を自動保存
 - **セッション再開**: `/memoria:resume` で過去のセッションを再開
-- **設計決定の自動検出**: セッション終了時に設計決定を自動検出・保存（手動記録も可能）
-- **開発者パターン**: good/badパターンを収集・学習
-- **コーディングルール**: プロジェクト固有のルールを管理
-- **Webダッシュボード**: セッション・決定・パターン・ルールの閲覧・編集
+- **技術的な判断の記録**: セッション終了時に自動検出・保存（手動記録も可能）
+- **Webダッシュボード**: セッション・判断記録の閲覧・編集
 
 ## インストール
 
@@ -36,38 +34,50 @@ scoop install jq
 winget install jqlang.jq
 ```
 
-### Claude Code プラグインとしてインストール
+### プラグインのインストール
+
+Claude Code内で以下を実行
 
 ```bash
-# マーケットプレースを追加
 /plugin marketplace add hir4ta/memoria-marketplace
-
-# memoriaをインストール
 /plugin install memoria@memoria-marketplace
 ```
 
+Claude Codeを再起動して完了
+
+## アップデート
+
+Claude Code内で以下を実行
+
+```bash
+/plugin marketplace update memoria-marketplace
+/plugin update memoria@memoria-marketplace
+```
+
+Claude Codeを再起動
+
 ## 使い方
 
-### Hooks（自動動作）
+### 自動動作
 
-| Hook | タイミング | 動作 |
-| ------ | ----------- | ------ |
-| session-start | セッション開始時 | 関連セッションの提案、未レビュー決定の通知 |
-| session-end | セッション終了時 | 会話履歴を保存、設計決定を自動検出 |
-| pre-compact | 圧縮前 | 進行中のセッションを保存 |
+| タイミング | 動作 |
+| ----------- | ------ |
+| セッション開始時 | 関連セッションの提案 |
+| セッション終了時 | 会話履歴を保存、技術的な判断を自動検出 |
+| 圧縮前 | 進行中のセッションを保存 |
 
-### Skills（コマンド）
+### コマンド
 
 | コマンド | 説明 |
-| -------- | ------ |
+| --------- | ------ |
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
 | `/memoria:save` | 現在のセッションを手動保存 |
-| `/memoria:decision "タイトル"` | 設計決定を記録 |
-| `/memoria:search "クエリ"` | セッション・決定を検索 |
+| `/memoria:decision "タイトル"` | 技術的な判断を記録 |
+| `/memoria:search "クエリ"` | セッション・判断記録を検索 |
 
 ### ダッシュボード
 
-プロジェクトディレクトリで以下を実行:
+プロジェクトディレクトリで以下を実行
 
 ```bash
 npx @hir4ta/memoria --dashboard
@@ -84,72 +94,55 @@ npx @hir4ta/memoria --dashboard --port 8080
 #### 画面一覧
 
 - **Sessions**: セッション一覧・詳細・編集・削除
-- **Decisions**: 設計決定の一覧・作成・編集・削除
-- **Patterns**: 開発者パターンの一覧・追加・削除
-- **Rules**: コーディングルールの一覧・追加・編集・削除
+- **Decisions**: 技術的な判断の一覧・作成・編集・削除
+
+## 仕組み
+
+```mermaid
+flowchart TB
+    subgraph auto [自動保存]
+        A[セッション終了] --> B[会話履歴を保存]
+        A --> C[技術的な判断を自動検出]
+    end
+
+    subgraph manual [手動保存]
+        D["memoria:save"] --> E[任意のタイミングで保存]
+        F["memoria:decision"] --> G[技術的な判断を明示的に記録]
+    end
+
+    subgraph resume [セッション再開]
+        H["memoria:resume"] --> I[一覧から選択]
+        I --> J[過去の文脈を復元]
+    end
+
+    subgraph search [検索]
+        K["memoria:search"] --> L[セッションと判断を検索]
+    end
+
+    subgraph dashboard [ダッシュボード]
+        M["npx @hir4ta/memoria -d"] --> N[ブラウザで表示]
+        N --> O[閲覧・編集・削除]
+    end
+
+    B --> H
+    E --> H
+    C --> K
+    G --> K
+    B --> M
+    C --> M
+```
 
 ## データ保存
 
-すべてのデータは `.memoria/` ディレクトリにJSON形式で保存されます:
+すべてのデータは `.memoria/` ディレクトリにJSON形式で保存
 
 ```text
 .memoria/
 ├── sessions/       # セッション履歴
-│   └── {id}.json
-├── decisions/      # 設計決定
-│   └── {id}.json
-├── patterns/       # 開発者パターン
-│   └── {user}.json
-└── rules/          # コーディングルール
-    └── coding-standards.json
+└── decisions/      # 技術的な判断
 ```
 
-Gitでバージョン管理可能です。
-
-## 開発
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/hir4ta/memoria.git
-cd memoria
-
-# 依存関係をインストール
-npm install
-
-# フロントエンド開発サーバー (localhost:5173)
-npm run dev
-
-# API開発サーバー (localhost:7777)
-npm run dev:server
-
-# ビルド
-npm run build
-
-# プレビュー
-npm run preview
-```
-
-## 技術スタック
-
-- **Server**: Hono (Node.js)
-- **Frontend**: React 18, Vite, React Router v7
-- **UI**: shadcn/ui, Tailwind CSS v4
-- **Hooks**: Bash, jq
-- **Skills**: Markdown
-
-## アーキテクチャ
-
-```text
-[Claude Code] → [hooks (bash/jq)] → [.memoria/*.json]
-                                          ↑
-[/memoria:* commands] → [skills] ─────────┘
-                                          ↓
-                  [dashboard (Hono)] ← [.memoria/*.json]
-```
-
-- **ビルド不要**: フックはbash、スキルはmarkdown
-- **外部依存なし**: jqのみ必要、ダッシュボードはnpxで実行
-- **Git互換**: すべてのデータをJSONで保存、バージョン管理可能
+Gitでバージョン管理可能です。`.gitignore` に追加するかはプロジェクトに応じて判断してください。
 
 ## ライセンス
 

@@ -65,37 +65,3 @@ export interface Decision {
   status: "draft" | "active" | "superseded" | "deprecated";
 }
 
-// Pattern types
-export interface PatternItem {
-  id?: string;
-  type: "good" | "bad";
-  description: string;
-  example?: string;
-  suggestion?: string;
-  detectedAt: string;
-  source: "session" | "review" | "manual";
-  sourceId?: string;
-}
-
-export interface Pattern {
-  id: string;
-  user: string;
-  patterns: PatternItem[];
-  updatedAt: string;
-}
-
-// Rule types
-export interface RuleItem {
-  id: string;
-  category: string;
-  rule: string;
-  example: string;
-  addedBy: string;
-}
-
-export interface Rules {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  rules: RuleItem[];
-}

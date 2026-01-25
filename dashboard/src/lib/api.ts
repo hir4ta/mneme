@@ -1,4 +1,4 @@
-import type { Session, Decision, Pattern, Rules } from "./types";
+import type { Session, Decision } from "./types";
 
 const API_BASE = "/api";
 
@@ -74,20 +74,6 @@ export async function updateDecision(
 export async function deleteDecision(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/decisions/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete decision");
-}
-
-// Patterns
-export async function getPatterns(): Promise<Pattern[]> {
-  const res = await fetch(`${API_BASE}/patterns`);
-  if (!res.ok) throw new Error("Failed to fetch patterns");
-  return res.json();
-}
-
-// Rules
-export async function getRules(): Promise<Rules[]> {
-  const res = await fetch(`${API_BASE}/rules`);
-  if (!res.ok) throw new Error("Failed to fetch rules");
-  return res.json();
 }
 
 // Project info
