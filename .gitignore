@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# development docs (local only)
+DEVELOPER.md
+docs/
+
+# memoria
+.memoria
+
+# claude
+.claude
+CLAUDE.md

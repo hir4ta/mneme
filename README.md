@@ -51,7 +51,7 @@ winget install jqlang.jq
 ### Hooks（自動動作）
 
 | Hook | タイミング | 動作 |
-|------|-----------|------|
+| ------ | ----------- | ------ |
 | session-start | セッション開始時 | 関連セッションの提案、未レビュー決定の通知 |
 | session-end | セッション終了時 | 会話履歴を保存、設計決定を自動検出 |
 | pre-compact | 圧縮前 | 進行中のセッションを保存 |
@@ -59,7 +59,7 @@ winget install jqlang.jq
 ### Skills（コマンド）
 
 | コマンド | 説明 |
-|---------|------|
+| -------- | ------ |
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
 | `/memoria:save` | 現在のセッションを手動保存 |
 | `/memoria:decision "タイトル"` | 設計決定を記録 |
@@ -73,9 +73,10 @@ winget install jqlang.jq
 npx @hir4ta/memoria --dashboard
 ```
 
-ブラウザで http://localhost:7777 を開く。
+ブラウザで <http://localhost:7777> を開く。
 
 ポート変更:
+
 ```bash
 npx @hir4ta/memoria --dashboard --port 8080
 ```
@@ -91,7 +92,7 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 すべてのデータは `.memoria/` ディレクトリにJSON形式で保存されます:
 
-```
+```text
 .memoria/
 ├── sessions/       # セッション履歴
 │   └── {id}.json
@@ -138,7 +139,7 @@ npm run preview
 
 ## アーキテクチャ
 
-```
+```text
 [Claude Code] → [hooks (bash/jq)] → [.memoria/*.json]
                                           ↑
 [/memoria:* commands] → [skills] ─────────┘
