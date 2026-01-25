@@ -9,7 +9,7 @@
 *.config.ts
 *.config.mjs
 tsconfig.json
-eslint.config.mjs
+biome.json
 components.json
 
 # Development files
@@ -17,6 +17,7 @@ components.json
 .github/
 .vscode/
 .claude/
+.codex/
 docs/
 
 # Documentation (except README and skills)
@@ -26,10 +27,6 @@ docs/
 
 # Local data
 .memoria/
-
-# Old Next.js files
-.next/
-next-env.d.ts
 
 # Node modules
 node_modules/
