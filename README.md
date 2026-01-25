@@ -51,10 +51,18 @@ Claude Code内で以下を実行
 
 ```bash
 /plugin marketplace update memoria-marketplace
-/plugin update memoria@memoria-marketplace
 ```
 
 Claude Codeを再起動
+
+### 自動更新を有効にする（推奨）
+
+1. `/plugin` を実行
+2. Marketplaces タブを選択
+3. `memoria-marketplace` を選択
+4. "Enable auto-update" を有効化
+
+これによりClaude Code起動時に自動でアップデートされます
 
 ## 使い方
 
