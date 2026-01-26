@@ -123,62 +123,15 @@ echo "[memoria] Current session file created: ${current_session_path}" >&2
 # Initialize tags.json if not exists
 # ============================================
 tags_path="${memoria_dir}/tags.json"
+default_tags_path="${SCRIPT_DIR}/default-tags.json"
 
 if [ ! -f "$tags_path" ]; then
-    cat > "$tags_path" << 'TAGS_EOF'
-{
-  "version": 1,
-  "tags": [
-    {"id": "frontend", "label": "Frontend", "aliases": ["front", "フロント", "client", "クライアント", "browser"], "category": "domain", "color": "#3B82F6"},
-    {"id": "backend", "label": "Backend", "aliases": ["back", "バック", "server", "サーバー"], "category": "domain", "color": "#10B981"},
-    {"id": "api", "label": "API", "aliases": ["rest", "graphql", "endpoint", "エンドポイント"], "category": "domain", "color": "#06B6D4"},
-    {"id": "db", "label": "Database", "aliases": ["database", "sql", "query", "クエリ", "rdb", "nosql", "orm", "データベース"], "category": "domain", "color": "#8B5CF6"},
-    {"id": "infra", "label": "Infrastructure", "aliases": ["infrastructure", "cloud", "クラウド", "aws", "gcp", "azure", "インフラ"], "category": "domain", "color": "#F97316"},
-    {"id": "mobile", "label": "Mobile", "aliases": ["ios", "android", "react-native", "flutter", "アプリ", "モバイル"], "category": "domain", "color": "#A855F7"},
-    {"id": "cli", "label": "CLI", "aliases": ["command-line", "terminal", "コマンドライン", "shell"], "category": "domain", "color": "#1F2937"},
-    {"id": "feature", "label": "Feature", "aliases": ["new", "機能追加", "実装", "feat", "新機能"], "category": "phase", "color": "#22C55E"},
-    {"id": "bugfix", "label": "Bug Fix", "aliases": ["bug", "fix", "バグ", "修正", "hotfix", "バグ修正"], "category": "phase", "color": "#EF4444"},
-    {"id": "refactor", "label": "Refactoring", "aliases": ["refactoring", "cleanup", "整理", "改善", "リファクタリング"], "category": "phase", "color": "#6B7280"},
-    {"id": "test", "label": "Test", "aliases": ["testing", "spec", "jest", "vitest", "e2e", "unit", "テスト"], "category": "phase", "color": "#EC4899"},
-    {"id": "docs", "label": "Documentation", "aliases": ["documentation", "readme", "doc", "仕様書", "設計書", "ドキュメント"], "category": "phase", "color": "#64748B"},
-    {"id": "config", "label": "Configuration", "aliases": ["configuration", "env", "環境", "settings", "dotfile", "設定"], "category": "phase", "color": "#A855F7"},
-    {"id": "perf", "label": "Performance", "aliases": ["performance", "optimization", "最適化", "高速化", "チューニング", "パフォーマンス"], "category": "phase", "color": "#FBBF24"},
-    {"id": "security", "label": "Security", "aliases": ["sec", "vulnerability", "脆弱性", "セキュア", "hardening", "セキュリティ"], "category": "phase", "color": "#DC2626"},
-    {"id": "docker", "label": "Docker", "aliases": ["container", "コンテナ", "dockerfile", "compose"], "category": "infra", "color": "#2496ED"},
-    {"id": "k8s", "label": "Kubernetes", "aliases": ["kubernetes", "kubectl", "helm", "クーバネティス"], "category": "infra", "color": "#326CE5"},
-    {"id": "ci-cd", "label": "CI/CD", "aliases": ["cicd", "pipeline", "github-actions", "jenkins", "パイプライン"], "category": "infra", "color": "#4A5568"},
-    {"id": "monitoring", "label": "Monitoring", "aliases": ["monitor", "datadog", "prometheus", "grafana", "アラート", "alert", "監視"], "category": "infra", "color": "#F59E0B"},
-    {"id": "deploy", "label": "Deployment", "aliases": ["deployment", "release", "リリース", "本番", "production", "staging", "デプロイ"], "category": "infra", "color": "#7C3AED"},
-    {"id": "network", "label": "Network", "aliases": ["networking", "dns", "cdn", "load-balancer", "lb", "proxy", "nginx", "ネットワーク"], "category": "infra", "color": "#0EA5E9"},
-    {"id": "architecture", "label": "Architecture", "aliases": ["arch", "設計", "構成", "design-pattern", "アーキテクチャ"], "category": "architecture", "color": "#0D9488"},
-    {"id": "migration", "label": "Migration", "aliases": ["migrate", "移行", "upgrade", "バージョンアップ", "マイグレーション"], "category": "architecture", "color": "#F97316"},
-    {"id": "auth", "label": "Authentication", "aliases": ["authentication", "login", "ログイン", "認可", "authorization", "oauth", "jwt", "session", "認証"], "category": "feature", "color": "#F59E0B"},
-    {"id": "cache", "label": "Cache", "aliases": ["caching", "redis", "memcached", "cdn-cache", "キャッシュ"], "category": "feature", "color": "#EF4444"},
-    {"id": "search", "label": "Search", "aliases": ["elasticsearch", "algolia", "全文検索", "インデックス", "検索"], "category": "feature", "color": "#3B82F6"},
-    {"id": "notification", "label": "Notification", "aliases": ["notify", "push", "プッシュ通知", "email", "slack", "通知"], "category": "feature", "color": "#EC4899"},
-    {"id": "payment", "label": "Payment", "aliases": ["billing", "stripe", "課金", "サブスクリプション", "subscription", "決済"], "category": "feature", "color": "#10B981"},
-    {"id": "batch", "label": "Batch Processing", "aliases": ["job", "cron", "scheduler", "定期実行", "background", "バッチ処理"], "category": "feature", "color": "#7C3AED"},
-    {"id": "realtime", "label": "Realtime", "aliases": ["websocket", "socket", "sse", "push", "live", "リアルタイム"], "category": "feature", "color": "#06B6D4"},
-    {"id": "ui", "label": "UI", "aliases": ["user-interface", "画面", "コンポーネント", "component"], "category": "ui", "color": "#E879F9"},
-    {"id": "ux", "label": "UX", "aliases": ["user-experience", "ユーザビリティ", "usability"], "category": "ui", "color": "#F472B6"},
-    {"id": "a11y", "label": "Accessibility", "aliases": ["accessibility", "aria", "wcag", "スクリーンリーダー", "アクセシビリティ"], "category": "ui", "color": "#14B8A6"},
-    {"id": "i18n", "label": "Internationalization", "aliases": ["internationalization", "多言語", "翻訳", "locale", "l10n", "国際化"], "category": "ui", "color": "#0EA5E9"},
-    {"id": "form", "label": "Form", "aliases": ["input", "validation", "バリデーション", "入力", "フォーム"], "category": "ui", "color": "#6366F1"},
-    {"id": "chart", "label": "Chart", "aliases": ["graph", "グラフ", "可視化", "visualization", "dashboard", "チャート"], "category": "ui", "color": "#22C55E"},
-    {"id": "analytics", "label": "Analytics", "aliases": ["tracking", "ga", "mixpanel", "トラッキング", "計測", "分析"], "category": "data", "color": "#F97316"},
-    {"id": "seo", "label": "SEO", "aliases": ["検索エンジン", "meta", "sitemap", "ogp"], "category": "data", "color": "#84CC16"},
-    {"id": "data-model", "label": "Data Model", "aliases": ["schema", "スキーマ", "entity", "er図", "テーブル設計", "データモデル"], "category": "data", "color": "#8B5CF6"},
-    {"id": "ml", "label": "Machine Learning", "aliases": ["machine-learning", "ai", "model", "推論", "inference", "機械学習"], "category": "data", "color": "#7C3AED"},
-    {"id": "error-handling", "label": "Error Handling", "aliases": ["exception", "例外", "error", "エラー処理", "エラーハンドリング"], "category": "quality", "color": "#EF4444"},
-    {"id": "validation", "label": "Validation", "aliases": ["validate", "検証", "入力チェック", "zod", "yup", "バリデーション"], "category": "quality", "color": "#F59E0B"},
-    {"id": "lint", "label": "Lint", "aliases": ["eslint", "prettier", "format", "フォーマット", "biome"], "category": "quality", "color": "#6366F1"},
-    {"id": "type", "label": "Type", "aliases": ["typescript", "typing", "型定義", "generics", "型"], "category": "quality", "color": "#3B82F6"},
-    {"id": "dependency", "label": "Dependency", "aliases": ["npm", "package", "パッケージ", "ライブラリ", "upgrade", "依存関係"], "category": "quality", "color": "#78716C"},
-    {"id": "debug", "label": "Debug", "aliases": ["debugging", "調査", "原因調査", "トラブルシューティング", "デバッグ"], "category": "quality", "color": "#F97316"}
-  ]
-}
-TAGS_EOF
-    echo "[memoria] Tags master file created: ${tags_path}" >&2
+    if [ -f "$default_tags_path" ]; then
+        cp "$default_tags_path" "$tags_path"
+        echo "[memoria] Tags master file created from default: ${tags_path}" >&2
+    else
+        echo "[memoria] Warning: default-tags.json not found at ${default_tags_path}" >&2
+    fi
 fi
 
 # ============================================
@@ -296,6 +249,7 @@ update_rules="## memoria Real-time Update Rules
 2. Find matching tag from aliases
 3. Use id if found (e.g., \"フロント\" -> \"frontend\")
 4. Add new tag to tags.json if not found
+5. **Limit: 5-10 tags max, ordered by relevance (most relevant first)**
 
 **Notes:**
 - interaction id is sequential (int-001, int-002, ...)

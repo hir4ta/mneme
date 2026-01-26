@@ -143,6 +143,7 @@ Prevents notation variations. Reference this when selecting tags:
 2. Find matching tag from aliases
 3. Use id if found (e.g., "フロント" → "frontend")
 4. Add new tag to tags.json if not found
+5. **Limit: 5-10 tags max, ordered by relevance (most relevant first)**
 
 ```json
 {

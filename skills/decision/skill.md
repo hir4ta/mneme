@@ -149,6 +149,7 @@ This allows tracing "in what context was this decision made".
 2. Find matching tag from aliases
 3. Use id if found (e.g., "認証" → "auth")
 4. Add new tag to tags.json if not found
+5. **Limit: 3-5 tags max for decisions, ordered by relevance (most relevant first)**
 
 ## Output Format
 

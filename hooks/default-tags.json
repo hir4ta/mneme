@@ -1,0 +1,1255 @@
+{
+  "version": 1,
+  "tags": [
+    {
+      "id": "frontend",
+      "label": "Frontend",
+      "aliases": [
+        "front",
+        "フロント",
+        "client",
+        "クライアント",
+        "browser",
+        "web"
+      ],
+      "category": "domain",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "backend",
+      "label": "Backend",
+      "aliases": [
+        "back",
+        "バック",
+        "server",
+        "サーバー"
+      ],
+      "category": "domain",
+      "color": "#10B981"
+    },
+    {
+      "id": "api",
+      "label": "API",
+      "aliases": [
+        "rest",
+        "graphql",
+        "endpoint",
+        "エンドポイント",
+        "restful"
+      ],
+      "category": "domain",
+      "color": "#06B6D4"
+    },
+    {
+      "id": "db",
+      "label": "Database",
+      "aliases": [
+        "database",
+        "sql",
+        "query",
+        "クエリ",
+        "rdb",
+        "nosql",
+        "orm",
+        "データベース",
+        "postgres",
+        "mysql",
+        "mongodb",
+        "sqlite"
+      ],
+      "category": "domain",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "infra",
+      "label": "Infrastructure",
+      "aliases": [
+        "infrastructure",
+        "cloud",
+        "クラウド",
+        "aws",
+        "gcp",
+        "azure",
+        "インフラ"
+      ],
+      "category": "domain",
+      "color": "#F97316"
+    },
+    {
+      "id": "mobile",
+      "label": "Mobile",
+      "aliases": [
+        "ios",
+        "android",
+        "react-native",
+        "flutter",
+        "アプリ",
+        "モバイル",
+        "swift",
+        "kotlin"
+      ],
+      "category": "domain",
+      "color": "#A855F7"
+    },
+    {
+      "id": "cli",
+      "label": "CLI",
+      "aliases": [
+        "command-line",
+        "terminal",
+        "コマンドライン",
+        "shell",
+        "bash",
+        "zsh"
+      ],
+      "category": "domain",
+      "color": "#1F2937"
+    },
+    {
+      "id": "desktop",
+      "label": "Desktop",
+      "aliases": [
+        "electron",
+        "tauri",
+        "デスクトップ",
+        "native"
+      ],
+      "category": "domain",
+      "color": "#64748B"
+    },
+    {
+      "id": "feature",
+      "label": "Feature",
+      "aliases": [
+        "new",
+        "機能追加",
+        "実装",
+        "feat",
+        "新機能"
+      ],
+      "category": "phase",
+      "color": "#22C55E"
+    },
+    {
+      "id": "bugfix",
+      "label": "Bug Fix",
+      "aliases": [
+        "bug",
+        "fix",
+        "バグ",
+        "修正",
+        "バグ修正"
+      ],
+      "category": "phase",
+      "color": "#EF4444"
+    },
+    {
+      "id": "hotfix",
+      "label": "Hotfix",
+      "aliases": [
+        "urgent",
+        "緊急",
+        "緊急修正",
+        "critical"
+      ],
+      "category": "phase",
+      "color": "#DC2626"
+    },
+    {
+      "id": "refactor",
+      "label": "Refactoring",
+      "aliases": [
+        "refactoring",
+        "cleanup",
+        "整理",
+        "改善",
+        "リファクタリング"
+      ],
+      "category": "phase",
+      "color": "#6B7280"
+    },
+    {
+      "id": "test",
+      "label": "Test",
+      "aliases": [
+        "testing",
+        "spec",
+        "jest",
+        "vitest",
+        "e2e",
+        "unit",
+        "テスト",
+        "integration"
+      ],
+      "category": "phase",
+      "color": "#EC4899"
+    },
+    {
+      "id": "docs",
+      "label": "Documentation",
+      "aliases": [
+        "documentation",
+        "readme",
+        "doc",
+        "仕様書",
+        "設計書",
+        "ドキュメント"
+      ],
+      "category": "phase",
+      "color": "#64748B"
+    },
+    {
+      "id": "config",
+      "label": "Configuration",
+      "aliases": [
+        "configuration",
+        "env",
+        "環境",
+        "settings",
+        "dotfile",
+        "設定"
+      ],
+      "category": "phase",
+      "color": "#A855F7"
+    },
+    {
+      "id": "perf",
+      "label": "Performance",
+      "aliases": [
+        "performance",
+        "optimization",
+        "最適化",
+        "高速化",
+        "チューニング",
+        "パフォーマンス"
+      ],
+      "category": "phase",
+      "color": "#FBBF24"
+    },
+    {
+      "id": "security",
+      "label": "Security",
+      "aliases": [
+        "sec",
+        "vulnerability",
+        "脆弱性",
+        "セキュア",
+        "hardening",
+        "セキュリティ"
+      ],
+      "category": "phase",
+      "color": "#DC2626"
+    },
+    {
+      "id": "docker",
+      "label": "Docker",
+      "aliases": [
+        "container",
+        "コンテナ",
+        "dockerfile",
+        "compose",
+        "docker-compose"
+      ],
+      "category": "infra",
+      "color": "#2496ED"
+    },
+    {
+      "id": "k8s",
+      "label": "Kubernetes",
+      "aliases": [
+        "kubernetes",
+        "kubectl",
+        "helm",
+        "クーバネティス",
+        "k8s"
+      ],
+      "category": "infra",
+      "color": "#326CE5"
+    },
+    {
+      "id": "ci-cd",
+      "label": "CI/CD",
+      "aliases": [
+        "cicd",
+        "pipeline",
+        "github-actions",
+        "jenkins",
+        "パイプライン",
+        "gitlab-ci",
+        "circleci"
+      ],
+      "category": "infra",
+      "color": "#4A5568"
+    },
+    {
+      "id": "monitoring",
+      "label": "Monitoring",
+      "aliases": [
+        "monitor",
+        "datadog",
+        "prometheus",
+        "grafana",
+        "アラート",
+        "alert",
+        "監視",
+        "observability"
+      ],
+      "category": "infra",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "deploy",
+      "label": "Deployment",
+      "aliases": [
+        "deployment",
+        "release",
+        "リリース",
+        "本番",
+        "production",
+        "staging",
+        "デプロイ"
+      ],
+      "category": "infra",
+      "color": "#7C3AED"
+    },
+    {
+      "id": "network",
+      "label": "Network",
+      "aliases": [
+        "networking",
+        "dns",
+        "cdn",
+        "load-balancer",
+        "lb",
+        "proxy",
+        "nginx",
+        "ネットワーク"
+      ],
+      "category": "infra",
+      "color": "#0EA5E9"
+    },
+    {
+      "id": "terraform",
+      "label": "Terraform",
+      "aliases": [
+        "iac",
+        "infrastructure-as-code",
+        "pulumi",
+        "cloudformation"
+      ],
+      "category": "infra",
+      "color": "#7B42BC"
+    },
+    {
+      "id": "serverless",
+      "label": "Serverless",
+      "aliases": [
+        "lambda",
+        "functions",
+        "faas",
+        "vercel",
+        "netlify",
+        "サーバーレス",
+        "cloudflare-workers"
+      ],
+      "category": "cloud",
+      "color": "#FF9900"
+    },
+    {
+      "id": "microservices",
+      "label": "Microservices",
+      "aliases": [
+        "micro",
+        "マイクロサービス",
+        "service-mesh",
+        "istio"
+      ],
+      "category": "cloud",
+      "color": "#00BCD4"
+    },
+    {
+      "id": "event-driven",
+      "label": "Event Driven",
+      "aliases": [
+        "event",
+        "kafka",
+        "rabbitmq",
+        "sqs",
+        "イベント駆動",
+        "pubsub",
+        "message-queue"
+      ],
+      "category": "cloud",
+      "color": "#9C27B0"
+    },
+    {
+      "id": "edge",
+      "label": "Edge Computing",
+      "aliases": [
+        "edge",
+        "エッジ",
+        "edge-function",
+        "cdn-compute"
+      ],
+      "category": "cloud",
+      "color": "#607D8B"
+    },
+    {
+      "id": "wasm",
+      "label": "WebAssembly",
+      "aliases": [
+        "webassembly",
+        "wasi",
+        "emscripten"
+      ],
+      "category": "cloud",
+      "color": "#654FF0"
+    },
+    {
+      "id": "architecture",
+      "label": "Architecture",
+      "aliases": [
+        "arch",
+        "設計",
+        "構成",
+        "design-pattern",
+        "アーキテクチャ",
+        "system-design"
+      ],
+      "category": "architecture",
+      "color": "#0D9488"
+    },
+    {
+      "id": "migration",
+      "label": "Migration",
+      "aliases": [
+        "migrate",
+        "移行",
+        "upgrade",
+        "バージョンアップ",
+        "マイグレーション"
+      ],
+      "category": "architecture",
+      "color": "#F97316"
+    },
+    {
+      "id": "api-design",
+      "label": "API Design",
+      "aliases": [
+        "api-設計",
+        "openapi",
+        "swagger",
+        "schema-design",
+        "スキーマ設計"
+      ],
+      "category": "architecture",
+      "color": "#06B6D4"
+    },
+    {
+      "id": "legacy",
+      "label": "Legacy",
+      "aliases": [
+        "レガシー",
+        "old-code",
+        "古いコード",
+        "modernization"
+      ],
+      "category": "architecture",
+      "color": "#78716C"
+    },
+    {
+      "id": "tech-debt",
+      "label": "Tech Debt",
+      "aliases": [
+        "technical-debt",
+        "技術的負債",
+        "負債",
+        "debt"
+      ],
+      "category": "architecture",
+      "color": "#EF4444"
+    },
+    {
+      "id": "auth",
+      "label": "Authentication",
+      "aliases": [
+        "authentication",
+        "login",
+        "ログイン",
+        "認可",
+        "authorization",
+        "oauth",
+        "jwt",
+        "session",
+        "認証",
+        "oidc",
+        "sso"
+      ],
+      "category": "feature",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "cache",
+      "label": "Cache",
+      "aliases": [
+        "caching",
+        "redis",
+        "memcached",
+        "cdn-cache",
+        "キャッシュ"
+      ],
+      "category": "feature",
+      "color": "#EF4444"
+    },
+    {
+      "id": "search",
+      "label": "Search",
+      "aliases": [
+        "elasticsearch",
+        "algolia",
+        "全文検索",
+        "インデックス",
+        "検索",
+        "meilisearch",
+        "typesense"
+      ],
+      "category": "feature",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "notification",
+      "label": "Notification",
+      "aliases": [
+        "notify",
+        "プッシュ通知",
+        "email",
+        "slack",
+        "通知",
+        "sns"
+      ],
+      "category": "feature",
+      "color": "#EC4899"
+    },
+    {
+      "id": "payment",
+      "label": "Payment",
+      "aliases": [
+        "billing",
+        "stripe",
+        "課金",
+        "サブスクリプション",
+        "subscription",
+        "決済"
+      ],
+      "category": "feature",
+      "color": "#10B981"
+    },
+    {
+      "id": "batch",
+      "label": "Batch Processing",
+      "aliases": [
+        "job",
+        "cron",
+        "scheduler",
+        "定期実行",
+        "background",
+        "バッチ処理",
+        "queue"
+      ],
+      "category": "feature",
+      "color": "#7C3AED"
+    },
+    {
+      "id": "realtime",
+      "label": "Realtime",
+      "aliases": [
+        "websocket",
+        "socket",
+        "sse",
+        "push",
+        "live",
+        "リアルタイム",
+        "socket.io"
+      ],
+      "category": "feature",
+      "color": "#06B6D4"
+    },
+    {
+      "id": "upload",
+      "label": "Upload",
+      "aliases": [
+        "file-upload",
+        "ファイルアップロード",
+        "s3",
+        "storage",
+        "ストレージ",
+        "blob"
+      ],
+      "category": "feature",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "aliases": [
+        "download",
+        "csv",
+        "excel",
+        "pdf",
+        "エクスポート",
+        "ダウンロード"
+      ],
+      "category": "feature",
+      "color": "#64748B"
+    },
+    {
+      "id": "webhook",
+      "label": "Webhook",
+      "aliases": [
+        "callback",
+        "hook",
+        "ウェブフック"
+      ],
+      "category": "feature",
+      "color": "#F97316"
+    },
+    {
+      "id": "integration",
+      "label": "Integration",
+      "aliases": [
+        "third-party",
+        "外部連携",
+        "サードパーティ",
+        "連携",
+        "external"
+      ],
+      "category": "feature",
+      "color": "#0EA5E9"
+    },
+    {
+      "id": "feature-flag",
+      "label": "Feature Flag",
+      "aliases": [
+        "toggle",
+        "フィーチャーフラグ",
+        "機能フラグ",
+        "launchdarkly"
+      ],
+      "category": "feature",
+      "color": "#22C55E"
+    },
+    {
+      "id": "ui",
+      "label": "UI",
+      "aliases": [
+        "user-interface",
+        "画面",
+        "コンポーネント",
+        "component",
+        "view"
+      ],
+      "category": "ui",
+      "color": "#E879F9"
+    },
+    {
+      "id": "ux",
+      "label": "UX",
+      "aliases": [
+        "user-experience",
+        "ユーザビリティ",
+        "usability"
+      ],
+      "category": "ui",
+      "color": "#F472B6"
+    },
+    {
+      "id": "a11y",
+      "label": "Accessibility",
+      "aliases": [
+        "accessibility",
+        "aria",
+        "wcag",
+        "スクリーンリーダー",
+        "アクセシビリティ"
+      ],
+      "category": "ui",
+      "color": "#14B8A6"
+    },
+    {
+      "id": "i18n",
+      "label": "Internationalization",
+      "aliases": [
+        "internationalization",
+        "多言語",
+        "翻訳",
+        "locale",
+        "l10n",
+        "国際化"
+      ],
+      "category": "ui",
+      "color": "#0EA5E9"
+    },
+    {
+      "id": "form",
+      "label": "Form",
+      "aliases": [
+        "input",
+        "フォーム",
+        "react-hook-form",
+        "formik"
+      ],
+      "category": "ui",
+      "color": "#6366F1"
+    },
+    {
+      "id": "chart",
+      "label": "Chart",
+      "aliases": [
+        "graph",
+        "グラフ",
+        "可視化",
+        "visualization",
+        "チャート",
+        "d3",
+        "recharts"
+      ],
+      "category": "ui",
+      "color": "#22C55E"
+    },
+    {
+      "id": "animation",
+      "label": "Animation",
+      "aliases": [
+        "motion",
+        "アニメーション",
+        "transition",
+        "framer-motion",
+        "gsap"
+      ],
+      "category": "ui",
+      "color": "#F472B6"
+    },
+    {
+      "id": "responsive",
+      "label": "Responsive",
+      "aliases": [
+        "レスポンシブ",
+        "mobile-first",
+        "breakpoint"
+      ],
+      "category": "ui",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "dark-mode",
+      "label": "Dark Mode",
+      "aliases": [
+        "ダークモード",
+        "theme",
+        "テーマ",
+        "light-mode"
+      ],
+      "category": "ui",
+      "color": "#1F2937"
+    },
+    {
+      "id": "ssr",
+      "label": "SSR",
+      "aliases": [
+        "server-side-rendering",
+        "ssg",
+        "isr",
+        "static-generation",
+        "next.js"
+      ],
+      "category": "ui",
+      "color": "#000000"
+    },
+    {
+      "id": "pwa",
+      "label": "PWA",
+      "aliases": [
+        "progressive-web-app",
+        "service-worker",
+        "オフライン",
+        "installable"
+      ],
+      "category": "ui",
+      "color": "#5A0FC8"
+    },
+    {
+      "id": "offline",
+      "label": "Offline",
+      "aliases": [
+        "オフライン対応",
+        "offline-first",
+        "sync"
+      ],
+      "category": "ui",
+      "color": "#607D8B"
+    },
+    {
+      "id": "analytics",
+      "label": "Analytics",
+      "aliases": [
+        "tracking",
+        "ga",
+        "mixpanel",
+        "トラッキング",
+        "計測",
+        "分析",
+        "google-analytics"
+      ],
+      "category": "data",
+      "color": "#F97316"
+    },
+    {
+      "id": "seo",
+      "label": "SEO",
+      "aliases": [
+        "検索エンジン",
+        "meta",
+        "sitemap",
+        "ogp",
+        "検索最適化"
+      ],
+      "category": "data",
+      "color": "#84CC16"
+    },
+    {
+      "id": "data-model",
+      "label": "Data Model",
+      "aliases": [
+        "schema",
+        "スキーマ",
+        "entity",
+        "er図",
+        "テーブル設計",
+        "データモデル"
+      ],
+      "category": "data",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "etl",
+      "label": "ETL",
+      "aliases": [
+        "data-pipeline",
+        "データパイプライン",
+        "transform",
+        "extract",
+        "load"
+      ],
+      "category": "data",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "reporting",
+      "label": "Reporting",
+      "aliases": [
+        "report",
+        "レポート",
+        "集計",
+        "aggregation"
+      ],
+      "category": "data",
+      "color": "#64748B"
+    },
+    {
+      "id": "llm",
+      "label": "LLM",
+      "aliases": [
+        "large-language-model",
+        "gpt",
+        "claude",
+        "大規模言語モデル",
+        "language-model",
+        "chatgpt",
+        "anthropic"
+      ],
+      "category": "ai",
+      "color": "#10B981"
+    },
+    {
+      "id": "ai-agent",
+      "label": "AI Agent",
+      "aliases": [
+        "agent",
+        "エージェント",
+        "autonomous",
+        "自律",
+        "agentic"
+      ],
+      "category": "ai",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "mcp",
+      "label": "MCP",
+      "aliases": [
+        "model-context-protocol",
+        "tool-use",
+        "function-calling"
+      ],
+      "category": "ai",
+      "color": "#D97706"
+    },
+    {
+      "id": "rag",
+      "label": "RAG",
+      "aliases": [
+        "retrieval-augmented-generation",
+        "検索拡張生成",
+        "retrieval"
+      ],
+      "category": "ai",
+      "color": "#06B6D4"
+    },
+    {
+      "id": "vector-db",
+      "label": "Vector DB",
+      "aliases": [
+        "vector-database",
+        "pinecone",
+        "weaviate",
+        "qdrant",
+        "chroma",
+        "ベクターDB",
+        "embedding-store"
+      ],
+      "category": "ai",
+      "color": "#7C3AED"
+    },
+    {
+      "id": "embedding",
+      "label": "Embedding",
+      "aliases": [
+        "embeddings",
+        "埋め込み",
+        "vector",
+        "ベクトル"
+      ],
+      "category": "ai",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "prompt",
+      "label": "Prompt Engineering",
+      "aliases": [
+        "prompt-engineering",
+        "プロンプト",
+        "prompt-design",
+        "system-prompt"
+      ],
+      "category": "ai",
+      "color": "#22C55E"
+    },
+    {
+      "id": "fine-tuning",
+      "label": "Fine-tuning",
+      "aliases": [
+        "finetuning",
+        "ファインチューニング",
+        "training",
+        "lora",
+        "qlora"
+      ],
+      "category": "ai",
+      "color": "#EC4899"
+    },
+    {
+      "id": "multimodal",
+      "label": "Multimodal",
+      "aliases": [
+        "マルチモーダル",
+        "vision",
+        "image",
+        "audio",
+        "video"
+      ],
+      "category": "ai",
+      "color": "#F472B6"
+    },
+    {
+      "id": "ml",
+      "label": "Machine Learning",
+      "aliases": [
+        "machine-learning",
+        "ml-ops",
+        "推論",
+        "inference",
+        "機械学習",
+        "pytorch",
+        "tensorflow"
+      ],
+      "category": "ai",
+      "color": "#7C3AED"
+    },
+    {
+      "id": "nlp",
+      "label": "NLP",
+      "aliases": [
+        "natural-language-processing",
+        "自然言語処理",
+        "text-processing"
+      ],
+      "category": "ai",
+      "color": "#0EA5E9"
+    },
+    {
+      "id": "error-handling",
+      "label": "Error Handling",
+      "aliases": [
+        "exception",
+        "例外",
+        "error",
+        "エラー処理",
+        "エラーハンドリング",
+        "try-catch"
+      ],
+      "category": "quality",
+      "color": "#EF4444"
+    },
+    {
+      "id": "validation",
+      "label": "Validation",
+      "aliases": [
+        "validate",
+        "検証",
+        "入力チェック",
+        "zod",
+        "yup",
+        "バリデーション",
+        "joi"
+      ],
+      "category": "quality",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "lint",
+      "label": "Lint",
+      "aliases": [
+        "eslint",
+        "prettier",
+        "format",
+        "フォーマット",
+        "biome",
+        "stylelint"
+      ],
+      "category": "quality",
+      "color": "#6366F1"
+    },
+    {
+      "id": "type",
+      "label": "Type",
+      "aliases": [
+        "typescript",
+        "typing",
+        "型定義",
+        "generics",
+        "型",
+        "type-safety"
+      ],
+      "category": "quality",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "dependency",
+      "label": "Dependency",
+      "aliases": [
+        "npm",
+        "package",
+        "パッケージ",
+        "ライブラリ",
+        "依存関係",
+        "yarn",
+        "pnpm"
+      ],
+      "category": "quality",
+      "color": "#78716C"
+    },
+    {
+      "id": "debug",
+      "label": "Debug",
+      "aliases": [
+        "debugging",
+        "調査",
+        "原因調査",
+        "トラブルシューティング",
+        "デバッグ",
+        "breakpoint"
+      ],
+      "category": "quality",
+      "color": "#F97316"
+    },
+    {
+      "id": "logging",
+      "label": "Logging",
+      "aliases": [
+        "log",
+        "ログ",
+        "logger",
+        "winston",
+        "pino",
+        "ロギング"
+      ],
+      "category": "quality",
+      "color": "#64748B"
+    },
+    {
+      "id": "profiling",
+      "label": "Profiling",
+      "aliases": [
+        "profile",
+        "プロファイリング",
+        "benchmark",
+        "ベンチマーク",
+        "flame-graph"
+      ],
+      "category": "quality",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "async",
+      "label": "Async",
+      "aliases": [
+        "asynchronous",
+        "非同期",
+        "promise",
+        "async-await",
+        "concurrency",
+        "並行処理"
+      ],
+      "category": "quality",
+      "color": "#06B6D4"
+    },
+    {
+      "id": "state",
+      "label": "State Management",
+      "aliases": [
+        "state",
+        "状態管理",
+        "redux",
+        "zustand",
+        "jotai",
+        "recoil",
+        "context"
+      ],
+      "category": "quality",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "encryption",
+      "label": "Encryption",
+      "aliases": [
+        "暗号化",
+        "crypto",
+        "hashing",
+        "ハッシュ",
+        "bcrypt",
+        "aes"
+      ],
+      "category": "quality",
+      "color": "#DC2626"
+    },
+    {
+      "id": "review",
+      "label": "Code Review",
+      "aliases": [
+        "コードレビュー",
+        "pr-review",
+        "レビュー",
+        "feedback"
+      ],
+      "category": "workflow",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "blocked",
+      "label": "Blocked",
+      "aliases": [
+        "ブロック",
+        "waiting",
+        "依存待ち",
+        "pending"
+      ],
+      "category": "workflow",
+      "color": "#EF4444"
+    },
+    {
+      "id": "breaking",
+      "label": "Breaking Change",
+      "aliases": [
+        "破壊的変更",
+        "breaking-change",
+        "major",
+        "互換性"
+      ],
+      "category": "workflow",
+      "color": "#DC2626"
+    },
+    {
+      "id": "triage",
+      "label": "Triage",
+      "aliases": [
+        "トリアージ",
+        "priority",
+        "優先度",
+        "分類"
+      ],
+      "category": "workflow",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "incident",
+      "label": "Incident",
+      "aliases": [
+        "インシデント",
+        "outage",
+        "障害",
+        "emergency",
+        "緊急対応"
+      ],
+      "category": "workflow",
+      "color": "#DC2626"
+    },
+    {
+      "id": "rollback",
+      "label": "Rollback",
+      "aliases": [
+        "ロールバック",
+        "revert",
+        "巻き戻し",
+        "復旧"
+      ],
+      "category": "workflow",
+      "color": "#F97316"
+    },
+    {
+      "id": "spike",
+      "label": "Spike",
+      "aliases": [
+        "スパイク",
+        "investigation",
+        "調査",
+        "poc",
+        "prototype",
+        "実験"
+      ],
+      "category": "workflow",
+      "color": "#8B5CF6"
+    },
+    {
+      "id": "wip",
+      "label": "WIP",
+      "aliases": [
+        "work-in-progress",
+        "作業中",
+        "進行中",
+        "draft"
+      ],
+      "category": "workflow",
+      "color": "#FBBF24"
+    }
+  ]
+}
