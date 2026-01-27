@@ -222,18 +222,75 @@ if [ "$is_resumed" = true ] && [ -d "$sessions_dir" ] && [ -n "$current_branch" 
 fi
 
 # ============================================
-# Output context injection (minimal)
+# Build additionalContext (superpowers style)
 # ============================================
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Read using-memoria skill content
+using_memoria_content=$(cat "${PLUGIN_ROOT}/skills/using-memoria/skill.md" 2>/dev/null || echo "")
+
+# Escape for JSON using pure bash (superpowers style)
+escape_for_json() {
+    local input="$1"
+    local output=""
+    local i char
+    for (( i=0; i<${#input}; i++ )); do
+        char="${input:$i:1}"
+        case "$char" in
+            $'\\') output+='\\' ;;
+            '"') output+='\"' ;;
+            $'\n') output+='\n' ;;
+            $'\r') output+='\r' ;;
+            $'\t') output+='\t' ;;
+            *) output+="$char" ;;
+        esac
+    done
+    printf '%s' "$output"
+}
+
+using_memoria_escaped=$(escape_for_json "$using_memoria_content")
+
 resume_note=""
 if [ "$is_resumed" = true ]; then
-    resume_note="\\n(Resumed session - use /memoria:save to save additional changes)"
+    resume_note=" (Resumed)"
 fi
 
+# Build the auto-save instruction
+auto_save_instruction="<EXTREMELY_IMPORTANT>
+You MUST update the session file at the END of EVERY response.
+
+This is not optional. This is not negotiable. You cannot skip this.
+
+**Session:** ${file_id}${resume_note}
+**Path:** ${session_relative_path}
+
+## What to do after EVERY response
+
+1. Read the current session file
+2. Add to 'interactions' array:
+   - id: \"int-NNN\" (increment)
+   - timestamp: ISO8601
+   - topic: searchable summary
+   - request: user's question
+   - thinking: your key insights
+   - response: summary of your response
+   - toolsUsed: [{name, target}]
+   - filesModified: [paths]
+3. Update 'summary': title, goal, outcome, description
+4. Update 'metrics', 'decisions', 'errors', 'tags' as needed
+5. Write the updated JSON back
+
+Do this silently. No confirmation messages needed.
+</EXTREMELY_IMPORTANT>"
+
+auto_save_escaped=$(escape_for_json "$auto_save_instruction")
+
+# Output context injection as JSON (superpowers style)
 cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "<memoria>\\n**Session:** ${file_id}\\n**Path:** ${session_relative_path}${resume_note}\\n\\n**Auto-save:** Enabled (updates on every response)\\n\\n**Commands:** /memoria:resume, /memoria:search, /memoria:review\\n${related_sessions:+\\nRelated sessions (same branch):\\n${related_sessions}}</memoria>"
+    "additionalContext": "${auto_save_escaped}\n\n${using_memoria_escaped}"
   }
 }
 EOF
