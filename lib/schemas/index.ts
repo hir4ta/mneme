@@ -55,6 +55,8 @@ export {
   ProposalSchema,
   type Session,
   SessionSchema,
+  type SessionStatus,
+  SessionStatusSchema,
   type SessionType,
   SessionTypeSchema,
 } from "./session.js";

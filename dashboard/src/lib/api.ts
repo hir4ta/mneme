@@ -81,6 +81,17 @@ export async function deleteSession(id: string): Promise<void> {
   if (!res.ok) throw new Error("Failed to delete session");
 }
 
+export interface SessionMarkdown {
+  exists: boolean;
+  content: string | null;
+}
+
+export async function getSessionMarkdown(id: string): Promise<SessionMarkdown> {
+  const res = await fetch(`${API_BASE}/sessions/${id}/markdown`);
+  if (!res.ok) throw new Error("Failed to fetch session markdown");
+  return res.json();
+}
+
 // Decisions
 export async function getDecisions(): Promise<Decision[]> {
   const res = await fetch(`${API_BASE}/decisions?paginate=false`);

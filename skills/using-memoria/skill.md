@@ -18,7 +18,7 @@ memoria is a long-term memory plugin for Claude Code.
 7. **Web dashboard**: Visual management of sessions and decisions
 8. **Brainstorming**: `/memoria:brainstorm` for design-first workflow
 9. **Planning**: `/memoria:plan` for detailed implementation plans
-10. **TDD**: `/memoria:tdd` for strict RED-GREEN-REFACTOR enforcement
+10. **TDD**: `/memoria:tdd` for RED-GREEN-REFACTOR workflow (recommended)
 11. **Debugging**: `/memoria:debug` for systematic root cause analysis
 
 ## Recommended Workflow
@@ -57,6 +57,7 @@ Use manual save to:
 
 ### What Gets Saved
 
+**Session JSON** (structured data for search/dashboard):
 | Field | Description |
 |-------|-------------|
 | summary | title, goal, outcome, description |
@@ -66,6 +67,16 @@ Use manual save to:
 | decisions | Technical decisions with reasoning |
 | errors | Errors encountered and solutions |
 | tags | Related keywords |
+
+**Session MD** (detailed context for AI resume):
+| Section | Description |
+|---------|-------------|
+| 計画・タスク | Goals, task list, remaining tasks |
+| 議論の経緯 | Decisions made, alternatives considered |
+| コード例 | Before/after code snippets |
+| 参照情報 | Documents, URLs referenced |
+| 次回への引き継ぎ | Why stopped, notes, next steps |
+| エラー・解決策 | Errors and solutions |
 
 ## Commands
 
@@ -89,12 +100,15 @@ npx @hir4ta/memoria --dashboard
 
 ## Data Location
 
-`.memoria/` directory stores JSON files:
+`.memoria/` directory stores session data:
 
 ```
 .memoria/
 ├── tags.json         # Tag master file
-├── sessions/         # Session history (auto-saved)
+├── sessions/         # Session history
+│   └── YYYY/MM/
+│       ├── {id}.json # Structured data (search/dashboard)
+│       └── {id}.md   # Detailed context (AI resume)
 ├── decisions/        # Technical decisions
 ├── rules/            # Dev rules / review guidelines
 ├── reviews/          # Review results

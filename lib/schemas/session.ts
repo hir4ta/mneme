@@ -59,6 +59,15 @@ export const CommentSchema = z.object({
 
 export type Comment = z.infer<typeof CommentSchema>;
 
+// Session status enum
+export const SessionStatusSchema = z.enum([
+  "in_progress",
+  "complete",
+  "abandoned",
+]);
+
+export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+
 // Session schema
 export const SessionSchema = z.object({
   id: z.string(),
@@ -69,6 +78,7 @@ export const SessionSchema = z.object({
   goal: z.string().optional(),
   tags: z.array(z.string()),
   sessionType: SessionTypeSchema.nullable().optional(),
+  status: SessionStatusSchema.nullable().optional(),
   relatedSessions: z.array(z.string()).optional(),
   interactions: z.array(InteractionSchema),
   comments: z.array(CommentSchema).optional(),

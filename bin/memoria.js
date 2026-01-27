@@ -48,8 +48,16 @@ function getPort() {
   return 7777;
 }
 
+function showSecurityWarning() {
+  console.log("\n⚠️  SECURITY WARNING:");
+  console.log("   The dashboard has NO authentication.");
+  console.log("   It is intended for LOCAL development use only.");
+  console.log("   Do NOT expose to the internet or untrusted networks.\n");
+}
+
 function startDashboard() {
   checkMemoriaDir();
+  showSecurityWarning();
 
   const port = getPort();
   const serverPath = path.join(packageDir, "dist", "server.js");

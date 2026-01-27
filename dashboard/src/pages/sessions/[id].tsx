@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
+import { SessionContextCard } from "@/components/session-context-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -581,7 +582,49 @@ export function SessionDetailPage() {
               <span className="text-muted-foreground">Interactions:</span>{" "}
               {interactionCount}
             </div>
+            {session.sessionType && (
+              <div>
+                <span className="text-muted-foreground">Type:</span>{" "}
+                <Badge variant="outline" className="text-xs">
+                  {session.sessionType}
+                </Badge>
+              </div>
+            )}
+            {session.status && (
+              <div>
+                <span className="text-muted-foreground">Status:</span>{" "}
+                <Badge
+                  variant={
+                    session.status === "complete" ? "default" : "secondary"
+                  }
+                  className="text-xs"
+                >
+                  {session.status}
+                </Badge>
+              </div>
+            )}
           </div>
+
+          {/* Related Sessions */}
+          {session.relatedSessions && session.relatedSessions.length > 0 && (
+            <div className="pt-2 border-t">
+              <span className="text-muted-foreground text-sm">
+                Related Sessions:
+              </span>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {session.relatedSessions.map((relatedId) => (
+                  <Link
+                    key={relatedId}
+                    to={`/sessions/${relatedId}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-muted hover:bg-muted/80 rounded text-xs font-mono transition-colors"
+                  >
+                    <span className="text-muted-foreground">🔗</span>
+                    {relatedId}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <span className="text-muted-foreground text-sm">Tags:</span>
@@ -698,6 +741,9 @@ export function SessionDetailPage() {
 
       {/* Context Restoration */}
       <ContextRestorationCard session={session} />
+
+      {/* Session Context (from MD file) */}
+      <SessionContextCard sessionId={session.id} />
 
       {interactionCount > 0 && (
         <Card>

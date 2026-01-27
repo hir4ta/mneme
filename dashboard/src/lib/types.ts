@@ -15,6 +15,7 @@ export type {
   RuleItem,
   Session,
   SessionContext,
+  SessionStatus,
   SessionType,
   Tag,
   TagsFile,

@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/memoria",
-  "version": "0.11.5",
+  "version": "0.12.0",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",
@@ -49,8 +49,10 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-force-graph-2d": "^1.29.0",
+    "react-markdown": "^10.1.0",
     "react-router": "^7.1.3",
     "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.6"
   },

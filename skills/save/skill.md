@@ -26,6 +26,7 @@ Sessions are auto-saved **only before Auto-Compact**. Use this command when you 
 | Target | Content |
 |--------|---------|
 | Session JSON | summary, metrics, files, decisions, errors, interactions, tags |
+| Session MD | Detailed context for AI (plans, discussions, code examples, handoff notes) |
 | dev-rules.json | Development rules mentioned in conversation |
 | review-guidelines.json | Review guidelines mentioned in conversation |
 
@@ -119,11 +120,106 @@ Categories for dev-rules: `code-style`, `architecture`, `error-handling`, `perfo
 
 Categories for review-guidelines: `must-check`, `warning`, `suggestion`, `other`
 
+### 3. Generate Session MD File
+
+Generate a markdown file alongside the JSON for detailed context preservation.
+
+**File path**: `.memoria/sessions/YYYY/MM/{id}.md`
+
+**Template**:
+
+```markdown
+# {title}
+
+**Session ID:** {id}
+**Date:** {createdAt}
+**Status:** {status}
+**Branch:** {branch}
+
+---
+
+## 計画・タスク
+
+### 目標
+{goal from conversation}
+
+### タスクリスト
+- [ ] Task 1
+- [x] Task 2 (completed)
+
+### 残タスク
+{incomplete tasks if any}
+
+---
+
+## 議論の経緯
+
+### 決定事項
+| 項目 | 決定 | 理由 |
+|------|------|------|
+{decisions made during session}
+
+### 検討した代替案
+{alternatives considered with reasons}
+
+---
+
+## コード例
+
+### 変更箇所
+**ファイル:** `path/to/file.ts`
+
+\`\`\`typescript
+// Before
+{original code}
+
+// After
+{modified code}
+\`\`\`
+
+---
+
+## 参照情報
+
+{documents, URLs, resources referenced}
+
+---
+
+## 次回への引き継ぎ
+
+### 中断理由
+{why session ended}
+
+### 再開時の注意点
+{things to be aware of when resuming}
+
+### 次にやること
+{next steps}
+
+---
+
+## エラー・解決策
+
+| エラー | 原因 | 解決策 |
+|--------|------|--------|
+{errors encountered and how they were resolved}
+```
+
+**Guidelines**:
+- Extract information from the conversation
+- Focus on what the next Claude session needs to know
+- Include specific code snippets when relevant
+- Document decisions and their reasoning
+- Be concise but comprehensive
+
 ### File Operations
 
 ```bash
-# Session
+# Session JSON
 Read + Edit: .memoria/sessions/YYYY/MM/{id}.json
+
+# Session MD (new)
+Write: .memoria/sessions/YYYY/MM/{id}.md
 
 # Rules (read for duplicate check, edit to append)
 Read + Edit: .memoria/rules/dev-rules.json
@@ -138,6 +234,10 @@ Session saved.
 Session ID: abc12345
 Title: JWT authentication implementation
 Outcome: success
+
+Files:
+  JSON: .memoria/sessions/2026/01/abc12345.json
+  MD:   .memoria/sessions/2026/01/abc12345.md
 
 Metrics:
   Files: +2 created, ~1 modified
@@ -161,3 +261,5 @@ Rules updated:
 - Use this command for manual saves and rule extraction
 - Rules are appended (not overwritten) - duplicates are skipped
 - Interactions are checked for duplicates before adding
+- **MD file is generated alongside JSON for detailed context**
+- MD file contains plans, discussions, code examples - everything needed to resume

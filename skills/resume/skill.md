@@ -66,6 +66,9 @@ Glob: .memoria/sessions/**/*.json
 # Read each session file
 Read: .memoria/sessions/{year}/{month}/{filename}.json
 
+# Read session MD file if exists (for detailed context)
+Read: .memoria/sessions/{year}/{month}/{filename}.md
+
 # Filter logic (pseudo-code)
 for each session:
   if --type specified and session.sessionType != type: skip
@@ -127,9 +130,20 @@ Ready to continue?
 
 When resuming, inject the following context:
 
+### From JSON file:
 1. **Purpose**: title, goal → understand session objective
 2. **Type**: sessionType → what kind of session this was
 3. **Progress**: interactions → what's been decided
 4. **Thinking**: interactions[].thinking → reasoning behind decisions
 5. **Problems solved**: interactions[].problem → errors encountered
 6. **Files changed**: interactions[].filesModified → what's been modified
+
+### From MD file (if exists):
+7. **Plans**: タスクリスト, 残タスク → what was planned and what's left
+8. **Discussions**: 議論の経緯 → decisions made and alternatives considered
+9. **Code examples**: コード例 → specific changes with before/after
+10. **References**: 参照情報 → documents and resources used
+11. **Handoff**: 次回への引き継ぎ → why stopped, notes for resuming, next steps
+12. **Errors**: エラー・解決策 → problems encountered and solutions
+
+**Important**: If an MD file exists alongside the JSON, READ IT. The MD file contains detailed context that the JSON doesn't capture - plans, discussions, code snippets, and handoff notes that are critical for resuming effectively.

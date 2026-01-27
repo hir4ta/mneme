@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { z } from "zod";
 import {
   getOrCreateDecisionIndex,
   getOrCreateSessionIndex,
@@ -12,6 +13,82 @@ import {
   readSessionIndex,
   rebuildAllIndexes,
 } from "../../lib/index/manager.js";
+
+// =============================================================================
+// Validation Schemas
+// =============================================================================
+
+const sessionUpdateSchema = z
+  .object({
+    id: z.string().optional(),
+    title: z.string().optional(),
+    goal: z.string().optional(),
+    outcome: z.string().nullable().optional(),
+    description: z.string().optional(),
+    sessionType: z.string().nullable().optional(),
+    tags: z.array(z.string()).optional(),
+    status: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+const commentSchema = z.object({
+  content: z.string().min(1, "Comment content is required"),
+  user: z.string().optional(),
+});
+
+const decisionCreateSchema = z
+  .object({
+    id: z.string().optional(),
+    title: z.string().min(1, "Decision title is required"),
+    decision: z.string().optional(),
+    rationale: z.string().optional(),
+    status: z.enum(["draft", "active", "superseded", "deprecated"]).optional(),
+    tags: z.array(z.string()).optional(),
+    createdAt: z.string().optional(),
+  })
+  .passthrough();
+
+const decisionUpdateSchema = z
+  .object({
+    title: z.string().optional(),
+    decision: z.string().optional(),
+    rationale: z.string().optional(),
+    status: z.enum(["draft", "active", "superseded", "deprecated"]).optional(),
+    tags: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Sanitize ID parameter to prevent path traversal
+ */
+function sanitizeId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+/**
+ * Safe JSON file parser with error logging
+ */
+function safeParseJsonFile<T>(filePath: string): T | null {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch (error) {
+    console.error(`Failed to parse JSON: ${filePath}`, error);
+    return null;
+  }
+}
+
+/**
+ * Safe atomic write using tmp file + rename
+ */
+function safeWriteJsonFile(filePath: string, data: unknown): void {
+  const tmpPath = `${filePath}.tmp`;
+  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
+  fs.renameSync(tmpPath, filePath);
+}
 
 const app = new Hono();
 
@@ -215,28 +292,55 @@ app.get("/api/sessions", async (c) => {
     }
 
     return c.json(paginateArray(filtered, params.page, params.limit));
-  } catch {
+  } catch (error) {
+    console.error("Failed to read sessions:", error);
     return c.json({ error: "Failed to read sessions" }, 500);
   }
 });
 
 app.get("/api/sessions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
-    const content = fs.readFileSync(filePath, "utf-8");
-    return c.json(JSON.parse(content));
-  } catch {
+    const session = safeParseJsonFile(filePath);
+    if (!session) {
+      return c.json({ error: "Failed to parse session" }, 500);
+    }
+    return c.json(session);
+  } catch (error) {
+    console.error("Failed to read session:", error);
     return c.json({ error: "Failed to read session" }, 500);
   }
 });
 
+// Get session markdown file (detailed context)
+app.get("/api/sessions/:id/markdown", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  try {
+    const jsonPath = findJsonFileById(sessionsDir, id);
+    if (!jsonPath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    // MD file is in the same directory as JSON
+    const mdPath = jsonPath.replace(/\.json$/, ".md");
+    if (!fs.existsSync(mdPath)) {
+      return c.json({ exists: false, content: null });
+    }
+    const content = fs.readFileSync(mdPath, "utf-8");
+    return c.json({ exists: true, content });
+  } catch (error) {
+    console.error("Failed to read session markdown:", error);
+    return c.json({ error: "Failed to read session markdown" }, 500);
+  }
+});
+
 app.put("/api/sessions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
@@ -244,15 +348,23 @@ app.put("/api/sessions/:id", async (c) => {
       return c.json({ error: "Session not found" }, 404);
     }
     const body = await c.req.json();
-    fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
-    return c.json(body);
-  } catch {
+    const parsed = sessionUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid session data", details: parsed.error.issues },
+        400,
+      );
+    }
+    safeWriteJsonFile(filePath, parsed.data);
+    return c.json(parsed.data);
+  } catch (error) {
+    console.error("Failed to update session:", error);
     return c.json({ error: "Failed to update session" }, 500);
   }
 });
 
 app.delete("/api/sessions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
@@ -261,32 +373,44 @@ app.delete("/api/sessions/:id", async (c) => {
     }
     fs.unlinkSync(filePath);
     return c.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("Failed to delete session:", error);
     return c.json({ error: "Failed to delete session" }, 500);
   }
 });
 
 app.post("/api/sessions/:id/comments", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
-    const session = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const body = await c.req.json();
+    const parsed = commentSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid comment data", details: parsed.error.issues },
+        400,
+      );
+    }
+    const session = safeParseJsonFile<Record<string, unknown>>(filePath);
+    if (!session) {
+      return c.json({ error: "Failed to parse session" }, 500);
+    }
     const comment = {
       id: `comment-${Date.now()}`,
-      content: body.content,
-      user: body.user,
+      content: parsed.data.content,
+      user: parsed.data.user,
       createdAt: new Date().toISOString(),
     };
-    session.comments = session.comments || [];
-    session.comments.push(comment);
-    fs.writeFileSync(filePath, JSON.stringify(session, null, 2));
+    session.comments = (session.comments as unknown[]) || [];
+    (session.comments as unknown[]).push(comment);
+    safeWriteJsonFile(filePath, session);
     return c.json(comment, 201);
-  } catch {
+  } catch (error) {
+    console.error("Failed to add comment:", error);
     return c.json({ error: "Failed to add comment" }, 500);
   }
 });
@@ -357,22 +481,27 @@ app.get("/api/decisions", async (c) => {
     }
 
     return c.json(paginateArray(filtered, params.page, params.limit));
-  } catch {
+  } catch (error) {
+    console.error("Failed to read decisions:", error);
     return c.json({ error: "Failed to read decisions" }, 500);
   }
 });
 
 app.get("/api/decisions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
-    const content = fs.readFileSync(filePath, "utf-8");
-    return c.json(JSON.parse(content));
-  } catch {
+    const decision = safeParseJsonFile(filePath);
+    if (!decision) {
+      return c.json({ error: "Failed to parse decision" }, 500);
+    }
+    return c.json(decision);
+  } catch (error) {
+    console.error("Failed to read decision:", error);
     return c.json({ error: "Failed to read decision" }, 500);
   }
 });
@@ -381,21 +510,30 @@ app.post("/api/decisions", async (c) => {
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
     const body = await c.req.json();
-    const id = body.id || `decision-${Date.now()}`;
-    body.id = id;
-    body.createdAt = body.createdAt || new Date().toISOString();
-    const targetDir = getYearMonthDir(decisionsDir, body.createdAt);
+    const parsed = decisionCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid decision data", details: parsed.error.issues },
+        400,
+      );
+    }
+    const data = parsed.data;
+    const id = sanitizeId(data.id || `decision-${Date.now()}`);
+    data.id = id;
+    data.createdAt = data.createdAt || new Date().toISOString();
+    const targetDir = getYearMonthDir(decisionsDir, data.createdAt);
     fs.mkdirSync(targetDir, { recursive: true });
     const filePath = path.join(targetDir, `${id}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
-    return c.json(body, 201);
-  } catch {
+    safeWriteJsonFile(filePath, data);
+    return c.json(data, 201);
+  } catch (error) {
+    console.error("Failed to create decision:", error);
     return c.json({ error: "Failed to create decision" }, 500);
   }
 });
 
 app.put("/api/decisions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
@@ -403,16 +541,24 @@ app.put("/api/decisions/:id", async (c) => {
       return c.json({ error: "Decision not found" }, 404);
     }
     const body = await c.req.json();
-    body.updatedAt = new Date().toISOString();
-    fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
-    return c.json(body);
-  } catch {
+    const parsed = decisionUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json(
+        { error: "Invalid decision data", details: parsed.error.issues },
+        400,
+      );
+    }
+    const data = { ...parsed.data, updatedAt: new Date().toISOString() };
+    safeWriteJsonFile(filePath, data);
+    return c.json(data);
+  } catch (error) {
+    console.error("Failed to update decision:", error);
     return c.json({ error: "Failed to update decision" }, 500);
   }
 });
 
 app.delete("/api/decisions/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
@@ -421,7 +567,8 @@ app.delete("/api/decisions/:id", async (c) => {
     }
     fs.unlinkSync(filePath);
     return c.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("Failed to delete decision:", error);
     return c.json({ error: "Failed to delete decision" }, 500);
   }
 });
@@ -446,15 +593,19 @@ app.get("/api/rules/:id", async (c) => {
     if (!fs.existsSync(filePath)) {
       return c.json({ error: "Rules not found" }, 404);
     }
-    const content = fs.readFileSync(filePath, "utf-8");
-    return c.json(JSON.parse(content));
-  } catch {
+    const rules = safeParseJsonFile(filePath);
+    if (!rules) {
+      return c.json({ error: "Failed to parse rules" }, 500);
+    }
+    return c.json(rules);
+  } catch (error) {
+    console.error("Failed to read rules:", error);
     return c.json({ error: "Failed to read rules" }, 500);
   }
 });
 
 app.put("/api/rules/:id", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const dir = rulesDir();
   try {
     if (!fs.existsSync(dir)) {
@@ -463,9 +614,10 @@ app.put("/api/rules/:id", async (c) => {
     const filePath = path.join(dir, `${id}.json`);
     const body = await c.req.json();
     body.updatedAt = new Date().toISOString();
-    fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    safeWriteJsonFile(filePath, body);
     return c.json(body);
-  } catch {
+  } catch (error) {
+    console.error("Failed to update rules:", error);
     return c.json({ error: "Failed to update rules" }, 500);
   }
 });
@@ -508,7 +660,8 @@ app.get("/api/timeline", async (c) => {
     }
 
     return c.json({ timeline: sortedTimeline });
-  } catch {
+  } catch (error) {
+    console.error("Failed to build timeline:", error);
     return c.json({ error: "Failed to build timeline" }, 500);
   }
 });
@@ -551,14 +704,15 @@ app.get("/api/tag-network", async (c) => {
     });
 
     return c.json({ nodes, edges });
-  } catch {
+  } catch (error) {
+    console.error("Failed to build tag network:", error);
     return c.json({ error: "Failed to build tag network" }, 500);
   }
 });
 
 // Decision Impact API - 決定の影響範囲
 app.get("/api/decisions/:id/impact", async (c) => {
-  const decisionId = c.req.param("id");
+  const decisionId = sanitizeId(c.req.param("id"));
   const sessionsDir = path.join(getMemoriaDir(), "sessions");
   const patternsDir = path.join(getMemoriaDir(), "patterns");
 
@@ -614,7 +768,8 @@ app.get("/api/decisions/:id/impact", async (c) => {
       impactedSessions,
       impactedPatterns,
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to analyze decision impact:", error);
     return c.json({ error: "Failed to analyze decision impact" }, 500);
   }
 });
@@ -658,7 +813,8 @@ app.get("/api/sessions/graph", async (c) => {
     }
 
     return c.json({ nodes, edges });
-  } catch {
+  } catch (error) {
+    console.error("Failed to build session graph:", error);
     return c.json({ error: "Failed to build session graph" }, 500);
   }
 });
@@ -709,13 +865,15 @@ app.get("/api/summary/weekly", async (c) => {
       try {
         const prompt = buildSummaryPrompt(recentSessions, recentDecisions);
         summary.aiSummary = await generateAISummary(apiKey, prompt);
-      } catch {
+      } catch (aiError) {
+        console.error("AI summary generation failed:", aiError);
         // AI summary failed, continue without it
       }
     }
 
     return c.json(summary);
-  } catch {
+  } catch (error) {
+    console.error("Failed to generate weekly summary:", error);
     return c.json({ error: "Failed to generate weekly summary" }, 500);
   }
 });
@@ -724,7 +882,10 @@ app.post("/api/summary/generate", async (c) => {
   const apiKey = getOpenAIKey();
   if (!apiKey) {
     return c.json(
-      { error: "AI summary requires OPENAI_API_KEY environment variable (optional feature)" },
+      {
+        error:
+          "AI summary requires OPENAI_API_KEY environment variable (optional feature)",
+      },
       400,
     );
   }
@@ -758,7 +919,8 @@ app.post("/api/summary/generate", async (c) => {
 
     const summary = await generateAISummary(apiKey, prompt);
     return c.json({ summary });
-  } catch {
+  } catch (error) {
+    console.error("Failed to generate summary:", error);
     return c.json({ error: "Failed to generate summary" }, 500);
   }
 });
@@ -878,14 +1040,19 @@ app.get("/api/stats/overview", async (c) => {
         total: totalInteractions,
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to get stats overview:", error);
     return c.json({ error: "Failed to get stats overview" }, 500);
   }
 });
 
 app.get("/api/stats/activity", async (c) => {
   const memoriaDir = getMemoriaDir();
-  const days = Number.parseInt(c.req.query("days") || "30", 10);
+  const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
+
+  // Prevent infinite loop with bounds checking
+  const MAX_DAYS = 365;
+  const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
 
   try {
     const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
@@ -893,7 +1060,7 @@ app.get("/api/stats/activity", async (c) => {
 
     // Calculate date range
     const now = new Date();
-    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const startDate = new Date(now.getTime() - safeDays * 24 * 60 * 60 * 1000);
 
     // Group sessions by date
     const activityByDate: Record<
@@ -901,8 +1068,9 @@ app.get("/api/stats/activity", async (c) => {
       { sessions: number; decisions: number }
     > = {};
 
-    // Initialize all dates
-    for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+    // Initialize all dates (safe iteration with counter)
+    for (let i = 0; i < safeDays; i++) {
+      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       const dateKey = d.toISOString().split("T")[0];
       activityByDate[dateKey] = { sessions: 0, decisions: 0 };
     }
@@ -928,8 +1096,9 @@ app.get("/api/stats/activity", async (c) => {
       .map(([date, counts]) => ({ date, ...counts }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    return c.json({ activity, days });
-  } catch {
+    return c.json({ activity, days: safeDays });
+  } catch (error) {
+    console.error("Failed to get activity stats:", error);
     return c.json({ error: "Failed to get activity stats" }, 500);
   }
 });
@@ -954,7 +1123,8 @@ app.get("/api/stats/tags", async (c) => {
       .slice(0, 20);
 
     return c.json({ tags });
-  } catch {
+  } catch (error) {
+    console.error("Failed to get tag stats:", error);
     return c.json({ error: "Failed to get tag stats" }, 500);
   }
 });
@@ -996,7 +1166,8 @@ app.get("/api/patterns", async (c) => {
     );
 
     return c.json({ patterns: allPatterns });
-  } catch {
+  } catch (error) {
+    console.error("Failed to read patterns:", error);
     return c.json({ error: "Failed to read patterns" }, 500);
   }
 });
@@ -1032,7 +1203,8 @@ app.get("/api/patterns/stats", async (c) => {
     }
 
     return c.json({ total, byType, bySource });
-  } catch {
+  } catch (error) {
+    console.error("Failed to get pattern stats:", error);
     return c.json({ error: "Failed to get pattern stats" }, 500);
   }
 });
@@ -1070,7 +1242,8 @@ app.delete("/api/patterns/:id", async (c) => {
     }
 
     return c.json({ error: "Pattern not found" }, 404);
-  } catch {
+  } catch (error) {
+    console.error("Failed to delete pattern:", error);
     return c.json({ error: "Failed to delete pattern" }, 500);
   }
 });
@@ -1253,13 +1426,14 @@ app.get("/api/export/sessions/:id/markdown", async (c) => {
     c.header("Content-Type", "text/markdown; charset=utf-8");
     c.header("Content-Disposition", `attachment; filename="${filename}"`);
     return c.text(markdown);
-  } catch {
+  } catch (error) {
+    console.error("Failed to export session:", error);
     return c.json({ error: "Failed to export session" }, 500);
   }
 });
 
 app.get("/api/export/decisions/:id/markdown", async (c) => {
-  const id = c.req.param("id");
+  const id = sanitizeId(c.req.param("id"));
   const decisionsDir = path.join(getMemoriaDir(), "decisions");
 
   try {
@@ -1277,7 +1451,8 @@ app.get("/api/export/decisions/:id/markdown", async (c) => {
     c.header("Content-Type", "text/markdown; charset=utf-8");
     c.header("Content-Disposition", `attachment; filename="${filename}"`);
     return c.text(markdown);
-  } catch {
+  } catch (error) {
+    console.error("Failed to export decision:", error);
     return c.json({ error: "Failed to export decision" }, 500);
   }
 });
@@ -1312,7 +1487,8 @@ app.post("/api/export/sessions/bulk", async (c) => {
     c.header("Content-Type", "text/markdown; charset=utf-8");
     c.header("Content-Disposition", `attachment; filename="${filename}"`);
     return c.text(combined);
-  } catch {
+  } catch (error) {
+    console.error("Failed to export sessions:", error);
     return c.json({ error: "Failed to export sessions" }, 500);
   }
 });
@@ -1324,9 +1500,13 @@ app.get("/api/tags", async (c) => {
     if (!fs.existsSync(tagsPath)) {
       return c.json({ version: 1, tags: [] });
     }
-    const content = fs.readFileSync(tagsPath, "utf-8");
-    return c.json(JSON.parse(content));
-  } catch {
+    const tags = safeParseJsonFile(tagsPath);
+    if (!tags) {
+      return c.json({ error: "Failed to parse tags" }, 500);
+    }
+    return c.json(tags);
+  } catch (error) {
+    console.error("Failed to read tags:", error);
     return c.json({ error: "Failed to read tags" }, 500);
   }
 });
@@ -1352,7 +1532,8 @@ app.get("/api/indexes/status", async (c) => {
         isStale: isIndexStale(decisionsIndex),
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to get index status:", error);
     return c.json({ error: "Failed to get index status" }, 500);
   }
 });

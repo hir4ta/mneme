@@ -17,9 +17,9 @@ input_json=$(cat)
 tool_name=$(echo "$input_json" | jq -r '.tool_name // ""')
 file_path=$(echo "$input_json" | jq -r '.tool_input.file_path // .tool_input.path // ""')
 
-# TDD mode check (future enhancement)
-# Check if editing implementation file without corresponding test
-# For now, this is a placeholder for future TDD enforcement
+# TDD mode recommendation (optional)
+# This hook does not enforce TDD - use /memoria:tdd skill for TDD workflow
+# The skill provides guidance but does not block non-TDD edits
 
 # Example TDD check (commented out for now):
 # if [[ -n "$file_path" && "$file_path" =~ ^src/ && ! "$file_path" =~ \.(test|spec)\.(ts|js|tsx|jsx)$ ]]; then

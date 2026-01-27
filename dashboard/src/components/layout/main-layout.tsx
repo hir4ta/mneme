@@ -9,7 +9,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <div className="flex h-screen pt-[80px] px-4 pb-4 gap-4 overflow-hidden">
+      <div className="flex h-screen pt-[100px] px-4 pb-4 gap-4 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto rounded-xl border border-border/70 bg-white/60 backdrop-blur-md">

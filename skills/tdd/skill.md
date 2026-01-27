@@ -2,8 +2,8 @@
 name: tdd
 description: |
   Test-driven development with strict RED-GREEN-REFACTOR enforcement.
-  NO EXCEPTIONS. Tests must fail before implementation.
-  Use when implementing any feature or bugfix.
+  Recommended for implementing features and bugfixes.
+  Use when you want disciplined test-first development.
 ---
 
 # /memoria:tdd

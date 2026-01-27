@@ -93,10 +93,26 @@ fi
 related_session_ids="[]"
 if [ -d "$sessions_dir" ] && [ -n "$current_branch" ]; then
     # Find sessions on same branch (last 3, excluding current)
-    related_session_ids=$(find "$sessions_dir" -name "*.json" -type f 2>/dev/null | \
-        xargs -I {} jq -r --arg branch "$current_branch" --arg current "$file_id" \
-        'select(.context.branch == $branch and .id != $current) | .id' {} 2>/dev/null | \
-        head -3 | jq -R -s -c 'split("\n") | map(select(length > 0))')
+    # Use a safer approach with error handling
+    related_ids=""
+    while IFS= read -r session_file; do
+        if [ -f "$session_file" ]; then
+            session_branch=$(jq -r '.context.branch // ""' "$session_file" 2>/dev/null || echo "")
+            session_id_val=$(jq -r '.id // ""' "$session_file" 2>/dev/null || echo "")
+            if [ "$session_branch" = "$current_branch" ] && [ -n "$session_id_val" ] && [ "$session_id_val" != "$file_id" ]; then
+                if [ -n "$related_ids" ]; then
+                    related_ids="${related_ids}\n${session_id_val}"
+                else
+                    related_ids="$session_id_val"
+                fi
+            fi
+        fi
+    done < <(find "$sessions_dir" -name "*.json" -type f 2>/dev/null | head -20)
+
+    # Convert to JSON array (last 3)
+    if [ -n "$related_ids" ]; then
+        related_session_ids=$(echo -e "$related_ids" | head -3 | jq -R -s -c 'split("\n") | map(select(length > 0))' 2>/dev/null || echo "[]")
+    fi
 
     # Fallback if jq pipeline fails
     if [ -z "$related_session_ids" ] || [ "$related_session_ids" = "null" ]; then
