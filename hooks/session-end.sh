@@ -102,8 +102,8 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             files: $files,
             metrics: {
                 userMessages: ($user_messages | length),
-                assistantResponses: ($assistant_responses | length),
-                thinkingBlocks: ([$assistant_responses[].thinking | select(. != "")] | length)
+                assistantResponses: ($all_assistant | length),
+                thinkingBlocks: ([$all_assistant[].thinking | select(. != "")] | length)
             }
         }
     ' 2>/dev/null || echo '{"interactions":[],"toolUsage":[],"files":[],"metrics":{}}')
