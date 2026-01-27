@@ -70,38 +70,44 @@ if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
 fi
 
 # ============================================
-# Initialize session JSON
+# Initialize session JSON (only if not exists)
 # ============================================
 session_path="${session_year_month_dir}/${file_id}.json"
 
-session_json=$(jq -n \
-    --arg id "$file_id" \
-    --arg sessionId "${session_id:-$session_short_id}" \
-    --arg createdAt "$now" \
-    --arg branch "$current_branch" \
-    --arg projectDir "$cwd" \
-    --arg userName "$git_user_name" \
-    --arg userEmail "$git_user_email" \
-    '{
-        id: $id,
-        sessionId: $sessionId,
-        createdAt: $createdAt,
-        context: {
-            branch: (if $branch == "" then null else $branch end),
-            projectDir: $projectDir,
-            user: {
-                name: $userName,
-                email: (if $userEmail == "" then null else $userEmail end)
-            } | with_entries(select(.value != null))
-        } | with_entries(select(.value != null)),
-        title: "",
-        goal: "",
-        tags: [],
-        interactions: []
-    }')
+if [ -f "$session_path" ]; then
+    # Existing session found - preserve it (resume/compact/clear case)
+    echo "[memoria] Session resumed: ${session_path}" >&2
+else
+    # New session - initialize
+    session_json=$(jq -n \
+        --arg id "$file_id" \
+        --arg sessionId "${session_id:-$session_short_id}" \
+        --arg createdAt "$now" \
+        --arg branch "$current_branch" \
+        --arg projectDir "$cwd" \
+        --arg userName "$git_user_name" \
+        --arg userEmail "$git_user_email" \
+        '{
+            id: $id,
+            sessionId: $sessionId,
+            createdAt: $createdAt,
+            context: {
+                branch: (if $branch == "" then null else $branch end),
+                projectDir: $projectDir,
+                user: {
+                    name: $userName,
+                    email: (if $userEmail == "" then null else $userEmail end)
+                } | with_entries(select(.value != null))
+            } | with_entries(select(.value != null)),
+            title: "",
+            goal: "",
+            tags: [],
+            interactions: []
+        }')
 
-echo "$session_json" > "$session_path"
-echo "[memoria] Session initialized: ${session_path}" >&2
+    echo "$session_json" > "$session_path"
+    echo "[memoria] Session initialized: ${session_path}" >&2
+fi
 
 # Session path for additionalContext
 current_session_relative_path=".memoria/sessions/${year_part}/${month_part}/${file_id}.json"
