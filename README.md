@@ -2,13 +2,12 @@
 
 Long-term memory plugin for Claude Code
 
-Provides explicit session saving with API fallback, technical decision recording, and web dashboard management.
+Provides automatic session saving, technical decision recording, and web dashboard management.
 
 ## Features
 
 ### Core Features
-- **Explicit Session Saving**: Save with `/memoria:save` or "save session" request
-- **API Fallback**: Auto-save via OpenAI API before Auto-Compact and at session end
+- **Auto-save**: Sessions saved automatically on every Claude response (no configuration needed)
 - **Session Resume**: Resume past sessions with `/memoria:resume`
 - **Technical Decision Recording**: Record decisions with `/memoria:decision`
 - **Rule-based Review**: Code review based on `dev-rules.json` / `review-guidelines.json`
@@ -96,45 +95,23 @@ Restart Claude Code.
 
 This will auto-update on Claude Code startup.
 
-## Configuration (Optional)
-
-To enable API fallback for automatic session saving, run `/memoria:init` or manually create `~/.claude/memoria.json`:
-
-```json
-{
-  "openai_api_key": "sk-..."
-}
-```
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `openai_api_key` | No | Enables auto-save at PreCompact/SessionEnd |
-
-**Without `openai_api_key`**: Sessions are only saved when you explicitly use `/memoria:save`.
-
-**With `openai_api_key`**: Auto-save is enabled. Sessions are automatically saved:
-- Before Auto-Compact (status: `draft`)
-- At session end (status: `complete`)
-
 ## Usage
 
-### Session Saving
+### Session Auto-Save
 
-| Method | When | Status |
-|--------|------|--------|
-| **Explicit** | `/memoria:save` or "save session" | `complete` |
-| **PreCompact** | Before Auto-Compact (API) | `draft` |
-| **SessionEnd** | Session end (API) | `complete` |
+Sessions are saved **automatically on every Claude response**. No configuration needed.
 
-**Note**: PreCompact/SessionEnd API fallback requires `~/.claude/memoria.json` configuration.
+On each response, Claude updates:
+- `interactions`: Chat-style conversation log
+- `summary`: Title, goal, outcome, description
+- `metrics`: File counts, decision counts, error counts
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `/memoria:init` | Initialize config file (`~/.claude/memoria.json`) |
 | `/memoria:resume [id]` | Resume session (show list if ID omitted) |
-| `/memoria:save` | Save session + extract rules from conversation |
+| `/memoria:save` | Extract rules from conversation + manual update |
 | `/memoria:decision "title"` | Record a technical decision |
 | `/memoria:search "query"` | Search sessions and decisions |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review (--full for two-stage) |
@@ -181,46 +158,47 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 ```mermaid
 flowchart TB
-    subgraph realtime [Real-time Updates]
-        A[Meaningful Change] --> B[Update Session JSON]
-        B --> C[interactions array]
+    subgraph autosave [Auto-Save]
+        A[Claude Response] --> B[Stop Hook]
+        B --> C[Update Session JSON]
+        C --> D[interactions + summary + metrics]
     end
 
     subgraph manual [Manual Actions]
-        D["memoria:save"] --> E[Force flush session]
-        F["memoria:decision"] --> G[Record decision explicitly]
+        E["memoria:save"] --> F[Extract rules + force update]
+        G["memoria:decision"] --> H[Record decision explicitly]
     end
 
     subgraph resume [Session Resume]
-        H["memoria:resume"] --> I[Select from list]
-        I --> J[Restore past context]
+        I["memoria:resume"] --> J[Select from list]
+        J --> K[Restore past context]
     end
 
     subgraph search [Search]
-        K["memoria:search"] --> L[Search sessions and decisions]
+        L["memoria:search"] --> M[Search sessions and decisions]
     end
 
     subgraph review [Review]
-        P["memoria:review"] --> Q[Rule-based findings]
-        Q --> R[Save review results]
+        N["memoria:review"] --> O[Rule-based findings]
+        O --> P[Save review results]
     end
 
     subgraph report [Weekly Report]
-        S["memoria:report"] --> T[Review summary report]
+        Q["memoria:report"] --> R[Review summary report]
     end
 
     subgraph dashboard [Dashboard]
-        M["npx @hir4ta/memoria -d"] --> N[Open in browser]
-        N --> O[View, edit, delete]
+        S["npx @hir4ta/memoria -d"] --> T[Open in browser]
+        T --> U[View, edit, delete]
     end
 
-    B --> H
-    E --> H
-    G --> K
-    B --> R
-    R --> T
-    B --> M
-    G --> M
+    D --> I
+    F --> I
+    H --> L
+    D --> P
+    P --> R
+    D --> S
+    H --> S
 ```
 
 ## Data Storage
@@ -241,8 +219,6 @@ Git-manageable. Add to `.gitignore` based on your project needs.
 
 ### Session JSON Schema
 
-Sessions use an **analysis-friendly** schema. Quantitative data (metrics) and qualitative data (summary) are separated, with files/decisions/errors as independent arrays for easy aggregation.
-
 ```json
 {
   "id": "abc12345",
@@ -260,8 +236,15 @@ Sessions use an **analysis-friendly** schema. Quantitative data (metrics) and qu
     "outcome": "success",
     "description": "Implemented JWT auth with RS256 signing"
   },
+  "interactions": [
+    {
+      "timestamp": "2026-01-27T10:15:00Z",
+      "user": "Implement authentication",
+      "assistant": "Implemented JWT auth with RS256 signing",
+      "toolsUsed": ["Read", "Edit", "Write"]
+    }
+  ],
   "metrics": {
-    "durationMinutes": 120,
     "filesCreated": 2,
     "filesModified": 1,
     "decisionsCount": 2,
@@ -296,19 +279,6 @@ Sessions use an **analysis-friendly** schema. Quantitative data (metrics) and qu
   "status": "complete"
 }
 ```
-
-### Update Triggers
-
-Claude Code updates session JSON when meaningful changes occur:
-
-| Trigger | Update |
-|---------|--------|
-| Session purpose becomes clear | `summary.title`, `summary.goal`, `sessionType` |
-| File modified | Add to `files`, update `metrics` |
-| Technical decision made | Add to `decisions` |
-| Error encountered/resolved | Add to `errors` |
-| URL referenced | `webLinks` |
-| New keyword appears | `tags` (reference tags.json) |
 
 ### Session Types
 

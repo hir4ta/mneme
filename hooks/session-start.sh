@@ -153,6 +153,8 @@ else
             files: [],
             decisions: [],
             errors: [],
+            interactions: [],
+            preCompactBackups: [],
             webLinks: [],
             tags: [],
             sessionType: null,
@@ -231,7 +233,7 @@ cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "<memoria>\\n**Session:** ${file_id}\\n**Path:** ${session_relative_path}${resume_note}\\n\\nUse /memoria:save to save this session explicitly.\\nAuto-save runs at session end (requires ~/.claude/memoria.json with openai_api_key).\\n\\n**Commands:** /memoria:resume, /memoria:save, /memoria:search, /memoria:review\\n${related_sessions:+\\nRelated sessions (same branch):\\n${related_sessions}}</memoria>"
+    "additionalContext": "<memoria>\\n**Session:** ${file_id}\\n**Path:** ${session_relative_path}${resume_note}\\n\\n**Auto-save:** Enabled (updates on every response)\\n\\n**Commands:** /memoria:resume, /memoria:search, /memoria:review\\n${related_sessions:+\\nRelated sessions (same branch):\\n${related_sessions}}</memoria>"
   }
 }
 EOF

@@ -663,22 +663,10 @@ app.get("/api/sessions/graph", async (c) => {
   }
 });
 
-// Summary API
+// Summary API (Optional AI feature - requires OPENAI_API_KEY env var)
 const getOpenAIKey = (): string | null => {
-  const configPath = path.join(
-    process.env.HOME || "",
-    ".claude",
-    "memoria.json",
-  );
-  try {
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      return config.openai_api_key || null;
-    }
-  } catch {
-    // Ignore errors
-  }
-  return null;
+  // Get API key from environment variable only
+  return process.env.OPENAI_API_KEY || null;
 };
 
 app.get("/api/summary/weekly", async (c) => {
@@ -736,7 +724,7 @@ app.post("/api/summary/generate", async (c) => {
   const apiKey = getOpenAIKey();
   if (!apiKey) {
     return c.json(
-      { error: "OpenAI API key not configured in ~/.claude/memoria.json" },
+      { error: "AI summary requires OPENAI_API_KEY environment variable (optional feature)" },
       400,
     );
   }

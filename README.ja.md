@@ -2,13 +2,12 @@
 
 Claude Codeの長期記憶を実現するプラグイン
 
-セッションのリアルタイム保存、技術的な判断の記録、Webダッシュボードでの管理を提供します。
+セッションの自動保存、技術的な判断の記録、Webダッシュボードでの管理を提供します。
 
 ## 機能
 
 ### コア機能
-- **明示的セッション保存**: `/memoria:save` または「セッション保存して」で保存
-- **APIフォールバック**: Auto-Compact前とセッション終了時にOpenAI APIで自動保存
+- **自動保存**: Claudeの返信ごとにセッションを自動保存（設定不要）
 - **セッション再開**: `/memoria:resume` で過去のセッションを再開
 - **技術的な判断の記録**: `/memoria:decision` で判断を記録
 - **ルールベースレビュー**: `dev-rules.json` / `review-guidelines.json` に基づくレビュー
@@ -96,45 +95,23 @@ Claude Codeを再起動
 
 これによりClaude Code起動時に自動でアップデートされます
 
-## 設定（オプション）
-
-APIフォールバックによる自動セッション保存を有効にするには、`/memoria:init` を実行するか、手動で `~/.claude/memoria.json` を作成してください：
-
-```json
-{
-  "openai_api_key": "sk-..."
-}
-```
-
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| `openai_api_key` | いいえ | 設定すると自動保存が有効になる |
-
-**`openai_api_key` なし**: `/memoria:save` での手動保存のみ。
-
-**`openai_api_key` あり**: 自動保存が有効になり、以下のタイミングで保存：
-- Auto-Compact前（status: `draft`）
-- セッション終了時（status: `complete`）
-
 ## 使い方
 
-### セッション保存
+### セッション自動保存
 
-| 方法 | タイミング | ステータス |
-|------|----------|-----------|
-| **明示的保存** | `/memoria:save` または「セッション保存して」 | `complete` |
-| **PreCompact** | Auto-Compact前（API） | `draft` |
-| **SessionEnd** | セッション終了時（API） | `complete` |
+セッションは**Claudeの返信ごとに自動保存**されます。設定不要。
 
-**注意**: PreCompact/SessionEnd のAPIフォールバックには `~/.claude/memoria.json` の設定が必要です。
+各返信時に以下が更新されます：
+- `interactions`: チャット形式の会話ログ
+- `summary`: タイトル、目的、結果、説明
+- `metrics`: ファイル数、決定数、エラー数
 
 ### コマンド
 
 | コマンド | 説明 |
 | --------- | ------ |
-| `/memoria:init` | 設定ファイルを初期化（`~/.claude/memoria.json`） |
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
-| `/memoria:save` | セッション保存 + 会話からルール抽出 |
+| `/memoria:save` | ルール抽出 + 手動更新 |
 | `/memoria:decision "タイトル"` | 技術的な判断を記録 |
 | `/memoria:search "クエリ"` | セッション・判断記録を検索 |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | ルールに基づくレビュー（--fullで二段階） |
@@ -181,46 +158,47 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 ```mermaid
 flowchart TB
-    subgraph realtime [リアルタイム更新]
-        A[意味のある変化] --> B[セッションJSONを更新]
-        B --> C[interactions配列]
+    subgraph autosave [自動保存]
+        A[Claudeの返信] --> B[Stopフック]
+        B --> C[セッションJSON更新]
+        C --> D[interactions + summary + metrics]
     end
 
     subgraph manual [手動操作]
-        D["memoria:save"] --> E[セッションを強制保存]
-        F["memoria:decision"] --> G[判断を明示的に記録]
+        E["memoria:save"] --> F[ルール抽出 + 強制更新]
+        G["memoria:decision"] --> H[判断を明示的に記録]
     end
 
     subgraph resume [セッション再開]
-        H["memoria:resume"] --> I[一覧から選択]
-        I --> J[過去の文脈を復元]
+        I["memoria:resume"] --> J[一覧から選択]
+        J --> K[過去の文脈を復元]
     end
 
     subgraph search [検索]
-        K["memoria:search"] --> L[セッションと判断を検索]
+        L["memoria:search"] --> M[セッションと判断を検索]
     end
 
     subgraph review [レビュー]
-        P["memoria:review"] --> Q[ルールに基づく指摘]
-        Q --> R[レビュー結果を保存]
+        N["memoria:review"] --> O[ルールに基づく指摘]
+        O --> P[レビュー結果を保存]
     end
 
     subgraph report [週次レポート]
-        S["memoria:report"] --> T[レビュー集計レポート]
+        Q["memoria:report"] --> R[レビュー集計レポート]
     end
 
     subgraph dashboard [ダッシュボード]
-        M["npx @hir4ta/memoria -d"] --> N[ブラウザで表示]
-        N --> O[閲覧・編集・削除]
+        S["npx @hir4ta/memoria -d"] --> T[ブラウザで表示]
+        T --> U[閲覧・編集・削除]
     end
 
-    B --> H
-    E --> H
-    G --> K
-    B --> R
-    R --> T
-    B --> M
-    G --> M
+    D --> I
+    F --> I
+    H --> L
+    D --> P
+    P --> R
+    D --> S
+    H --> S
 ```
 
 ## データ保存
@@ -241,8 +219,6 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
 
 ### セッションJSONスキーマ
 
-セッションは **分析向け** のスキーマを使用します。定量データ（metrics）と定性データ（summary）を分離し、files/decisions/errorsを独立配列として集計可能にしています。
-
 ```json
 {
   "id": "abc12345",
@@ -260,8 +236,15 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
     "outcome": "success",
     "description": "RS256署名でJWT認証を実装"
   },
+  "interactions": [
+    {
+      "timestamp": "2026-01-27T10:15:00Z",
+      "user": "認証機能を実装して",
+      "assistant": "RS256署名でJWT認証を実装しました",
+      "toolsUsed": ["Read", "Edit", "Write"]
+    }
+  ],
   "metrics": {
-    "durationMinutes": 120,
     "filesCreated": 2,
     "filesModified": 1,
     "decisionsCount": 2,
@@ -296,21 +279,6 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
   "status": "complete"
 }
 ```
-
-### 更新トリガー
-
-Claude Code は意味のある変化があった時にセッションJSONを更新します：
-
-| トリガー | 更新内容 |
-|---------|---------|
-| セッションの目的が明確になった | `summary.title`, `summary.goal`, `sessionType` |
-| ファイルを変更した | `files` に追加、`metrics` 更新 |
-| 技術的決定を下した | `decisions` に追加 |
-| エラーに遭遇・解決した | `errors` に追加 |
-| URLを参照した | `webLinks` |
-| 新しいキーワードが出現 | `tags`（tags.jsonを参照） |
-
-**注意**: 明示的に `/memoria:save` を実行するか、APIフォールバックが発動するまでセッションは保存されません。
 
 ### セッションタイプ
 

@@ -1,93 +1,31 @@
 ---
 name: init
-description: Initialize memoria configuration file (~/.claude/memoria.json).
+description: (Deprecated) Configuration is no longer needed.
 ---
 
 # /memoria:init
 
-Initialize memoria configuration file for API-based session saving.
+**This command is deprecated.**
 
-## Usage
+Session saving is now automatic - no configuration needed.
 
-```
-/memoria:init
-```
+## What Changed
 
-## What This Does
+Previously, memoria required an OpenAI API key for auto-saving sessions. Now:
 
-Creates `~/.claude/memoria.json` with a template configuration:
+- **Auto-save**: Sessions are saved automatically on every Claude response (via Stop hook)
+- **No API key needed**: Claude itself updates the session JSON directly
+- **No configuration file needed**: `~/.claude/memoria.json` is no longer required
 
-```json
-{
-  "openai_api_key": "sk-..."
-}
-```
+## If You Have an Existing Config
 
-## Configuration Options
+You can safely delete `~/.claude/memoria.json` - it's no longer used.
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `openai_api_key` | No | OpenAI API key for auto-save (without this, only manual save works) |
-
-## Execution Steps
-
-1. Check if `~/.claude/memoria.json` already exists
-2. If exists: Show current config and ask if user wants to overwrite
-3. If not exists: Create the file with template
-
-### File Operations
-
-```bash
-# Check existence
-Read: ~/.claude/memoria.json (may not exist)
-
-# Create config
-Write: ~/.claude/memoria.json
-```
-
-## Why This Is Needed
-
-Session auto-saving at PreCompact and SessionEnd uses OpenAI API to summarize the conversation. Without this configuration:
-
-- PreCompact hook skips auto-save
-- SessionEnd hook skips API fallback
-- Only explicit `/memoria:save` works (Claude writes JSON directly)
-
-## Output Format
-
-### New Installation
+## Output
 
 ```
-memoria configuration initialized.
+/memoria:init is deprecated.
 
-Path: ~/.claude/memoria.json
-
-{
-  "openai_api_key": "sk-..."
-}
-
-Next steps:
-1. Edit ~/.claude/memoria.json
-2. Replace "sk-..." with your OpenAI API key
-
-Get your API key at: https://platform.openai.com/api-keys
+Session saving is now automatic - no configuration needed.
+You can safely delete ~/.claude/memoria.json if it exists.
 ```
-
-### Already Exists
-
-```
-Configuration already exists at ~/.claude/memoria.json
-
-Current config:
-{
-  "openai_api_key": "sk-***"
-}
-
-Use --force to overwrite.
-```
-
-## Notes
-
-- API key is stored in user's home directory, not in project
-- File is not committed to git (outside project directory)
-- Used by PreCompact and SessionEnd hooks only
