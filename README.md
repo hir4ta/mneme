@@ -103,7 +103,7 @@ This will auto-update on Claude Code startup.
 |--------|--------|
 | Session Start | Suggest related sessions, initialize session JSON |
 | During Session | Claude Code updates session JSON on meaningful changes |
-| Session End | Fallback processing if not updated, cleanup |
+| Session End | Log completion |
 
 ### Commands
 
@@ -232,6 +232,7 @@ Sessions use an **interactions-based** schema. Each interaction represents a dec
   "title": "JWT authentication implementation",
   "goal": "Implement JWT-based auth with refresh token support",
   "tags": ["auth", "jwt", "backend"],
+  "sessionType": "implementation",
   "interactions": [
     {
       "id": "int-001",
@@ -261,13 +262,27 @@ Claude Code updates session JSON when meaningful changes occur:
 
 | Trigger | Update |
 |---------|--------|
-| Session purpose becomes clear | `title`, `goal` |
+| Session purpose becomes clear | `title`, `goal`, `sessionType` |
 | User instruction handled | Add to `interactions` |
 | Technical decision made | `proposals`, `choice`, `reasoning` |
 | Error encountered/resolved | `problem`, `choice`, `reasoning` |
 | File modified | `actions`, `filesModified` |
 | URL referenced | `webLinks` |
 | New keyword appears | `tags` (reference tags.json) |
+
+### Session Types
+
+The `sessionType` field classifies the session type. **Always set this** even if interactions is empty.
+
+| Type | Description |
+|------|-------------|
+| `decision` | Decision cycle present (design choices, tech selection) |
+| `implementation` | Code changes made |
+| `research` | Research, learning, catchup |
+| `exploration` | Codebase exploration |
+| `discussion` | Discussion, consultation only |
+| `debug` | Debugging, investigation |
+| `review` | Code review |
 
 ### Tags
 

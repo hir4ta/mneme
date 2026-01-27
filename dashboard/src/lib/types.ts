@@ -38,6 +38,16 @@ export interface Interaction {
   filesModified?: string[];
 }
 
+// Session type values
+export type SessionType =
+  | "decision"
+  | "implementation"
+  | "research"
+  | "exploration"
+  | "discussion"
+  | "debug"
+  | "review";
+
 // Session type (new interactions-based schema)
 export interface Session {
   id: string;
@@ -47,6 +57,8 @@ export interface Session {
   title: string;
   goal?: string;
   tags: string[];
+  sessionType?: SessionType | null;
+  relatedSessions?: string[];
   interactions: Interaction[];
 }
 

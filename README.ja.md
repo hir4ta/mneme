@@ -103,7 +103,7 @@ Claude Codeを再起動
 | ----------- | ------ |
 | セッション開始時 | セッションJSONを初期化、関連セッションの提案 |
 | 会話中 | 意味のある変化があった時にセッションJSONを更新 |
-| セッション終了時 | フォールバック処理（未更新の場合）、クリーンアップ |
+| セッション終了時 | ログ出力 |
 
 ### コマンド
 
@@ -232,6 +232,7 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
   "title": "JWT認証機能の実装",
   "goal": "JWTベースの認証機能を実装し、リフレッシュトークンにも対応する",
   "tags": ["auth", "jwt", "backend"],
+  "sessionType": "implementation",
   "interactions": [
     {
       "id": "int-001",
@@ -261,13 +262,27 @@ Claude Code は意味のある変化があった時にセッションJSONを更�
 
 | トリガー | 更新内容 |
 |---------|---------|
-| セッションの目的が明確になった | `title`, `goal` |
+| セッションの目的が明確になった | `title`, `goal`, `sessionType` |
 | ユーザーの指示に対応した | `interactions` に追加 |
 | 技術的決定を下した | `proposals`, `choice`, `reasoning` |
 | エラーに遭遇・解決した | `problem`, `choice`, `reasoning` |
 | ファイルを変更した | `actions`, `filesModified` |
 | URLを参照した | `webLinks` |
 | 新しいキーワードが出現 | `tags`（tags.jsonを参照） |
+
+### セッションタイプ
+
+`sessionType` フィールドはセッションの種類を分類します。interactions が空でも**必ず設定**してください。
+
+| タイプ | 説明 |
+|--------|------|
+| `decision` | 決定サイクルあり（設計判断、技術選択など） |
+| `implementation` | コード変更あり |
+| `research` | リサーチ・学習・キャッチアップ |
+| `exploration` | コードベース探索 |
+| `discussion` | 議論・相談のみ |
+| `debug` | デバッグ・調査 |
+| `review` | コードレビュー |
 
 ### タグ
 

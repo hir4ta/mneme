@@ -10,16 +10,52 @@ Resume a previous session.
 ## Usage
 
 ```
-/memoria:resume        # Show session list
-/memoria:resume <id>   # Resume specific session
+/memoria:resume              # Show recent sessions
+/memoria:resume <id>         # Resume specific session
+/memoria:resume --type=implementation  # Filter by session type
+/memoria:resume --tag=auth   # Filter by tag
+/memoria:resume --days=7     # Filter by last N days
+/memoria:resume --branch=feature/auth  # Filter by branch
 ```
+
+### Filter Options
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--type=<type>` | Filter by sessionType | `--type=implementation` |
+| `--tag=<tag>` | Filter by tag | `--tag=auth` |
+| `--days=<n>` | Filter by last N days | `--days=7` |
+| `--branch=<name>` | Filter by branch | `--branch=main` |
+
+Multiple filters can be combined:
+```
+/memoria:resume --type=implementation --days=14
+```
+
+### Session Types
+
+| Type | Description |
+|------|-------------|
+| `decision` | Decision cycle present |
+| `implementation` | Code changes made |
+| `research` | Research, learning |
+| `exploration` | Codebase exploration |
+| `discussion` | Discussion only |
+| `debug` | Debugging |
+| `review` | Code review |
 
 ## Execution Steps
 
 1. Read all JSON files under `.memoria/sessions/` (including year/month folders)
-2. Display session list to user
-3. If session ID specified, read the file and get details
-4. Load session context (title, goal, interactions) to resume work
+2. Apply filters if specified:
+   - `--type`: Match `sessionType` field
+   - `--tag`: Match any tag in `tags` array
+   - `--days`: Compare `createdAt` with current date
+   - `--branch`: Match `context.branch` field
+3. Sort by `createdAt` descending (most recent first)
+4. Display filtered session list
+5. If session ID specified, read the file and get details
+6. Load session context (title, goal, interactions) to resume work
 
 ### File Operations
 
@@ -29,6 +65,13 @@ Glob: .memoria/sessions/**/*.json
 
 # Read each session file
 Read: .memoria/sessions/{year}/{month}/{filename}.json
+
+# Filter logic (pseudo-code)
+for each session:
+  if --type specified and session.sessionType != type: skip
+  if --tag specified and tag not in session.tags: skip
+  if --days specified and session.createdAt < (now - days): skip
+  if --branch specified and session.context.branch != branch: skip
 ```
 
 ## Output Format
@@ -36,16 +79,19 @@ Read: .memoria/sessions/{year}/{month}/{filename}.json
 ### List View
 
 ```
-Recent sessions:
+Recent sessions (filtered: --type=implementation --days=14):
+
   1. [abc123] JWT authentication implementation (2026-01-24, feature/auth)
-     [auth] [jwt] [backend]
-     interactions: 3
+     Type: implementation
+     Tags: [auth] [jwt] [backend]
+     Interactions: 3
 
   2. [def456] User management API (2026-01-23, feature/user)
-     [user] [api]
-     interactions: 2
+     Type: implementation
+     Tags: [user] [api]
+     Interactions: 2
 
-Select a session to resume (1-3), or enter ID:
+Select a session to resume (1-2), or enter ID:
 ```
 
 ### Resume View
@@ -53,6 +99,7 @@ Select a session to resume (1-3), or enter ID:
 ```
 Resuming session "JWT authentication implementation"
 
+Type: implementation
 Goal:
   Implement JWT-based auth with refresh token support
 
@@ -81,7 +128,8 @@ Ready to continue?
 When resuming, inject the following context:
 
 1. **Purpose**: title, goal → understand session objective
-2. **Progress**: interactions → what's been decided
-3. **Thinking**: interactions[].thinking → reasoning behind decisions
-4. **Problems solved**: interactions[].problem → errors encountered
-5. **Files changed**: interactions[].filesModified → what's been modified
+2. **Type**: sessionType → what kind of session this was
+3. **Progress**: interactions → what's been decided
+4. **Thinking**: interactions[].thinking → reasoning behind decisions
+5. **Problems solved**: interactions[].problem → errors encountered
+6. **Files changed**: interactions[].filesModified → what's been modified

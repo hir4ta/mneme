@@ -359,27 +359,50 @@ Update interaction:
 }
 ```
 
-### Save to Patterns
+### Save to Patterns (REQUIRED)
 
-If this is a reusable solution, save to patterns:
+**Every solved error MUST be saved to patterns for future reference.**
 
-```json
-// .memoria/patterns/[user].json - add to patterns array
-{
-  "type": "error-solution",
-  "errorPattern": "[representative error message]",
-  "errorRegex": "[regex to match similar errors]",
-  "solution": "[how to fix]",
-  "reasoning": "[why this solution works]",
-  "relatedFiles": ["[files typically involved]"],
-  "tags": ["[relevant tags]"],
-  "detectedAt": "[ISO8601]",
-  "source": "debug",
-  "sourceId": "[session id]",
-  "occurrences": 1,
-  "lastSeenAt": "[ISO8601]"
-}
-```
+1. **Check if pattern file exists**:
+   ```
+   Read: .memoria/patterns/{git-user-name}.json
+   If not exists: create new file with empty patterns array
+   ```
+
+2. **Add error-solution pattern**:
+   ```json
+   // .memoria/patterns/{git-user-name}.json
+   {
+     "id": "pattern-{user}-001",
+     "user": { "name": "{git user.name}", "email": "{git user.email}" },
+     "patterns": [
+       {
+         "type": "error-solution",
+         "errorPattern": "[representative error message - first line]",
+         "errorRegex": "[regex to match similar errors]",
+         "solution": "[how to fix - concise]",
+         "reasoning": "[why this solution works]",
+         "relatedFiles": ["[files typically involved]"],
+         "tags": ["[relevant tags from tags.json]"],
+         "detectedAt": "[ISO8601]",
+         "source": "debug",
+         "sourceId": "[session id]",
+         "occurrences": 1,
+         "lastSeenAt": "[ISO8601]"
+       }
+     ],
+     "updatedAt": "[ISO8601]"
+   }
+   ```
+
+3. **If pattern already exists** (same errorRegex):
+   - Increment `occurrences`
+   - Update `lastSeenAt`
+   - Optionally update `solution` if improved
+
+**Skip saving only if:**
+- Error was due to typo or trivial mistake
+- Error was environment-specific (local config issue)
 
 ### Commit
 

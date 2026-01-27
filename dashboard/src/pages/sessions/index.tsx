@@ -5,7 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { deleteSession, getSessions, getTags } from "@/lib/api";
-import type { Session, Tag } from "@/lib/types";
+import type { Session, SessionType, Tag } from "@/lib/types";
+
+const SESSION_TYPES: { value: SessionType; label: string }[] = [
+  { value: "decision", label: "Decision" },
+  { value: "implementation", label: "Implementation" },
+  { value: "research", label: "Research" },
+  { value: "exploration", label: "Exploration" },
+  { value: "discussion", label: "Discussion" },
+  { value: "debug", label: "Debug" },
+  { value: "review", label: "Review" },
+];
 
 function SessionCard({
   session,
@@ -78,6 +88,14 @@ function SessionCard({
                 </span>
               </>
             )}
+            {session.sessionType && (
+              <>
+                <span>-</span>
+                <Badge variant="outline" className="text-xs font-normal">
+                  {session.sessionType}
+                </Badge>
+              </>
+            )}
             {interactionCount > 0 && (
               <>
                 <span>-</span>
@@ -129,6 +147,7 @@ export function SessionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const fetchData = useCallback(async () => {
     try {
@@ -163,6 +182,10 @@ export function SessionsPage() {
 
   const filteredSessions = useMemo(() => {
     return sessions.filter((session) => {
+      // Type filter
+      if (typeFilter !== "all" && session.sessionType !== typeFilter) {
+        return false;
+      }
       // Tag filter
       if (tagFilter !== "all" && !session.tags.includes(tagFilter)) {
         return false;
@@ -185,7 +208,7 @@ export function SessionsPage() {
       }
       return true;
     });
-  }, [sessions, searchQuery, tagFilter]);
+  }, [sessions, searchQuery, tagFilter, typeFilter]);
 
   if (loading) {
     return <div className="text-center py-12">Loading...</div>;
@@ -222,6 +245,18 @@ export function SessionsPage() {
               className="max-w-xs"
             />
             <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
+            >
+              <option value="all">All Types</option>
+              {SESSION_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <select
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
               className="border border-border/70 bg-white/80 rounded-sm px-3 py-2 text-sm"
@@ -233,7 +268,7 @@ export function SessionsPage() {
                 </option>
               ))}
             </select>
-            {(searchQuery || tagFilter !== "all") && (
+            {(searchQuery || tagFilter !== "all" || typeFilter !== "all") && (
               <span className="text-sm text-muted-foreground">
                 {filteredSessions.length} of {sessions.length} sessions
               </span>

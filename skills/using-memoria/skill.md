@@ -40,13 +40,27 @@ Update session JSON when **meaningful changes occur**, not at session end.
 
 | Trigger | Update |
 |---------|--------|
-| Session purpose becomes clear | title, goal |
+| Session purpose becomes clear | title, goal, sessionType |
 | User instruction handled | Add to interactions |
 | Technical decision made | proposals, choice, reasoning in interaction |
 | Error encountered/resolved | problem, choice, reasoning in interaction |
 | File modified | actions, filesModified in interaction |
 | URL referenced | webLinks in interaction |
 | New keyword appears | tags (reference tags.json) |
+
+### sessionType (Required)
+
+Classify session type. **Always set this** even if interactions is empty.
+
+| Value | Description |
+|-------|-------------|
+| `decision` | Decision cycle present (design choices, tech selection) |
+| `implementation` | Code changes made |
+| `research` | Research, learning, catchup |
+| `exploration` | Codebase exploration |
+| `discussion` | Discussion, consultation only |
+| `debug` | Debugging, investigation |
+| `review` | Code review |
 
 ### Session File Location
 
@@ -113,6 +127,7 @@ When executing skills, directly operate JSON files under `.memoria/`:
   "title": "JWT authentication implementation",
   "goal": "Implement JWT-based auth with refresh token support",
   "tags": ["auth", "jwt", "backend"],
+  "sessionType": "implementation",
   "interactions": [
     {
       "id": "int-001",
