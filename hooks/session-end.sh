@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SessionEnd hook for memoria plugin
-# Fallback processing if LLM didn't update, and cleanup .current-session
+# Fallback processing if LLM didn't update session JSON
+# Uses session_id from stdin to find session file (supports concurrent sessions)
 
 set -euo pipefail
 
@@ -26,43 +27,48 @@ fi
 # Resolve paths
 cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 memoria_dir="${cwd}/.memoria"
-current_session_file="${memoria_dir}/.current-session"
+sessions_dir="${memoria_dir}/sessions"
 
 # ============================================
-# Read .current-session to get session path
+# Find session file using session_id from stdin
+# Pattern: .memoria/sessions/YYYY/MM/*_{session_short_id}.json
+# This approach supports concurrent sessions (no shared state file)
 # ============================================
 session_path=""
 file_id=""
 
-if [ -f "$current_session_file" ]; then
-    file_id=$(jq -r '.id // empty' "$current_session_file" 2>/dev/null || echo "")
-    session_relative_path=$(jq -r '.path // empty' "$current_session_file" 2>/dev/null || echo "")
-
-    if [ -n "$session_relative_path" ]; then
-        session_path="${cwd}/${session_relative_path}"
-    fi
-fi
-
-# If no .current-session, try to find by session_id (legacy fallback)
-if [ -z "$session_path" ] || [ ! -f "$session_path" ]; then
-    if [ -n "$session_id" ]; then
-        now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        date_part=$(echo "$now" | cut -d'T' -f1)
-        year_part=$(echo "$date_part" | cut -d'-' -f1)
-        month_part=$(echo "$date_part" | cut -d'-' -f2)
-        session_short_id="${session_id:0:8}"
-        file_id="${date_part}_${session_short_id}"
-
-        sessions_dir="${memoria_dir}/sessions/${year_part}/${month_part}"
-        mkdir -p "$sessions_dir"
-        session_path="${sessions_dir}/${file_id}.json"
-    fi
-fi
-
-# If still no session path, exit
-if [ -z "$session_path" ]; then
-    [ -f "$current_session_file" ] && rm -f "$current_session_file"
+if [ -z "$session_id" ]; then
+    echo "[memoria] No session_id provided, skipping" >&2
     exit 0
+fi
+
+session_short_id="${session_id:0:8}"
+
+# Search for session file by pattern
+# The file name format is: YYYY-MM-DD_xxxxxxxx.json where xxxxxxxx is session_short_id
+if [ -d "$sessions_dir" ]; then
+    # Find file matching *_{session_short_id}.json
+    found_file=$(find "$sessions_dir" -type f -name "*_${session_short_id}.json" 2>/dev/null | head -1)
+
+    if [ -n "$found_file" ] && [ -f "$found_file" ]; then
+        session_path="$found_file"
+        file_id=$(basename "$found_file" .json)
+        echo "[memoria] Found session file: ${session_path}" >&2
+    fi
+fi
+
+# If no existing file found, create new one (fallback for edge cases)
+if [ -z "$session_path" ]; then
+    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    date_part=$(echo "$now" | cut -d'T' -f1)
+    year_part=$(echo "$date_part" | cut -d'-' -f1)
+    month_part=$(echo "$date_part" | cut -d'-' -f2)
+    file_id="${date_part}_${session_short_id}"
+
+    year_month_dir="${sessions_dir}/${year_part}/${month_part}"
+    mkdir -p "$year_month_dir"
+    session_path="${year_month_dir}/${file_id}.json"
+    echo "[memoria] Creating new session file: ${session_path}" >&2
 fi
 
 # ============================================
@@ -268,14 +274,6 @@ if [ "$needs_fallback" = true ]; then
             echo "[memoria] Fallback processing completed: ${session_path}" >&2
         fi
     fi
-fi
-
-# ============================================
-# Cleanup .current-session file
-# ============================================
-if [ -f "$current_session_file" ]; then
-    rm -f "$current_session_file"
-    echo "[memoria] Cleaned up .current-session" >&2
 fi
 
 exit 0

@@ -182,7 +182,6 @@ flowchart TB
 
 ```text
 .memoria/
-├── .current-session  # 現在のセッションID・パス
 ├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
 ├── sessions/         # セッション履歴 (YYYY/MM)
 ├── decisions/        # 技術的な判断 (YYYY/MM)

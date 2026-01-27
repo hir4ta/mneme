@@ -182,7 +182,6 @@ All data is stored in `.memoria/` directory as JSON:
 
 ```text
 .memoria/
-├── .current-session  # Current session ID and path
 ├── tags.json         # Tag master file (93 tags, prevents notation variations)
 ├── sessions/         # Session history (YYYY/MM)
 ├── decisions/        # Technical decisions (YYYY/MM)

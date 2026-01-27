@@ -23,7 +23,7 @@ Claude Code auto-updates session JSON on meaningful changes. Use manual save whe
 
 ## Execution Steps
 
-1. Read session path from `.memoria/.current-session`
+1. Get session path from additionalContext (injected at session start)
 2. Extract from current conversation:
    - title: Session purpose
    - goal: What we're trying to achieve
@@ -34,9 +34,8 @@ Claude Code auto-updates session JSON on meaningful changes. Use manual save whe
 ### File Operations
 
 ```bash
-# Get session path
-Read: .memoria/.current-session
-# → { "id": "...", "path": ".memoria/sessions/..." }
+# Session path from additionalContext
+# Path format: .memoria/sessions/YYYY/MM/{id}.json
 
 # Normalize tags
 Read: .memoria/tags.json
@@ -54,7 +53,7 @@ Write: .memoria/sessions/YYYY/MM/{id}.json
 
 ## Notes
 
-- Error if `.current-session` doesn't exist (session not initialized)
+- Session path is provided via additionalContext at session start
 - Multiple saves overwrite with latest state
 - SessionEnd hook has fallback, so manual save is optional
 

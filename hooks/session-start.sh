@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SessionStart hook for memoria plugin
-# Initializes session JSON, creates .current-session, and injects context
+# Initializes session JSON and injects context via additionalContext
 
 set -euo pipefail
 
@@ -103,21 +103,8 @@ session_json=$(jq -n \
 echo "$session_json" > "$session_path"
 echo "[memoria] Session initialized: ${session_path}" >&2
 
-# ============================================
-# Create .current-session file
-# ============================================
-current_session_path="${memoria_dir}/.current-session"
+# Session path for additionalContext
 current_session_relative_path=".memoria/sessions/${year_part}/${month_part}/${file_id}.json"
-
-jq -n \
-    --arg id "$file_id" \
-    --arg path "$current_session_relative_path" \
-    '{
-        id: $id,
-        path: $path
-    }' > "$current_session_path"
-
-echo "[memoria] Current session file created: ${current_session_path}" >&2
 
 # ============================================
 # Initialize tags.json if not exists

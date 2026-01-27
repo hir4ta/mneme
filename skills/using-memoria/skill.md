@@ -35,7 +35,7 @@ Update session JSON when **meaningful changes occur**, not at session end.
 
 ### Session File Location
 
-- Session ID/path: Read from `.memoria/.current-session`
+- Session ID/path: Provided via additionalContext at session start
 - Session JSON: `.memoria/sessions/YYYY/MM/{id}.json`
 
 ## Commands
@@ -61,7 +61,6 @@ npx @hir4ta/memoria --dashboard
 
 ```
 .memoria/
-├── .current-session  # Current session ID/path
 ├── tags.json         # Tag master file (prevents notation variations)
 ├── sessions/         # Session history (interactions-based)
 ├── decisions/        # Technical decisions
