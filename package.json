@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/memoria",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",
@@ -23,7 +23,7 @@
     "dev": "vite",
     "dev:server": "tsx watch dashboard/server/index.ts",
     "build": "vite build && npm run build:server && npm run build:lib",
-    "build:server": "esbuild dashboard/server/index.ts --bundle --platform=node --outfile=dist/server.js --format=esm --external:fsevents",
+    "build:server": "esbuild dashboard/server/index.ts --bundle --platform=node --outfile=dist/server.js --format=esm --external:fsevents --external:yaml",
     "build:lib": "esbuild lib/*.ts --bundle --platform=node --outdir=dist/lib --format=esm --packages=external",
     "preview": "npm run build && node dist/server.js",
     "lint": "biome check .",
