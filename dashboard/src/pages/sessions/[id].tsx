@@ -761,7 +761,7 @@ export function SessionDetailPage() {
             >
               <Card className="h-full flex flex-col py-0 gap-0">
                 <CardContent className="py-4 flex-1 overflow-y-auto">
-                  <SessionContextCard sessionId={session.id} embedded />
+                  <SessionContextCard session={session} embedded />
                 </CardContent>
               </Card>
             </TabsContent>

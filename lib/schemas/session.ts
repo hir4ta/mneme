@@ -77,26 +77,36 @@ export const PreCompactBackupSchema = z.object({
 
 export type PreCompactBackup = z.infer<typeof PreCompactBackupSchema>;
 
-// YAML-specific schemas (for /memoria:save structured data)
-export const SessionYamlSummarySchema = z.object({
+// Structured data schemas (for /memoria:save)
+// These were previously in YAML files, now integrated into Session JSON
+
+export const SessionSummarySchema = z.object({
   title: z.string(),
   goal: z.string().optional(),
   outcome: z.enum(["success", "partial", "blocked", "abandoned"]).optional(),
   description: z.string().optional(),
-  session_type: SessionTypeSchema.optional(),
+  sessionType: SessionTypeSchema.optional(),
 });
 
-export type SessionYamlSummary = z.infer<typeof SessionYamlSummarySchema>;
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
 
-export const SessionYamlPlanSchema = z.object({
+// Backwards compatibility aliases
+export const SessionYamlSummarySchema = SessionSummarySchema;
+export type SessionYamlSummary = SessionSummary;
+
+export const SessionPlanSchema = z.object({
   goals: z.array(z.string()).optional(),
   tasks: z.array(z.string()).optional(),
   remaining: z.array(z.string()).optional(),
 });
 
-export type SessionYamlPlan = z.infer<typeof SessionYamlPlanSchema>;
+export type SessionPlan = z.infer<typeof SessionPlanSchema>;
 
-export const SessionYamlDiscussionSchema = z.object({
+// Backwards compatibility aliases
+export const SessionYamlPlanSchema = SessionPlanSchema;
+export type SessionYamlPlan = SessionPlan;
+
+export const SessionDiscussionSchema = z.object({
   topic: z.string(),
   timestamp: z.string().optional(),
   options: z.array(z.string()).optional(),
@@ -105,20 +115,26 @@ export const SessionYamlDiscussionSchema = z.object({
   alternatives: z.array(z.string()).optional(),
 });
 
-export type SessionYamlDiscussion = z.infer<typeof SessionYamlDiscussionSchema>;
+export type SessionDiscussion = z.infer<typeof SessionDiscussionSchema>;
 
-export const SessionYamlCodeExampleSchema = z.object({
+// Backwards compatibility aliases
+export const SessionYamlDiscussionSchema = SessionDiscussionSchema;
+export type SessionYamlDiscussion = SessionDiscussion;
+
+export const SessionCodeExampleSchema = z.object({
   file: z.string(),
   description: z.string().optional(),
   before: z.string().optional(),
   after: z.string().optional(),
 });
 
-export type SessionYamlCodeExample = z.infer<
-  typeof SessionYamlCodeExampleSchema
->;
+export type SessionCodeExample = z.infer<typeof SessionCodeExampleSchema>;
 
-export const SessionYamlErrorSchema = z.object({
+// Backwards compatibility aliases
+export const SessionYamlCodeExampleSchema = SessionCodeExampleSchema;
+export type SessionYamlCodeExample = SessionCodeExample;
+
+export const SessionErrorSchema = z.object({
   error: z.string(),
   context: z.string().optional(),
   cause: z.string().optional(),
@@ -126,17 +142,25 @@ export const SessionYamlErrorSchema = z.object({
   files: z.array(z.string()).optional(),
 });
 
-export type SessionYamlError = z.infer<typeof SessionYamlErrorSchema>;
+export type SessionError = z.infer<typeof SessionErrorSchema>;
 
-export const SessionYamlHandoffSchema = z.object({
-  stopped_reason: z.string().optional(),
+// Backwards compatibility aliases
+export const SessionYamlErrorSchema = SessionErrorSchema;
+export type SessionYamlError = SessionError;
+
+export const SessionHandoffSchema = z.object({
+  stoppedReason: z.string().optional(),
   notes: z.array(z.string()).optional(),
-  next_steps: z.array(z.string()).optional(),
+  nextSteps: z.array(z.string()).optional(),
 });
 
-export type SessionYamlHandoff = z.infer<typeof SessionYamlHandoffSchema>;
+export type SessionHandoff = z.infer<typeof SessionHandoffSchema>;
 
-export const SessionYamlReferenceSchema = z.object({
+// Backwards compatibility aliases
+export const SessionYamlHandoffSchema = SessionHandoffSchema;
+export type SessionYamlHandoff = SessionHandoff;
+
+export const SessionReferenceSchema = z.object({
   type: z.string().optional(),
   url: z.string().optional(),
   path: z.string().optional(),
@@ -144,18 +168,23 @@ export const SessionYamlReferenceSchema = z.object({
   description: z.string().optional(),
 });
 
-export type SessionYamlReference = z.infer<typeof SessionYamlReferenceSchema>;
+export type SessionReference = z.infer<typeof SessionReferenceSchema>;
 
+// Backwards compatibility aliases
+export const SessionYamlReferenceSchema = SessionReferenceSchema;
+export type SessionYamlReference = SessionReference;
+
+// Legacy: SessionYaml type (deprecated, use Session with structured fields instead)
 export const SessionYamlSchema = z.object({
   version: z.number(),
   session_id: z.string(),
-  summary: SessionYamlSummarySchema.optional(),
-  plan: SessionYamlPlanSchema.optional(),
-  discussions: z.array(SessionYamlDiscussionSchema).optional(),
-  code_examples: z.array(SessionYamlCodeExampleSchema).optional(),
-  errors: z.array(SessionYamlErrorSchema).optional(),
-  handoff: SessionYamlHandoffSchema.optional(),
-  references: z.array(SessionYamlReferenceSchema).optional(),
+  summary: SessionSummarySchema.optional(),
+  plan: SessionPlanSchema.optional(),
+  discussions: z.array(SessionDiscussionSchema).optional(),
+  code_examples: z.array(SessionCodeExampleSchema).optional(),
+  errors: z.array(SessionErrorSchema).optional(),
+  handoff: SessionHandoffSchema.optional(),
+  references: z.array(SessionReferenceSchema).optional(),
 });
 
 export type SessionYaml = z.infer<typeof SessionYamlSchema>;
@@ -200,6 +229,14 @@ export const SessionSchema = z.object({
   preCompactBackups: z.array(PreCompactBackupSchema).optional(),
   // Status
   status: SessionStatusSchema.nullable().optional(),
+  // Structured data (set by /memoria:save, previously in YAML file)
+  summary: SessionSummarySchema.optional(),
+  plan: SessionPlanSchema.optional(),
+  discussions: z.array(SessionDiscussionSchema).optional(),
+  codeExamples: z.array(SessionCodeExampleSchema).optional(),
+  errors: z.array(SessionErrorSchema).optional(),
+  handoff: SessionHandoffSchema.optional(),
+  references: z.array(SessionReferenceSchema).optional(),
   // Legacy fields (kept for backwards compatibility)
   goal: z.string().optional(),
   sessionType: SessionTypeSchema.nullable().optional(),

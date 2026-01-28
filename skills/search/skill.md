@@ -23,9 +23,9 @@ Search saved sessions, decisions, and patterns.
 
 ## Execution Steps
 
-1. Read all JSON and YAML files under `.memoria/`
+1. Read all JSON files under `.memoria/`
 2. Read `.memoria/tags.json` to include aliases in search
-3. Text search on title, interactions, tags (JSON) and summary, discussions, errors (YAML)
+3. Text search on all relevant fields (title, interactions, summary, discussions, errors, etc.)
 4. Score and display results
 5. If user wants details, re-read the file
 
@@ -35,15 +35,13 @@ Search saved sessions, decisions, and patterns.
 # Load tags.json for alias search
 Read: .memoria/tags.json
 
-# Get files by type (both JSON and YAML)
-Glob: .memoria/sessions/**/*.json   # Log + search index
-Glob: .memoria/sessions/**/*.yaml   # Structured data
+# Get files by type
+Glob: .memoria/sessions/**/*.json
 Glob: .memoria/decisions/**/*.json
 Glob: .memoria/patterns/*.json
 
 # Read each file for search
 Read: .memoria/{type}/{filename}.json
-Read: .memoria/{type}/{filename}.yaml  # For detailed data
 ```
 
 ## Search Algorithm
@@ -63,18 +61,18 @@ If query matches an alias in tags.json, search using the corresponding id:
 
 ## Search Target Fields
 
-### Sessions JSON (.memoria/sessions/**/*.json)
-Search index fields:
-- `title` - Session title (search keyword)
+### Sessions (.memoria/sessions/**/*.json)
+
+**Search index fields:**
+- `title` - Session title
 - `tags` - Tags
 
-Auto-saved interaction fields:
+**Auto-saved interaction fields:**
 - `interactions[].user` - User's request
 - `interactions[].thinking` - Thought process
 - `interactions[].assistant` - Assistant response
 
-### Sessions YAML (.memoria/sessions/**/*.yaml)
-Structured data (created via /memoria:save):
+**Structured data (set by /memoria:save):**
 - `summary.title` - Session title
 - `summary.goal` - Session goal
 - `summary.description` - What was accomplished
@@ -86,7 +84,7 @@ Structured data (created via /memoria:save):
 - `errors[].error` - Error encountered
 - `errors[].cause` - Root cause
 - `errors[].solution` - How it was resolved
-- `handoff.reason` - Why session ended
+- `handoff.stoppedReason` - Why session ended
 - `handoff.nextSteps[]` - Next steps
 
 ### Decisions (.memoria/decisions/**/*.json)
@@ -131,9 +129,10 @@ Enter number for details (quit: q):
 Title: JWT authentication implementation
 Tags: [auth] [jwt] [backend]
 
---- From YAML (if exists) ---
-Goal: Implement JWT-based auth
-Outcome: success
+Summary:
+  Goal: Implement JWT-based auth
+  Outcome: success
+  Type: implementation
 
 Discussions:
   - Auth method selection
@@ -144,9 +143,10 @@ Discussions:
 Errors resolved:
   - Token validation failed → Fixed by using correct public key
 
-Next steps:
-  - Add refresh token rotation
-  - Implement logout endpoint
+Handoff:
+  Next steps:
+    - Add refresh token rotation
+    - Implement logout endpoint
 
 Created: 2026-01-24
 ```

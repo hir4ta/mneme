@@ -9,7 +9,7 @@ Claude Codeの長期記憶を実現するプラグイン
 ### コア機能
 - **会話の自動保存**: セッション終了時にjqで自動保存（確実・高速）
 - **PreCompactバックアップ**: Auto-Compact前にinteractionsをバックアップ（コンテキスト95%で発動）
-- **手動保存**: `/memoria:save` で要約作成 + YAMLファイル生成
+- **手動保存**: `/memoria:save` で要約作成 + 構造化データ保存
 - **セッション再開**: `/memoria:resume` で過去のセッションを再開（チェーン追跡付き）
 - **セッション提案**: セッション開始時に最新3件を提案
 - **技術的な判断の記録**: `/memoria:decision` で判断を記録
@@ -42,7 +42,7 @@ Claude Codeの長期記憶を実現するプラグイン
 
 ### チーム利用のメリット
 
-- `.memoria/` のJSON/YAMLは**Git管理可能**なので、判断や会話の履歴をチームで共有できる
+- `.memoria/` のJSONファイルは**Git管理可能**なので、判断や会話の履歴をチームで共有できる
 - オンボーディングやレビュー時に「背景・経緯」を短時間で把握できる
 
 ## インストール
@@ -107,8 +107,7 @@ Claude Codeを再起動
 **PreCompact**ではinteractionsを`preCompactBackups`にバックアップします（コンテキスト95%で発動）。要約は自動作成されません。
 
 **要約と構造化データ**は `/memoria:save` で手動作成：
-- JSON: `title`, `tags` を更新（検索インデックス）
-- YAML: 構造化データを作成（summary, plan, discussions, errors, handoff）
+- JSON: `title`, `tags`, `summary`, `plan`, `discussions`, `errors`, `handoff`, `references` を更新
 
 ### セッション提案
 
@@ -140,7 +139,7 @@ Continue from a previous session? Use `/memoria:resume <id>`
 | コマンド | 説明 |
 | --------- | ------ |
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
-| `/memoria:save` | 要約作成 + YAML生成 + ルール抽出 |
+| `/memoria:save` | 要約作成 + 構造化データ保存 + ルール抽出 |
 | `/memoria:decision "タイトル"` | 技術的な判断を記録 |
 | `/memoria:search "クエリ"` | セッション・判断記録を検索 |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | ルールに基づくレビュー（--fullで二段階） |
@@ -206,7 +205,7 @@ flowchart TB
     end
 
     subgraph manual [手動操作]
-        H["memoria:save"] --> I[YAML作成 + JSON更新]
+        H["memoria:save"] --> I[JSON更新（構造化データ）]
         J["memoria:decision"] --> K[判断を明示的に記録]
     end
 
@@ -252,8 +251,7 @@ flowchart TB
 ├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
 ├── sessions/         # セッション履歴 (YYYY/MM)
 │   └── YYYY/MM/
-│       ├── {id}.json # ログ + 検索インデックス（自動保存）
-│       └── {id}.yaml # 構造化データ（手動保存）
+│       └── {id}.json # 全セッションデータ（自動 + 手動保存）
 ├── decisions/        # 技術的な判断 (YYYY/MM)
 ├── rules/            # 開発ルール / レビュー観点
 ├── reviews/          # レビュー結果 (YYYY/MM)
@@ -262,7 +260,9 @@ flowchart TB
 
 Gitでバージョン管理可能です。`.gitignore` に追加するかはプロジェクトに応じて判断してください。
 
-### セッションJSONスキーマ（ログ + 検索インデックス）
+### セッションJSONスキーマ
+
+全てのセッションデータは単一のJSONファイルに保存されます：
 
 ```json
 {
@@ -297,68 +297,53 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
   ],
   "preCompactBackups": [],
   "resumedFrom": "def45678",
-  "status": "complete"
+  "status": "complete",
+
+  "summary": {
+    "title": "JWT認証機能の実装",
+    "goal": "JWTベースの認証機能を実装",
+    "outcome": "success",
+    "description": "RS256署名でJWT認証を実装",
+    "sessionType": "implementation"
+  },
+
+  "plan": {
+    "tasks": ["[x] JWT署名方式の選定", "[x] ミドルウェア実装", "[ ] テスト追加"],
+    "remaining": ["テスト追加"]
+  },
+
+  "discussions": [
+    {
+      "topic": "署名方式",
+      "decision": "RS256を採用",
+      "reasoning": "本番環境でのセキュリティを考慮",
+      "alternatives": ["HS256（シンプルだが秘密鍵共有が必要）"]
+    }
+  ],
+
+  "errors": [
+    {
+      "error": "secretOrPrivateKey must be asymmetric",
+      "cause": "HS256用の秘密鍵をRS256で使用",
+      "solution": "RS256用のキーペアを生成"
+    }
+  ],
+
+  "handoff": {
+    "stoppedReason": "テスト作成は次回に持ち越し",
+    "notes": ["vitest設定済み", "モック用のキーペアは test/fixtures/ に配置"],
+    "nextSteps": ["jwt.test.ts を作成", "E2Eテスト追加"]
+  },
+
+  "references": [
+    { "url": "https://jwt.io/introduction", "title": "JWT Introduction" }
+  ]
 }
-```
-
-### セッションYAMLスキーマ（構造化データ）
-
-```yaml
-version: 1
-session_id: abc12345
-
-summary:
-  title: "JWT認証機能の実装"
-  goal: "JWTベースの認証機能を実装"
-  outcome: success  # success | partial | blocked | abandoned
-  description: "RS256署名でJWT認証を実装"
-  session_type: implementation
-
-plan:
-  tasks:
-    - "[x] JWT署名方式の選定"
-    - "[x] ミドルウェア実装"
-    - "[ ] テスト追加"
-  remaining:
-    - "テスト追加"
-
-discussions:
-  - topic: "署名方式"
-    decision: "RS256を採用"
-    reasoning: "本番環境でのセキュリティを考慮"
-    alternatives:
-      - "HS256（シンプルだが秘密鍵共有が必要）"
-
-code_examples:
-  - file: "src/auth/jwt.ts"
-    description: "JWT生成関数"
-    after: |
-      export function generateToken(payload: JWTPayload): string {
-        return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
-      }
-
-errors:
-  - error: "secretOrPrivateKey must be asymmetric"
-    cause: "HS256用の秘密鍵をRS256で使用"
-    solution: "RS256用のキーペアを生成"
-
-handoff:
-  stopped_reason: "テスト作成は次回に持ち越し"
-  notes:
-    - "vitest設定済み"
-    - "モック用のキーペアは test/fixtures/ に配置"
-  next_steps:
-    - "jwt.test.ts を作成"
-    - "E2Eテスト追加"
-
-references:
-  - url: "https://jwt.io/introduction"
-    title: "JWT Introduction"
 ```
 
 ### セッションタイプ
 
-`session_type` フィールド（YAML内）はセッションの種類を分類します。
+`sessionType` フィールドはセッションの種類を分類します。
 
 | タイプ | 説明 |
 |--------|------|

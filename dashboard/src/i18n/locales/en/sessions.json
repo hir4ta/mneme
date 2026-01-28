@@ -53,7 +53,6 @@
   "context": {
     "title": "Session Context",
     "sections": "{{count}} sections",
-    "yaml": "YAML",
     "sectionLabels": {
       "summary": "Summary",
       "plan": "Plan & Tasks",

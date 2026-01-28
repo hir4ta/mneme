@@ -1,4 +1,4 @@
-import type { Decision, Session, SessionYaml, TagsFile } from "./types";
+import type { Decision, Session, TagsFile } from "./types";
 
 const API_BASE = "/api";
 
@@ -89,17 +89,6 @@ export interface SessionMarkdown {
 export async function getSessionMarkdown(id: string): Promise<SessionMarkdown> {
   const res = await fetch(`${API_BASE}/sessions/${id}/markdown`);
   if (!res.ok) throw new Error("Failed to fetch session markdown");
-  return res.json();
-}
-
-export interface SessionYamlResponse {
-  exists: boolean;
-  data: SessionYaml | null;
-}
-
-export async function getSessionYaml(id: string): Promise<SessionYamlResponse> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/yaml`);
-  if (!res.ok) throw new Error("Failed to fetch session YAML");
   return res.json();
 }
 

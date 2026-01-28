@@ -37,8 +37,7 @@ Phase 5: Record & Output    → Save to interactions + docs/plans/
 
 1. **Search sessions** for similar implementations:
    ```
-   Glob: .memoria/sessions/**/*.json   # Search title, tags
-   Glob: .memoria/sessions/**/*.yaml   # Search summary, discussions, errors
+   Glob: .memoria/sessions/**/*.json   # Search title, tags, summary, discussions, errors
    Grep: keywords from user request (feature name, component type, etc.)
    ```
 
@@ -289,31 +288,36 @@ Which approach do you prefer? (A/B/C/modify)
 
 ### Record to Session
 
-**Note:** Session interactions are auto-saved by SessionEnd hook. Design discussions should be saved to YAML via `/memoria:save`.
+**Note:** Session interactions are auto-saved by SessionEnd hook. Design discussions should be saved to JSON via `/memoria:save`.
 
 When design is complete, prompt user to run `/memoria:save` to capture:
 
-**YAML discussions section:**
-```yaml
-discussions:
-  - topic: "[Feature name] design"
-    timestamp: "[ISO8601]"
-    options:
-      - "[Approach A]: [Summary]"
-      - "[Approach B]: [Summary]"
-    decision: "[Selected approach]"
-    reasoning: "[Why this approach was chosen]"
+**JSON discussions field:**
+```json
+"discussions": [
+  {
+    "topic": "[Feature name] design",
+    "timestamp": "[ISO8601]",
+    "options": [
+      "[Approach A]: [Summary]",
+      "[Approach B]: [Summary]"
+    ],
+    "decision": "[Selected approach]",
+    "reasoning": "[Why this approach was chosen]"
+  }
+]
 ```
 
-**YAML plan section (if design document created):**
-```yaml
-plan:
-  goals:
-    - "[Feature name] design complete"
-  tasks:
-    - "[x] Architecture section approved"
-    - "[x] Component design approved"
-    - "[ ] Implementation plan (next: /memoria:plan)"
+**JSON plan field (if design document created):**
+```json
+"plan": {
+  "goals": ["[Feature name] design complete"],
+  "tasks": [
+    "[x] Architecture section approved",
+    "[x] Component design approved",
+    "[ ] Implementation plan (next: /memoria:plan)"
+  ]
+}
 ```
 
 ### Record Important Decisions

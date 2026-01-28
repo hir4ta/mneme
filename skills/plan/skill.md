@@ -37,15 +37,14 @@ Phase 3: Plan Output       → Save to docs/plans/ + interactions
 
 1. **Search sessions** for similar feature implementations:
    ```
-   Glob: .memoria/sessions/**/*.json   # Search title, tags
-   Glob: .memoria/sessions/**/*.yaml   # Search plan, discussions
+   Glob: .memoria/sessions/**/*.json   # Search title, tags, plan, discussions
    Grep: keywords from feature (component type, API type, etc.)
-   Focus: YAML files with plan.tasks containing similar features
+   Focus: JSON files with plan.tasks containing similar features
    ```
 
 2. **Search for related test patterns and errors**:
    ```
-   Glob: .memoria/sessions/**/*.yaml
+   Glob: .memoria/sessions/**/*.json
    Look for: errors section with solutions, discussions about testing
    ```
 
@@ -283,29 +282,32 @@ Content: [Full plan from template above]
 
 ### Record to Session
 
-**Note:** Session interactions are auto-saved by SessionEnd hook. Plan details should be saved to YAML via `/memoria:save`.
+**Note:** Session interactions are auto-saved by SessionEnd hook. Plan details should be saved to JSON via `/memoria:save`.
 
 When plan is approved, prompt user to run `/memoria:save` to capture:
 
-**YAML plan section:**
-```yaml
-plan:
-  goals:
-    - "[Feature name] implementation"
-  tasks:
-    - "[ ] Task 1: [description] (RED)"
-    - "[ ] Task 2: [description] (GREEN)"
-    - "[ ] Task 3: [description] (REFACTOR)"
-  remaining:
-    - "All tasks pending"
+**JSON plan field:**
+```json
+"plan": {
+  "goals": ["[Feature name] implementation"],
+  "tasks": [
+    "[ ] Task 1: [description] (RED)",
+    "[ ] Task 2: [description] (GREEN)",
+    "[ ] Task 3: [description] (REFACTOR)"
+  ],
+  "remaining": ["All tasks pending"]
+}
 ```
 
-**YAML references section:**
-```yaml
-references:
-  - type: plan
-    path: "docs/plans/YYYY-MM-DD-[topic]-tasks.md"
-    description: "Implementation plan document"
+**JSON references field:**
+```json
+"references": [
+  {
+    "type": "plan",
+    "path": "docs/plans/YYYY-MM-DD-[topic]-tasks.md",
+    "description": "Implementation plan document"
+  }
+]
 ```
 
 ### Commit Plan
@@ -335,18 +337,19 @@ In the plan file, update task status:
 **Status**: Complete (2026-01-27 10:15)
 ```
 
-### Update YAML (via /memoria:save)
+### Update JSON (via /memoria:save)
 
 When saving session, update plan.tasks to reflect progress:
 
-```yaml
-plan:
-  tasks:
-    - "[x] Task 1: Create failing test (RED)"
-    - "[x] Task 2: Implement minimal code (GREEN)"
-    - "[ ] Task 3: Refactor (REFACTOR)"
-  remaining:
-    - "Task 3: Refactor"
+```json
+"plan": {
+  "tasks": [
+    "[x] Task 1: Create failing test (RED)",
+    "[x] Task 2: Implement minimal code (GREEN)",
+    "[ ] Task 3: Refactor (REFACTOR)"
+  ],
+  "remaining": ["Task 3: Refactor"]
+}
 ```
 
 ---

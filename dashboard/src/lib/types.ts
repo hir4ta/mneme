@@ -14,10 +14,18 @@ export type {
   RuleDocument,
   RuleItem,
   Session,
+  SessionCodeExample,
   SessionContext,
+  SessionDiscussion,
+  SessionError,
+  SessionHandoff,
+  SessionPlan,
+  SessionReference,
   SessionStatus,
+  // Structured data types (integrated into Session)
+  SessionSummary,
   SessionType,
-  // YAML types
+  // Legacy YAML types (backwards compatibility)
   SessionYaml,
   SessionYamlCodeExample,
   SessionYamlDiscussion,

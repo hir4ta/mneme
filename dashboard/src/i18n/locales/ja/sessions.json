@@ -51,7 +51,6 @@
   "context": {
     "title": "セッションコンテキスト",
     "sections": "{{count}}セクション",
-    "yaml": "YAML",
     "sectionLabels": {
       "summary": "概要",
       "plan": "計画・タスク",

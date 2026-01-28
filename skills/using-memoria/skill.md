@@ -11,7 +11,7 @@ memoria is a long-term memory plugin for Claude Code.
 
 1. **Auto-save interactions**: Conversations auto-saved at session end (jq-based, no Claude needed)
 2. **Backup on PreCompact**: Interactions backed up before Auto-Compact (context 95% full)
-3. **Manual save**: `/memoria:save` for summary creation and YAML generation
+3. **Manual save**: `/memoria:save` for summary creation and structured data
 4. **Session resume**: `/memoria:resume` to restore past sessions with chain tracking
 5. **Knowledge search**: `/memoria:search` to find saved information
 6. **Rule-based review**: `/memoria:review` for code review based on rules
@@ -63,33 +63,29 @@ When context reaches 95%, interactions are backed up to `preCompactBackups`:
 
 Use for:
 - Creating session summary (title, goal, outcome, description)
-- Generating YAML file with structured data (plan, discussions, errors, handoff)
+- Adding structured data (plan, discussions, errors, handoff, references)
 - Extracting development rules to `dev-rules.json`
 - Extracting review guidelines to `review-guidelines.json`
 
 ### What Gets Saved
 
-**JSON file** (log + search index):
+All data is stored in a single JSON file per session:
+
 | Field | When | Source |
 |-------|------|--------|
 | interactions | SessionEnd | Auto (jq) |
 | files | SessionEnd | Auto (jq) |
 | metrics | SessionEnd | Auto (jq) |
-| title | /memoria:save | Manual |
-| tags | /memoria:save | Manual |
+| title, tags | /memoria:save | Manual |
+| summary | /memoria:save | Manual |
+| plan | /memoria:save | Manual |
+| discussions | /memoria:save | Manual |
+| codeExamples | /memoria:save | Manual |
+| errors | /memoria:save | Manual |
+| handoff | /memoria:save | Manual |
+| references | /memoria:save | Manual |
 | preCompactBackups | PreCompact | Auto (jq) |
 | resumedFrom | /memoria:resume | Auto |
-
-**YAML file** (structured data for dashboard/resume):
-| Section | Description |
-|---------|-------------|
-| summary | title, goal, outcome, description, session_type |
-| plan | tasks, remaining |
-| discussions | decisions with reasoning and alternatives |
-| code_examples | before/after code snippets |
-| errors | problems and solutions |
-| handoff | stopped_reason, notes, next_steps |
-| references | documents, URLs referenced |
 
 ## Session Resume & Chain Tracking
 
@@ -110,7 +106,7 @@ This allows tracking related sessions over time.
 | Command | Description |
 |---------|-------------|
 | `/memoria:resume [id]` | Resume session (omit ID for list) |
-| `/memoria:save` | Create summary + YAML + extract rules |
+| `/memoria:save` | Create summary + structured data + extract rules |
 | `/memoria:search <query>` | Search knowledge |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based review |
 | `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
@@ -134,17 +130,16 @@ npx @hir4ta/memoria --dashboard
 ├── tags.json         # Tag master file
 ├── sessions/         # Session history
 │   └── YYYY/MM/
-│       ├── {id}.json # Log + search index (auto-saved)
-│       └── {id}.yaml # Structured data (manual save)
+│       └── {id}.json # All session data (auto + manual save)
 ├── decisions/        # Technical decisions
 ├── rules/            # Dev rules / review guidelines
 ├── reviews/          # Review results
 └── reports/          # Weekly reports
 ```
 
-## File Schemas
+## JSON File Schema
 
-### JSON (Log + Search Index)
+All session data is stored in a single JSON file:
 
 ```json
 {
@@ -179,55 +174,51 @@ npx @hir4ta/memoria --dashboard
   ],
   "preCompactBackups": [],
   "resumedFrom": "def456",
-  "status": "complete"
+  "status": "complete",
+
+  "summary": {
+    "title": "JWT authentication implementation",
+    "goal": "Implement JWT-based auth",
+    "outcome": "success",
+    "description": "Implemented JWT auth with RS256 signing",
+    "sessionType": "implementation"
+  },
+
+  "plan": {
+    "tasks": ["[x] JWT signing selection", "[ ] Add tests"],
+    "remaining": ["Add tests"]
+  },
+
+  "discussions": [
+    {
+      "topic": "Signing algorithm",
+      "decision": "RS256",
+      "reasoning": "Security for production",
+      "alternatives": ["HS256"]
+    }
+  ],
+
+  "errors": [
+    {
+      "error": "secretOrPrivateKey must be asymmetric",
+      "cause": "Used HS256 secret with RS256",
+      "solution": "Generate RS256 key pair"
+    }
+  ],
+
+  "handoff": {
+    "stoppedReason": "Test creation postponed",
+    "notes": ["vitest configured"],
+    "nextSteps": ["Create jwt.test.ts"]
+  },
+
+  "references": [
+    {"url": "https://jwt.io/introduction", "title": "JWT Introduction"}
+  ]
 }
 ```
 
-### YAML (Structured Data)
-
-```yaml
-version: 1
-session_id: abc12345
-
-summary:
-  title: "JWT authentication implementation"
-  goal: "Implement JWT-based auth"
-  outcome: success  # success | partial | blocked | abandoned
-  description: "Implemented JWT auth with RS256 signing"
-  session_type: implementation
-
-plan:
-  tasks:
-    - "[x] JWT署名方式の選定"
-    - "[ ] テスト追加"
-  remaining:
-    - "テスト追加"
-
-discussions:
-  - topic: "署名方式"
-    decision: "RS256を採用"
-    reasoning: "本番環境でのセキュリティを考慮"
-    alternatives:
-      - "HS256"
-
-errors:
-  - error: "secretOrPrivateKey must be asymmetric"
-    cause: "HS256用の秘密鍵をRS256で使用"
-    solution: "RS256用のキーペアを生成"
-
-handoff:
-  stopped_reason: "テスト作成は次回に持ち越し"
-  notes:
-    - "vitest設定済み"
-  next_steps:
-    - "jwt.test.ts を作成"
-
-references:
-  - url: "https://jwt.io/introduction"
-    title: "JWT Introduction"
-```
-
-### session_type Values
+### sessionType Values
 
 | Value | Description |
 |-------|-------------|

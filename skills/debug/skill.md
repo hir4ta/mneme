@@ -49,7 +49,7 @@ CORRECT:
 
 1. **Search sessions** for similar errors:
    ```
-   Glob: .memoria/sessions/**/*.yaml   # Search errors section
+   Glob: .memoria/sessions/**/*.json   # Search errors section
    Grep: error keywords, error codes, module names
    Look for: errors[].error, errors[].cause, errors[].solution
    ```
@@ -64,8 +64,7 @@ CORRECT:
 3. **Check recent sessions** in same area:
    ```
    Glob: .memoria/sessions/**/*.json   # Search by tags
-   Filter: same tags
-   Then read corresponding .yaml for detailed error info
+   Filter: same tags, then read for detailed error info
    ```
 
 ### Presentation Format
@@ -165,17 +164,20 @@ No matching error patterns in memoria. Starting fresh investigation.
 
 ### Recording
 
-**Note:** Debug details should be saved to YAML via `/memoria:save` when investigation completes.
+**Note:** Debug details should be saved to JSON via `/memoria:save` when investigation completes.
 
 During investigation, interactions are auto-saved (user questions, assistant responses, thinking).
 
-When debug completes, the YAML errors section will capture:
-```yaml
-errors:
-  - error: "[error message - first line]"
-    context: "[what was being done when error occurred]"
-    cause: null  # Filled when root cause found
-    solution: null  # Filled when fixed
+When debug completes, the JSON errors field will capture:
+```json
+"errors": [
+  {
+    "error": "[error message - first line]",
+    "context": "[what was being done when error occurred]",
+    "cause": null,
+    "solution": null
+  }
+]
 ```
 
 ---
@@ -329,16 +331,18 @@ Continue investigating or escalate?
 
 ### Recording (via /memoria:save)
 
-When debug completes, run `/memoria:save` to update YAML errors section:
+When debug completes, run `/memoria:save` to update JSON errors field:
 
-```yaml
-errors:
-  - error: "[error message]"
-    context: "[what was happening]"
-    cause: "[root cause identified]"
-    solution: "[how it was fixed]"
-    files:
-      - "[file that was fixed]"
+```json
+"errors": [
+  {
+    "error": "[error message]",
+    "context": "[what was happening]",
+    "cause": "[root cause identified]",
+    "solution": "[how it was fixed]",
+    "files": ["[file that was fixed]"]
+  }
+]
 ```
 
 This creates searchable error patterns for future debugging sessions.

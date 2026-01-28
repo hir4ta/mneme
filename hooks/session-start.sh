@@ -126,7 +126,7 @@ if [ "$is_resumed" = true ]; then
     echo "[memoria] Session resumed (status reset): ${session_path}" >&2
 else
     # New session: create initial JSON (log-focused schema)
-    # Note: summary, decisions, errors, sessionType are now in YAML file
+    # Note: summary, discussions, errors, handoff are set by /memoria:save
     session_json=$(jq -n \
         --arg id "$file_id" \
         --arg sessionId "${session_id:-$session_short_id}" \

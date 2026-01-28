@@ -9,7 +9,7 @@ Provides automatic session saving, technical decision recording, and web dashboa
 ### Core Features
 - **Auto-save interactions**: Conversations auto-saved at session end (jq-based, reliable)
 - **Backup on PreCompact**: Interactions backed up before Auto-Compact (context 95% full)
-- **Manual save**: Create summary and YAML file with `/memoria:save`
+- **Manual save**: Create summary and structured data with `/memoria:save`
 - **Session Resume**: Resume past sessions with `/memoria:resume` (with chain tracking)
 - **Session Suggestion**: Recent 3 sessions shown at session start
 - **Technical Decision Recording**: Record decisions with `/memoria:decision`
@@ -42,7 +42,7 @@ Provides automatic session saving, technical decision recording, and web dashboa
 
 ### Team Benefits
 
-- `.memoria/` JSON/YAML files are **Git-manageable**, enabling team sharing of decisions and session history
+- `.memoria/` JSON files are **Git-manageable**, enabling team sharing of decisions and session history
 - Quickly understand background and context during onboarding or reviews
 
 ## Installation
@@ -107,8 +107,7 @@ This will auto-update on Claude Code startup.
 **PreCompact** backs up interactions to `preCompactBackups` before Auto-Compact (context 95% full). Summary is NOT auto-created.
 
 **Summary and structured data** are created manually via `/memoria:save`:
-- JSON: Updates `title`, `tags` (search index)
-- YAML: Creates structured data (summary, plan, discussions, errors, handoff)
+- Updates `title`, `tags`, `summary`, `plan`, `discussions`, `errors`, `handoff`, `references` in JSON
 
 ### Session Suggestion
 
@@ -140,7 +139,7 @@ Chain: current ← abc123
 | Command | Description |
 |---------|-------------|
 | `/memoria:resume [id]` | Resume session (show list if ID omitted) |
-| `/memoria:save` | Create summary + YAML + extract rules |
+| `/memoria:save` | Create summary + structured data + extract rules |
 | `/memoria:decision "title"` | Record a technical decision |
 | `/memoria:search "query"` | Search sessions and decisions |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review (--full for two-stage) |
@@ -206,7 +205,7 @@ flowchart TB
     end
 
     subgraph manual [Manual Actions]
-        H["memoria:save"] --> I[Create YAML + update JSON]
+        H["memoria:save"] --> I[Update JSON with structured data]
         J["memoria:decision"] --> K[Record decision explicitly]
     end
 
@@ -252,8 +251,7 @@ All data is stored in `.memoria/` directory:
 ├── tags.json         # Tag master file (93 tags, prevents notation variations)
 ├── sessions/         # Session history (YYYY/MM)
 │   └── YYYY/MM/
-│       ├── {id}.json # Log + search index (auto-saved)
-│       └── {id}.yaml # Structured data (manual save)
+│       └── {id}.json # All session data (auto + manual save)
 ├── decisions/        # Technical decisions (YYYY/MM)
 ├── rules/            # Dev rules / review guidelines
 ├── reviews/          # Review results (YYYY/MM)
@@ -262,7 +260,9 @@ All data is stored in `.memoria/` directory:
 
 Git-manageable. Add to `.gitignore` based on your project needs.
 
-### Session JSON Schema (Log + Search Index)
+### Session JSON Schema
+
+All session data is stored in a single JSON file:
 
 ```json
 {
@@ -297,68 +297,53 @@ Git-manageable. Add to `.gitignore` based on your project needs.
   ],
   "preCompactBackups": [],
   "resumedFrom": "def45678",
-  "status": "complete"
+  "status": "complete",
+
+  "summary": {
+    "title": "JWT authentication implementation",
+    "goal": "Implement JWT-based auth with refresh token support",
+    "outcome": "success",
+    "description": "Implemented JWT auth with RS256 signing",
+    "sessionType": "implementation"
+  },
+
+  "plan": {
+    "tasks": ["[x] JWT signing method selection", "[x] Middleware implementation", "[ ] Add tests"],
+    "remaining": ["Add tests"]
+  },
+
+  "discussions": [
+    {
+      "topic": "Signing algorithm",
+      "decision": "Adopt RS256",
+      "reasoning": "Security considerations for production",
+      "alternatives": ["HS256 (simpler but requires shared secret)"]
+    }
+  ],
+
+  "errors": [
+    {
+      "error": "secretOrPrivateKey must be asymmetric",
+      "cause": "Using HS256 secret with RS256",
+      "solution": "Generate RS256 key pair"
+    }
+  ],
+
+  "handoff": {
+    "stoppedReason": "Test creation postponed to next session",
+    "notes": ["vitest configured", "Mock key pair in test/fixtures/"],
+    "nextSteps": ["Create jwt.test.ts", "Add E2E tests"]
+  },
+
+  "references": [
+    { "url": "https://jwt.io/introduction", "title": "JWT Introduction" }
+  ]
 }
-```
-
-### Session YAML Schema (Structured Data)
-
-```yaml
-version: 1
-session_id: abc12345
-
-summary:
-  title: "JWT authentication implementation"
-  goal: "Implement JWT-based auth with refresh token support"
-  outcome: success  # success | partial | blocked | abandoned
-  description: "Implemented JWT auth with RS256 signing"
-  session_type: implementation
-
-plan:
-  tasks:
-    - "[x] JWT signing method selection"
-    - "[x] Middleware implementation"
-    - "[ ] Add tests"
-  remaining:
-    - "Add tests"
-
-discussions:
-  - topic: "Signing algorithm"
-    decision: "Adopt RS256"
-    reasoning: "Security considerations for production"
-    alternatives:
-      - "HS256 (simpler but requires shared secret)"
-
-code_examples:
-  - file: "src/auth/jwt.ts"
-    description: "JWT generation function"
-    after: |
-      export function generateToken(payload: JWTPayload): string {
-        return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
-      }
-
-errors:
-  - error: "secretOrPrivateKey must be asymmetric"
-    cause: "Using HS256 secret with RS256"
-    solution: "Generate RS256 key pair"
-
-handoff:
-  stopped_reason: "Test creation postponed to next session"
-  notes:
-    - "vitest configured"
-    - "Mock key pair in test/fixtures/"
-  next_steps:
-    - "Create jwt.test.ts"
-    - "Add E2E tests"
-
-references:
-  - url: "https://jwt.io/introduction"
-    title: "JWT Introduction"
 ```
 
 ### Session Types
 
-The `session_type` field (in YAML) classifies the session type.
+The `sessionType` field classifies the session type.
 
 | Type | Description |
 |------|-------------|

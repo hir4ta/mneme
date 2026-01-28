@@ -10,15 +10,23 @@ import {
   Link,
   MessageSquare,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSessionYaml } from "@/lib/api";
-import type { SessionYaml } from "@/lib/types";
+import type {
+  Session,
+  SessionCodeExample,
+  SessionDiscussion,
+  SessionError,
+  SessionHandoff,
+  SessionPlan,
+  SessionReference,
+  SessionSummary,
+} from "@/lib/types";
 
 interface SessionContextCardProps {
-  sessionId: string;
+  session: Session;
   embedded?: boolean; // If true, render without outer Card wrapper
 }
 
@@ -27,7 +35,7 @@ const sectionIcons: Record<string, ReactNode> = {
   summary: <FileText className="h-4 w-4" />,
   plan: <ClipboardList className="h-4 w-4" />,
   discussions: <MessageSquare className="h-4 w-4" />,
-  code_examples: <Code className="h-4 w-4" />,
+  codeExamples: <Code className="h-4 w-4" />,
   references: <Link className="h-4 w-4" />,
   handoff: <ArrowRightFromLine className="h-4 w-4" />,
   errors: <AlertTriangle className="h-4 w-4" />,
@@ -38,7 +46,7 @@ const sectionColors: Record<string, string> = {
   summary: "border-l-blue-500",
   plan: "border-l-purple-500",
   discussions: "border-l-indigo-500",
-  code_examples: "border-l-green-500",
+  codeExamples: "border-l-green-500",
   references: "border-l-yellow-500",
   handoff: "border-l-orange-500",
   errors: "border-l-red-500",
@@ -87,11 +95,9 @@ function SummarySection({
   summary,
   t,
 }: {
-  summary: SessionYaml["summary"];
+  summary: SessionSummary;
   t: (key: string) => string;
 }) {
-  if (!summary) return null;
-
   return (
     <div className="space-y-2 text-sm">
       {summary.goal && (
@@ -123,13 +129,13 @@ function SummarySection({
           <p className="mt-1 whitespace-pre-wrap">{summary.description}</p>
         </div>
       )}
-      {summary.session_type && (
+      {summary.sessionType && (
         <div>
           <span className="text-muted-foreground">
             {t("context.fields.type")}:
           </span>{" "}
           <Badge variant="outline" className="text-xs">
-            {summary.session_type}
+            {summary.sessionType}
           </Badge>
         </div>
       )}
@@ -141,11 +147,9 @@ function PlanSection({
   plan,
   t,
 }: {
-  plan: SessionYaml["plan"];
+  plan: SessionPlan;
   t: (key: string) => string;
 }) {
-  if (!plan) return null;
-
   return (
     <div className="space-y-3 text-sm">
       {plan.goals && plan.goals.length > 0 && (
@@ -201,11 +205,9 @@ function DiscussionsSection({
   discussions,
   t,
 }: {
-  discussions: SessionYaml["discussions"];
+  discussions: SessionDiscussion[];
   t: (key: string) => string;
 }) {
-  if (!discussions || discussions.length === 0) return null;
-
   return (
     <div className="space-y-3">
       {discussions.map((discussion) => (
@@ -245,11 +247,9 @@ function CodeExamplesSection({
   codeExamples,
   t,
 }: {
-  codeExamples: SessionYaml["code_examples"];
+  codeExamples: SessionCodeExample[];
   t: (key: string) => string;
 }) {
-  if (!codeExamples || codeExamples.length === 0) return null;
-
   return (
     <div className="space-y-3">
       {codeExamples.map((example) => (
@@ -297,11 +297,9 @@ function ErrorsSection({
   errors,
   t,
 }: {
-  errors: SessionYaml["errors"];
+  errors: SessionError[];
   t: (key: string) => string;
 }) {
-  if (!errors || errors.length === 0) return null;
-
   return (
     <div className="space-y-3">
       {errors.map((error) => (
@@ -359,19 +357,17 @@ function HandoffSection({
   handoff,
   t,
 }: {
-  handoff: SessionYaml["handoff"];
+  handoff: SessionHandoff;
   t: (key: string) => string;
 }) {
-  if (!handoff) return null;
-
   return (
     <div className="space-y-2 text-sm">
-      {handoff.stopped_reason && (
+      {handoff.stoppedReason && (
         <div>
           <span className="text-muted-foreground">
             {t("context.fields.stoppedReason")}:
           </span>{" "}
-          <span>{handoff.stopped_reason}</span>
+          <span>{handoff.stoppedReason}</span>
         </div>
       )}
       {handoff.notes && handoff.notes.length > 0 && (
@@ -386,13 +382,13 @@ function HandoffSection({
           </ul>
         </div>
       )}
-      {handoff.next_steps && handoff.next_steps.length > 0 && (
+      {handoff.nextSteps && handoff.nextSteps.length > 0 && (
         <div>
           <div className="text-xs text-muted-foreground mb-1">
             {t("context.fields.nextSteps")}
           </div>
           <ul className="list-disc list-inside space-y-1 text-primary">
-            {handoff.next_steps.map((step) => (
+            {handoff.nextSteps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ul>
@@ -402,13 +398,7 @@ function HandoffSection({
   );
 }
 
-function ReferencesSection({
-  references,
-}: {
-  references: SessionYaml["references"];
-}) {
-  if (!references || references.length === 0) return null;
-
+function ReferencesSection({ references }: { references: SessionReference[] }) {
   return (
     <div className="space-y-2">
       {references.map((ref) => (
@@ -449,51 +439,24 @@ function ReferencesSection({
 }
 
 export function SessionContextCard({
-  sessionId,
+  session,
   embedded = false,
 }: SessionContextCardProps) {
   const { t } = useTranslation("sessions");
-  const [yaml, setYaml] = useState<SessionYaml | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchYaml() {
-      try {
-        const data = await getSessionYaml(sessionId);
-        if (data.exists && data.data) {
-          setYaml(data.data);
-        }
-      } catch (err) {
-        setError("Failed to load context");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchYaml();
-  }, [sessionId]);
-
-  if (loading) {
-    return null; // Don't show loading state for optional content
-  }
-
-  if (error || !yaml) {
-    return null; // Don't show error for optional content
-  }
 
   // Count available sections
   const sections = [
-    yaml.summary && (yaml.summary.goal || yaml.summary.description),
-    yaml.plan && (yaml.plan.tasks?.length || yaml.plan.remaining?.length),
-    yaml.discussions && yaml.discussions.length > 0,
-    yaml.code_examples && yaml.code_examples.length > 0,
-    yaml.errors && yaml.errors.length > 0,
-    yaml.handoff &&
-      (yaml.handoff.stopped_reason ||
-        yaml.handoff.notes?.length ||
-        yaml.handoff.next_steps?.length),
-    yaml.references && yaml.references.length > 0,
+    session.summary && (session.summary.goal || session.summary.description),
+    session.plan &&
+      (session.plan.tasks?.length || session.plan.remaining?.length),
+    session.discussions && session.discussions.length > 0,
+    session.codeExamples && session.codeExamples.length > 0,
+    session.errors && session.errors.length > 0,
+    session.handoff &&
+      (session.handoff.stoppedReason ||
+        session.handoff.notes?.length ||
+        session.handoff.nextSteps?.length),
+    session.references && session.references.length > 0,
   ].filter(Boolean).length;
 
   if (sections === 0) {
@@ -508,25 +471,22 @@ export function SessionContextCard({
         <Badge variant="secondary" className="text-xs font-normal">
           {t("context.sections", { count: sections })}
         </Badge>
-        <Badge variant="outline" className="text-xs font-normal">
-          {t("context.yaml")}
-        </Badge>
       </div>
-      {yaml.summary && (
+      {session.summary && (
         <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
-          {yaml.summary.outcome && (
+          {session.summary.outcome && (
             <Badge
               variant={
-                yaml.summary.outcome === "success" ? "default" : "outline"
+                session.summary.outcome === "success" ? "default" : "outline"
               }
               className="text-xs"
             >
-              {yaml.summary.outcome}
+              {session.summary.outcome}
             </Badge>
           )}
-          {yaml.summary.session_type && (
+          {session.summary.sessionType && (
             <Badge variant="outline" className="text-xs">
-              {yaml.summary.session_type}
+              {session.summary.sessionType}
             </Badge>
           )}
         </div>
@@ -536,70 +496,71 @@ export function SessionContextCard({
 
   const contentSections = (
     <div className="space-y-3">
-      {yaml.summary && (yaml.summary.goal || yaml.summary.description) && (
-        <SectionCard
-          sectionKey="summary"
-          label={t("context.sectionLabels.summary")}
-        >
-          <SummarySection summary={yaml.summary} t={t} />
-        </SectionCard>
-      )}
+      {session.summary &&
+        (session.summary.goal || session.summary.description) && (
+          <SectionCard
+            sectionKey="summary"
+            label={t("context.sectionLabels.summary")}
+          >
+            <SummarySection summary={session.summary} t={t} />
+          </SectionCard>
+        )}
 
-      {yaml.plan &&
-        (yaml.plan.tasks?.length || yaml.plan.remaining?.length) && (
+      {session.plan &&
+        (session.plan.tasks?.length || session.plan.remaining?.length) && (
           <SectionCard
             sectionKey="plan"
             label={t("context.sectionLabels.plan")}
           >
-            <PlanSection plan={yaml.plan} t={t} />
+            <PlanSection plan={session.plan} t={t} />
           </SectionCard>
         )}
 
-      {yaml.discussions && yaml.discussions.length > 0 && (
+      {session.discussions && session.discussions.length > 0 && (
         <SectionCard
           sectionKey="discussions"
           label={t("context.sectionLabels.discussions")}
         >
-          <DiscussionsSection discussions={yaml.discussions} t={t} />
+          <DiscussionsSection discussions={session.discussions} t={t} />
         </SectionCard>
       )}
 
-      {yaml.code_examples && yaml.code_examples.length > 0 && (
+      {session.codeExamples && session.codeExamples.length > 0 && (
         <SectionCard
-          sectionKey="code_examples"
+          sectionKey="codeExamples"
           label={t("context.sectionLabels.code_examples")}
         >
-          <CodeExamplesSection codeExamples={yaml.code_examples} t={t} />
+          <CodeExamplesSection codeExamples={session.codeExamples} t={t} />
         </SectionCard>
       )}
 
-      {yaml.errors && yaml.errors.length > 0 && (
+      {session.errors && session.errors.length > 0 && (
         <SectionCard
           sectionKey="errors"
           label={t("context.sectionLabels.errors")}
         >
-          <ErrorsSection errors={yaml.errors} t={t} />
+          <ErrorsSection errors={session.errors} t={t} />
         </SectionCard>
       )}
 
-      {yaml.handoff &&
-        (yaml.handoff.stopped_reason ||
-          yaml.handoff.notes?.length ||
-          yaml.handoff.next_steps?.length) && (
+      {session.handoff &&
+        (session.handoff.stoppedReason ||
+          session.handoff.notes?.length ||
+          session.handoff.nextSteps?.length) && (
           <SectionCard
             sectionKey="handoff"
             label={t("context.sectionLabels.handoff")}
           >
-            <HandoffSection handoff={yaml.handoff} t={t} />
+            <HandoffSection handoff={session.handoff} t={t} />
           </SectionCard>
         )}
 
-      {yaml.references && yaml.references.length > 0 && (
+      {session.references && session.references.length > 0 && (
         <SectionCard
           sectionKey="references"
           label={t("context.sectionLabels.references")}
         >
-          <ReferencesSection references={yaml.references} />
+          <ReferencesSection references={session.references} />
         </SectionCard>
       )}
     </div>
@@ -625,25 +586,22 @@ export function SessionContextCard({
           <Badge variant="secondary" className="text-xs font-normal">
             {t("context.sections", { count: sections })}
           </Badge>
-          <Badge variant="outline" className="text-xs font-normal">
-            {t("context.yaml")}
-          </Badge>
         </CardTitle>
-        {yaml.summary && (
+        {session.summary && (
           <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
-            {yaml.summary.outcome && (
+            {session.summary.outcome && (
               <Badge
                 variant={
-                  yaml.summary.outcome === "success" ? "default" : "outline"
+                  session.summary.outcome === "success" ? "default" : "outline"
                 }
                 className="text-xs"
               >
-                {yaml.summary.outcome}
+                {session.summary.outcome}
               </Badge>
             )}
-            {yaml.summary.session_type && (
+            {session.summary.sessionType && (
               <Badge variant="outline" className="text-xs">
-                {yaml.summary.session_type}
+                {session.summary.sessionType}
               </Badge>
             )}
           </div>

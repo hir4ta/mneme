@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/memoria",
-  "version": "0.12.7",
+  "version": "0.12.8",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",
@@ -74,7 +74,6 @@
     "typescript": "^5",
     "vite": "^6.0.7",
     "vitest": "^4.0.18",
-    "yaml": "^2.8.2",
     "zod": "^4.3.6"
   },
   "volta": {

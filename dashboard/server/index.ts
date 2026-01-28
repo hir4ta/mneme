@@ -4,7 +4,6 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import YAML from "yaml";
 import { z } from "zod";
 import {
   getOrCreateDecisionIndex,
@@ -363,29 +362,6 @@ app.get("/api/sessions/:id", async (c) => {
   }
 });
 
-// Get session YAML file (detailed structured data)
-app.get("/api/sessions/:id/yaml", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
-  try {
-    const jsonPath = findJsonFileById(sessionsDir, id);
-    if (!jsonPath) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-    // YAML file is in the same directory as JSON
-    const yamlPath = jsonPath.replace(/\.json$/, ".yaml");
-    if (!fs.existsSync(yamlPath)) {
-      return c.json({ exists: false, data: null });
-    }
-    const content = fs.readFileSync(yamlPath, "utf-8");
-    const data = YAML.parse(content);
-    return c.json({ exists: true, data });
-  } catch (error) {
-    console.error("Failed to read session YAML:", error);
-    return c.json({ error: "Failed to read session YAML" }, 500);
-  }
-});
-
 // Legacy: Get session markdown file (for backwards compatibility)
 app.get("/api/sessions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
@@ -442,11 +418,6 @@ app.delete("/api/sessions/:id", async (c) => {
       return c.json({ error: "Session not found" }, 404);
     }
     fs.unlinkSync(filePath);
-    // Also delete YAML file if exists
-    const yamlPath = filePath.replace(/\.json$/, ".yaml");
-    if (fs.existsSync(yamlPath)) {
-      fs.unlinkSync(yamlPath);
-    }
     // Rebuild index after deletion
     rebuildAllIndexes(memoriaDir);
     return c.json({ success: true });

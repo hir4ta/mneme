@@ -22,7 +22,7 @@ Resume a previous session.
 
 | Option | Description | Example |
 |--------|-------------|---------|
-| `--type=<type>` | Filter by sessionType (from YAML) | `--type=implementation` |
+| `--type=<type>` | Filter by sessionType | `--type=implementation` |
 | `--tag=<tag>` | Filter by tag | `--tag=auth` |
 | `--days=<n>` | Filter by last N days | `--days=7` |
 | `--branch=<name>` | Filter by branch | `--branch=main` |
@@ -47,17 +47,16 @@ Multiple filters can be combined:
 ## Execution Steps
 
 1. Read all JSON files under `.memoria/sessions/` (including year/month folders)
-2. For each session, check if YAML file exists for richer data
-3. Apply filters if specified:
-   - `--type`: Match `summary.session_type` from YAML (if exists)
-   - `--tag`: Match any tag in `tags` array (JSON)
+2. Apply filters if specified:
+   - `--type`: Match `summary.sessionType` or `sessionType` field
+   - `--tag`: Match any tag in `tags` array
    - `--days`: Compare `createdAt` with current date
    - `--branch`: Match `context.branch` field
-4. Sort by `createdAt` descending (most recent first)
-5. Display filtered session list
-6. If session ID specified, read the files and get details
-7. **Update current session JSON with `resumedFrom` field**
-8. Load session context to resume work
+3. Sort by `createdAt` descending (most recent first)
+4. Display filtered session list
+5. If session ID specified, read the JSON file and get details
+6. **Update current session JSON with `resumedFrom` field**
+7. Load session context to resume work
 
 ### File Operations
 
@@ -68,17 +67,13 @@ Glob: .memoria/sessions/**/*.json
 # Read each session file
 Read: .memoria/sessions/{year}/{month}/{filename}.json
 
-# Read session YAML file if exists (for detailed context)
-Read: .memoria/sessions/{year}/{month}/{filename}.yaml
-
 # Update CURRENT session with resumedFrom
 Edit: .memoria/sessions/{current_year}/{current_month}/{current_id}.json
   → Add "resumedFrom": "{resumed_session_id}"
 
 # Filter logic (pseudo-code)
 for each session:
-  if --type specified:
-    read YAML if exists, check summary.session_type
+  if --type specified and session.summary?.sessionType != type: skip
   if --tag specified and tag not in session.tags: skip
   if --days specified and session.createdAt < (now - days): skip
   if --branch specified and session.context.branch != branch: skip
@@ -95,13 +90,13 @@ Recent sessions (filtered: --type=implementation --days=14):
      Type: implementation
      Tags: [auth] [jwt] [backend]
      Interactions: 3
-     Has YAML: Yes
+     Has Summary: Yes
 
   2. [def456] User management API (2026-01-23, feature/user)
      Type: implementation
      Tags: [user] [api]
      Interactions: 2
-     Has YAML: No
+     Has Summary: No
 
 Select a session to resume (1-2), or enter ID:
 ```
@@ -116,40 +111,43 @@ Session chain: current ← abc123
 
 ---
 
-## From YAML (structured data):
+## Summary:
 
-Summary:
   Title: JWT authentication implementation
   Goal: Implement JWT-based auth with refresh token support
   Outcome: success
   Type: implementation
 
-Plan:
+## Plan:
+
   Tasks:
-    - [x] JWT署名方式の選定
-    - [x] ミドルウェア実装
-    - [ ] テスト追加
+    - [x] JWT signing method selection
+    - [x] Middleware implementation
+    - [ ] Add tests
   Remaining:
-    - テスト追加
+    - Add tests
 
-Discussions:
-  - 署名方式: RS256を採用（本番環境でのセキュリティを考慮）
+## Discussions:
 
-Handoff:
-  Stopped: テスト作成は次回に持ち越し
+  - Signing algorithm: RS256 (Security considerations for production)
+
+## Handoff:
+
+  Stopped: Test creation postponed to next session
   Notes:
-    - vitest設定済み
-    - モック用のキーペアは test/fixtures/ に配置
+    - vitest configured
+    - Mock key pair in test/fixtures/
   Next:
-    - jwt.test.ts を作成
-    - E2Eテスト追加
+    - Create jwt.test.ts
+    - Add E2E tests
 
-Errors:
-  - secretOrPrivateKey must be asymmetric → RS256用のキーペアを生成
+## Errors:
+
+  - secretOrPrivateKey must be asymmetric → Generate RS256 key pair
 
 ---
 
-## From JSON (interactions log):
+## Interactions Log:
 
 [int-001] 2026-01-24T10:00:00Z
   User: Implement authentication
@@ -168,25 +166,25 @@ Ready to continue?
 
 ## Context Injection
 
-When resuming, inject the following context:
+When resuming, inject the following context from the JSON file:
 
-### From YAML file (if exists) - Priority source:
-1. **Summary**: title, goal, outcome, description, session_type
+### Structured Data (set by /memoria:save):
+1. **Summary**: title, goal, outcome, description, sessionType
 2. **Plan**: tasks, remaining → what was planned and what's left
 3. **Discussions**: decisions with reasoning and alternatives
 4. **Code examples**: significant changes with before/after
 5. **Errors**: problems encountered and solutions
-6. **Handoff**: stopped_reason, notes, next_steps → critical for continuity
+6. **Handoff**: stoppedReason, notes, nextSteps → critical for continuity
 7. **References**: documents and resources used
 
-### From JSON file:
-8. **Title/Tags**: For context if YAML doesn't exist
+### Log Data (auto-saved by SessionEnd):
+8. **Title/Tags**: For quick context
 9. **Interactions**: Full conversation log with thinking
 10. **Files**: What files were changed
 11. **PreCompactBackups**: Interactions from before auto-compact (if any)
 
 **Important**:
-- If a YAML file exists alongside the JSON, READ IT FIRST. The YAML contains structured context.
+- All session data is in the JSON file
 - Always update the CURRENT session's JSON with `resumedFrom` to track session chains.
 
 ## Session Chain Tracking
