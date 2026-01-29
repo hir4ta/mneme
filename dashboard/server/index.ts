@@ -169,11 +169,15 @@ const getYearMonthDir = (baseDir: string, isoDate: string): string => {
   return path.join(baseDir, String(year), month);
 };
 
-// CORS for development
+// CORS for development (allow any localhost port)
 app.use(
   "/api/*",
   cors({
-    origin: ["http://localhost:5173", "http://localhost:7777"],
+    origin: (origin) => {
+      if (!origin) return true;
+      if (origin.startsWith("http://localhost:")) return origin;
+      return null;
+    },
   }),
 );
 
@@ -1580,11 +1584,8 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-const port = parseInt(process.env.PORT || "7777", 10);
-
-console.log(`\nmemoria dashboard`);
-console.log(`Project: ${getProjectRoot()}`);
-console.log(`URL: http://localhost:${port}\n`);
+const requestedPort = parseInt(process.env.PORT || "7777", 10);
+const maxPortAttempts = 10;
 
 // Initialize indexes on startup
 const memoriaDir = getMemoriaDir();
@@ -1606,9 +1607,38 @@ if (fs.existsSync(memoriaDir)) {
   }
 }
 
-serve({
-  fetch: app.fetch,
-  port,
+// Try to start server with port fallback
+async function startServer(port: number, attempt = 1): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const server = serve({
+      fetch: app.fetch,
+      port,
+    });
+
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE" && attempt < maxPortAttempts) {
+        console.log(`Port ${port} is in use, trying ${port + 1}...`);
+        server.close();
+        startServer(port + 1, attempt + 1).then(resolve).catch(reject);
+      } else if (err.code === "EADDRINUSE") {
+        reject(new Error(`Could not find an available port after ${maxPortAttempts} attempts`));
+      } else {
+        reject(err);
+      }
+    });
+
+    server.on("listening", () => {
+      console.log(`\nmemoria dashboard`);
+      console.log(`Project: ${getProjectRoot()}`);
+      console.log(`URL: http://localhost:${port}\n`);
+      resolve();
+    });
+  });
+}
+
+startServer(requestedPort).catch((err) => {
+  console.error("Failed to start server:", err.message);
+  process.exit(1);
 });
 
 // Graceful shutdown

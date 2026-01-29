@@ -16966,7 +16966,11 @@ var getYearMonthDir = (baseDir, isoDate) => {
 app.use(
   "/api/*",
   cors({
-    origin: ["http://localhost:5173", "http://localhost:7777"]
+    origin: (origin) => {
+      if (!origin) return true;
+      if (origin.startsWith("http://localhost:")) return origin;
+      return null;
+    }
   })
 );
 function parsePaginationParams(c) {
@@ -18098,12 +18102,8 @@ if (fs4.existsSync(distPath)) {
     return c.notFound();
   });
 }
-var port = parseInt(process.env.PORT || "7777", 10);
-console.log(`
-memoria dashboard`);
-console.log(`Project: ${getProjectRoot()}`);
-console.log(`URL: http://localhost:${port}
-`);
+var requestedPort = parseInt(process.env.PORT || "7777", 10);
+var maxPortAttempts = 10;
 var memoriaDir = getMemoriaDir();
 if (fs4.existsSync(memoriaDir)) {
   try {
@@ -18120,9 +18120,36 @@ if (fs4.existsSync(memoriaDir)) {
     console.warn("Failed to initialize indexes:", error48);
   }
 }
-serve({
-  fetch: app.fetch,
-  port
+async function startServer(port, attempt = 1) {
+  return new Promise((resolve, reject) => {
+    const server = serve({
+      fetch: app.fetch,
+      port
+    });
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE" && attempt < maxPortAttempts) {
+        console.log(`Port ${port} is in use, trying ${port + 1}...`);
+        server.close();
+        startServer(port + 1, attempt + 1).then(resolve).catch(reject);
+      } else if (err.code === "EADDRINUSE") {
+        reject(new Error(`Could not find an available port after ${maxPortAttempts} attempts`));
+      } else {
+        reject(err);
+      }
+    });
+    server.on("listening", () => {
+      console.log(`
+memoria dashboard`);
+      console.log(`Project: ${getProjectRoot()}`);
+      console.log(`URL: http://localhost:${port}
+`);
+      resolve();
+    });
+  });
+}
+startServer(requestedPort).catch((err) => {
+  console.error("Failed to start server:", err.message);
+  process.exit(1);
 });
 process.on("SIGINT", () => {
   console.log("\nShutting down...");

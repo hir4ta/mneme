@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
@@ -287,9 +287,13 @@ export function PatternsPage() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground mt-3">
-              {t("explanation.description").replace(/<code>.*?<\/code>/g, "")}{" "}
-              <code className="bg-muted px-1 rounded">/memoria:debug</code>{" "}
-              <code className="bg-muted px-1 rounded">/memoria:tdd</code>
+              <Trans
+                i18nKey="explanation.description"
+                ns="patterns"
+                components={{
+                  code: <code className="bg-muted px-1 rounded" />,
+                }}
+              />
             </p>
           </CardContent>
         </Card>
