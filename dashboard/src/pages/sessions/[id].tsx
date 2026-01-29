@@ -2,6 +2,7 @@ import { Link2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SessionContextCard } from "@/components/session-context-card";
 import {
   AlertDialog,
@@ -68,9 +69,12 @@ function CompactSummaryCard({ interaction }: { interaction: Interaction }) {
           <div className="text-xs text-amber-700 dark:text-amber-400 font-medium mb-2">
             {t("interaction.summaryFromPreviousContext")}
           </div>
-          <pre className="text-xs whitespace-pre-wrap overflow-x-auto text-amber-800 dark:text-amber-200 max-h-96 overflow-y-auto font-mono leading-relaxed">
-            {interaction.user}
-          </pre>
+          <div className="text-xs max-h-96 overflow-y-auto">
+            <MarkdownRenderer
+              content={interaction.user}
+              className="text-amber-800 dark:text-amber-200 prose-headings:text-amber-800 dark:prose-headings:text-amber-200 prose-strong:text-amber-800 dark:prose-strong:text-amber-200 prose-code:text-amber-800 dark:prose-code:text-amber-200"
+            />
+          </div>
         </div>
       )}
     </div>
@@ -90,38 +94,45 @@ function InteractionCard({ interaction }: { interaction: Interaction }) {
     <div className="space-y-3">
       {/* Timestamp header */}
       <div className="flex justify-center">
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+        <span className="text-xs text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full">
           {timestamp}
         </span>
       </div>
 
-      {/* User message - right aligned */}
+      {/* User message - right aligned - modern dark slate */}
       <div className="flex flex-col items-end">
-        <span className="text-xs text-muted-foreground mb-1 mr-1">
+        <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 mr-1">
           {t("interaction.user")}
         </span>
-        <div className="max-w-[85%] bg-gradient-to-br from-slate-700 to-slate-800 dark:from-slate-600 dark:to-slate-700 text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
-          <div className="text-sm whitespace-pre-wrap">{interaction.user}</div>
+        <div className="max-w-[85%] bg-[#39414B] text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
+          <MarkdownRenderer
+            content={interaction.user}
+            variant="dark"
+            className="text-sm text-white prose-headings:text-white prose-strong:text-white"
+          />
         </div>
       </div>
 
-      {/* Assistant response - left aligned */}
+      {/* Assistant response - left aligned - Claude cream/beige */}
       {interaction.assistant && (
         <div className="flex flex-col items-start">
-          <span className="text-xs text-muted-foreground mb-1 ml-1">
+          <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 ml-1">
             {t("interaction.assistant")}
           </span>
-          <div className="max-w-[85%] bg-muted rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm">
-            <div className="text-sm whitespace-pre-wrap">
-              {interaction.assistant.length > 500 && !isExpanded
-                ? `${interaction.assistant.substring(0, 500)}...`
-                : interaction.assistant}
-            </div>
+          <div className="max-w-[85%] bg-[#F5F5F0] dark:bg-stone-800 text-stone-800 dark:text-stone-100 rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm border border-stone-200 dark:border-stone-700">
+            <MarkdownRenderer
+              content={
+                interaction.assistant.length > 500 && !isExpanded
+                  ? `${interaction.assistant.substring(0, 500)}...`
+                  : interaction.assistant
+              }
+              className="text-sm"
+            />
             {interaction.assistant.length > 500 && !isExpanded && (
               <button
                 type="button"
                 onClick={() => setIsExpanded(true)}
-                className="text-xs text-primary hover:underline mt-2"
+                className="text-xs text-[#C15F3C] hover:underline mt-2"
               >
                 {t("interaction.showMore")}
               </button>
@@ -147,9 +158,10 @@ function InteractionCard({ interaction }: { interaction: Interaction }) {
 
             {showThinking && (
               <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2">
-                <pre className="text-xs whitespace-pre-wrap overflow-x-auto text-amber-800 dark:text-amber-200">
-                  {interaction.thinking}
-                </pre>
+                <MarkdownRenderer
+                  content={interaction.thinking || ""}
+                  className="text-xs text-amber-800 dark:text-amber-200 prose-headings:text-amber-800 dark:prose-headings:text-amber-200 prose-code:text-amber-700 dark:prose-code:text-amber-300"
+                />
               </div>
             )}
           </div>
@@ -574,7 +586,9 @@ export function SessionDetailPage() {
                 </div>
                 {session.context.repository && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">{tc("repository")}</span>
+                    <span className="text-muted-foreground">
+                      {tc("repository")}
+                    </span>
                     <span className="font-mono text-xs">
                       {session.context.repository}
                     </span>

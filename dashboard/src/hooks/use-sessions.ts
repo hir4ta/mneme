@@ -7,10 +7,21 @@ import {
 } from "@/lib/api";
 
 export function useSessions(params: SessionsQueryParams = {}) {
-  const { page = 1, limit = 20, tag, type, project, search, paginate = true } = params;
+  const {
+    page = 1,
+    limit = 20,
+    tag,
+    type,
+    project,
+    search,
+    paginate = true,
+  } = params;
 
   return useQuery({
-    queryKey: ["sessions", { page, limit, tag, type, project, search, paginate }],
+    queryKey: [
+      "sessions",
+      { page, limit, tag, type, project, search, paginate },
+    ],
     queryFn: () =>
       paginate
         ? getSessionsPaginated({ page, limit, tag, type, project, search })
