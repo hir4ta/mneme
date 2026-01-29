@@ -370,16 +370,22 @@ function HandoffSection({
           <span>{handoff.stoppedReason}</span>
         </div>
       )}
-      {handoff.notes && handoff.notes.length > 0 && (
+      {handoff.notes && (
         <div>
           <div className="text-xs text-muted-foreground mb-1">
             {t("context.fields.notes")}
           </div>
-          <ul className="list-disc list-inside space-y-1">
-            {handoff.notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
+          {Array.isArray(handoff.notes) ? (
+            handoff.notes.length > 0 && (
+              <ul className="list-disc list-inside space-y-1">
+                {handoff.notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )
+          ) : (
+            <p className="whitespace-pre-wrap">{handoff.notes}</p>
+          )}
         </div>
       )}
       {handoff.nextSteps && handoff.nextSteps.length > 0 && (
@@ -398,42 +404,57 @@ function HandoffSection({
   );
 }
 
-function ReferencesSection({ references }: { references: SessionReference[] }) {
+function ReferencesSection({
+  references,
+}: { references: (SessionReference | string)[] }) {
   return (
     <div className="space-y-2">
-      {references.map((ref) => (
-        <div
-          key={`${ref.type || ""}-${ref.url || ref.path || ref.title || ""}`}
-          className="flex items-start gap-2 text-sm"
-        >
-          {ref.type && (
-            <Badge variant="outline" className="text-xs">
-              {ref.type}
-            </Badge>
-          )}
-          {ref.url ? (
-            <a
-              href={ref.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary hover:underline"
-            >
-              {ref.title || ref.url}
-            </a>
-          ) : ref.path ? (
-            <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
-              {ref.path}
-            </code>
-          ) : (
-            ref.title
-          )}
-          {ref.description && (
-            <span className="text-muted-foreground text-xs">
-              - {ref.description}
-            </span>
-          )}
-        </div>
-      ))}
+      {references.map((ref) => {
+        // Handle string references (legacy format)
+        if (typeof ref === "string") {
+          return (
+            <div key={ref} className="flex items-start gap-2 text-sm">
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
+                {ref}
+              </code>
+            </div>
+          );
+        }
+        // Handle object references
+        return (
+          <div
+            key={`${ref.type || ""}-${ref.url || ref.path || ref.title || ""}`}
+            className="flex items-start gap-2 text-sm"
+          >
+            {ref.type && (
+              <Badge variant="outline" className="text-xs">
+                {ref.type}
+              </Badge>
+            )}
+            {ref.url ? (
+              <a
+                href={ref.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                {ref.title || ref.url}
+              </a>
+            ) : ref.path ? (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
+                {ref.path}
+              </code>
+            ) : (
+              ref.title
+            )}
+            {ref.description && (
+              <span className="text-muted-foreground text-xs">
+                - {ref.description}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
