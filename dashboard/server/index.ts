@@ -174,7 +174,7 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
-      if (!origin) return true;
+      if (!origin) return undefined;
       if (origin.startsWith("http://localhost:")) return origin;
       return null;
     },
@@ -189,6 +189,7 @@ interface PaginationParams {
   limit: number;
   tag?: string;
   type?: string;
+  project?: string;
   search?: string;
 }
 
@@ -203,6 +204,7 @@ function parsePaginationParams(c: {
     ),
     tag: c.req.query("tag"),
     type: c.req.query("type"),
+    project: c.req.query("project"),
     search: c.req.query("search"),
   };
 }
@@ -280,6 +282,22 @@ app.get("/api/sessions", async (c) => {
     }
     if (params.type) {
       filtered = filtered.filter((s) => s.sessionType === params.type);
+    }
+    if (params.project) {
+      const projectQuery = params.project;
+      filtered = filtered.filter((s) => {
+        const ctx = s.context as
+          | { projectName?: string; repository?: string }
+          | undefined;
+        const projectName = ctx?.projectName;
+        const repository = ctx?.repository;
+        // Match by projectName or repository (full or ending with /projectName)
+        return (
+          projectName === projectQuery ||
+          repository === projectQuery ||
+          repository?.endsWith(`/${projectQuery}`)
+        );
+      });
     }
     if (params.search) {
       const query = params.search.toLowerCase();
@@ -1619,9 +1637,15 @@ async function startServer(port: number, attempt = 1): Promise<void> {
       if (err.code === "EADDRINUSE" && attempt < maxPortAttempts) {
         console.log(`Port ${port} is in use, trying ${port + 1}...`);
         server.close();
-        startServer(port + 1, attempt + 1).then(resolve).catch(reject);
+        startServer(port + 1, attempt + 1)
+          .then(resolve)
+          .catch(reject);
       } else if (err.code === "EADDRINUSE") {
-        reject(new Error(`Could not find an available port after ${maxPortAttempts} attempts`));
+        reject(
+          new Error(
+            `Could not find an available port after ${maxPortAttempts} attempts`,
+          ),
+        );
       } else {
         reject(err);
       }

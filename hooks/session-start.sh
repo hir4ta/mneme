@@ -65,6 +65,21 @@ if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
     git_user_email=$(git -C "$cwd" config user.email 2>/dev/null || echo "")
 fi
 
+# Get project name from directory
+project_name=$(basename "$cwd")
+
+# Get repository name from git remote origin
+repository=""
+if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
+    git_remote_url=$(git -C "$cwd" remote get-url origin 2>/dev/null || echo "")
+    if [ -n "$git_remote_url" ]; then
+        # Extract user/repo from SSH or HTTPS URL
+        # git@github.com:user/repo.git → user/repo
+        # https://github.com/user/repo.git → user/repo
+        repository=$(echo "$git_remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+?)(\.git)?$|\1|')
+    fi
+fi
+
 # ============================================
 # Find existing session file or create new one
 # ============================================
@@ -133,6 +148,8 @@ else
         --arg createdAt "$now" \
         --arg branch "$current_branch" \
         --arg projectDir "$cwd" \
+        --arg projectName "$project_name" \
+        --arg repository "$repository" \
         --arg userName "$git_user_name" \
         --arg userEmail "$git_user_email" \
         '{
@@ -144,6 +161,8 @@ else
             context: {
                 branch: (if $branch == "" then null else $branch end),
                 projectDir: $projectDir,
+                projectName: $projectName,
+                repository: (if $repository == "" then null else $repository end),
                 user: {
                     name: $userName,
                     email: (if $userEmail == "" then null else $userEmail end)

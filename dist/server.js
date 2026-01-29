@@ -16967,7 +16967,7 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
-      if (!origin) return true;
+      if (!origin) return void 0;
       if (origin.startsWith("http://localhost:")) return origin;
       return null;
     }
@@ -16982,6 +16982,7 @@ function parsePaginationParams(c) {
     ),
     tag: c.req.query("tag"),
     type: c.req.query("type"),
+    project: c.req.query("project"),
     search: c.req.query("search")
   };
 }
@@ -17044,6 +17045,15 @@ app.get("/api/sessions", async (c) => {
     }
     if (params.type) {
       filtered = filtered.filter((s) => s.sessionType === params.type);
+    }
+    if (params.project) {
+      const projectQuery = params.project;
+      filtered = filtered.filter((s) => {
+        const ctx = s.context;
+        const projectName = ctx?.projectName;
+        const repository = ctx?.repository;
+        return projectName === projectQuery || repository === projectQuery || repository?.endsWith(`/${projectQuery}`);
+      });
     }
     if (params.search) {
       const query = params.search.toLowerCase();
@@ -18132,7 +18142,11 @@ async function startServer(port, attempt = 1) {
         server.close();
         startServer(port + 1, attempt + 1).then(resolve).catch(reject);
       } else if (err.code === "EADDRINUSE") {
-        reject(new Error(`Could not find an available port after ${maxPortAttempts} attempts`));
+        reject(
+          new Error(
+            `Could not find an available port after ${maxPortAttempts} attempts`
+          )
+        );
       } else {
         reject(err);
       }

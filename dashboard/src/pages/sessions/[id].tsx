@@ -567,6 +567,20 @@ export function SessionDetailPage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">{tc("project")}</span>
+                  <span className="font-mono text-xs">
+                    {session.context.projectName || tc("na")}
+                  </span>
+                </div>
+                {session.context.repository && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{tc("repository")}</span>
+                    <span className="font-mono text-xs">
+                      {session.context.repository}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     {t("detail.interactions")}
                   </span>

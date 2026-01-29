@@ -19,9 +19,12 @@
   "user": "ユーザー",
   "date": "日付",
   "branch": "ブランチ",
+  "project": "プロジェクト",
+  "repository": "リポジトリ",
   "type": "タイプ",
   "status": "ステータス",
   "tags": "タグ",
+  "allProjects": "全プロジェクト",
   "na": "N/A",
   "unknown": "不明",
   "pagination": {

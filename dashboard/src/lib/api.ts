@@ -22,6 +22,7 @@ export interface SessionsQueryParams {
   limit?: number;
   tag?: string;
   type?: string;
+  project?: string;
   search?: string;
   paginate?: boolean;
 }
@@ -49,6 +50,7 @@ export async function getSessionsPaginated(
   if (params.limit) searchParams.set("limit", String(params.limit));
   if (params.tag) searchParams.set("tag", params.tag);
   if (params.type) searchParams.set("type", params.type);
+  if (params.project) searchParams.set("project", params.project);
   if (params.search) searchParams.set("search", params.search);
   searchParams.set("paginate", "true");
 

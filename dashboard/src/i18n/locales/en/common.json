@@ -19,9 +19,12 @@
   "user": "User",
   "date": "Date",
   "branch": "Branch",
+  "project": "Project",
+  "repository": "Repository",
   "type": "Type",
   "status": "Status",
   "tags": "Tags",
+  "allProjects": "All Projects",
   "na": "N/A",
   "unknown": "unknown",
   "pagination": {

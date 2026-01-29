@@ -12,6 +12,8 @@ export type User = z.infer<typeof UserSchema>;
 export const SessionContextSchema = z.object({
   branch: z.string().nullable().optional(),
   projectDir: z.string(),
+  projectName: z.string().optional(),
+  repository: z.string().nullable().optional(),
   user: UserSchema.optional(),
 });
 
