@@ -57,7 +57,7 @@ Text matching on each file's content:
 ### Tag Alias Search
 
 If query matches an alias in tags.json, search using the corresponding id:
-- Example: "フロント" → search for "frontend" tag
+- Example: "front" → search for "frontend" tag
 
 ## Search Target Fields
 

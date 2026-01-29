@@ -7,6 +7,22 @@ description: How to use memoria - auto-loaded at session start
 
 memoria is a long-term memory plugin for Claude Code.
 
+## Session Start Greeting (Important)
+
+**When a new session starts**, check the additionalContext for "Recent sessions" section.
+If present, proactively inform the user about recent sessions they can resume:
+
+Example greeting:
+```
+Recent sessions:
+1. [abc12345] Title (date, branch)
+2. [def67890] Title (date, branch)
+
+To continue from a previous session, use `/memoria:resume <id>`.
+```
+
+This helps users quickly resume previous work without having to search.
+
 ## Features
 
 1. **Auto-save interactions**: Conversations auto-saved at session end (jq-based, no Claude needed)

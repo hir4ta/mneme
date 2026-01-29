@@ -159,17 +159,17 @@ Scan conversation for user instructions:
 
 #### Dev Rules
 Look for:
-- "〜を使って" / "Use X"
-- "〜は禁止" / "Don't use X"
-- "〜パターンで書いて" / "Write with X pattern"
-- "必ず〜して" / "Always do X"
+- "Use X"
+- "Don't use X"
+- "Write with X pattern"
+- "Always do X"
 
 Categories: `code-style`, `architecture`, `error-handling`, `performance`, `security`, `testing`, `other`
 
 #### Review Guidelines
 Look for:
-- "レビューで〜を確認して" / "Check X in reviews"
-- "〜は指摘して" / "Point out X"
+- "Check X in reviews"
+- "Point out X"
 
 Categories: `must-check`, `warning`, `suggestion`, `other`
 

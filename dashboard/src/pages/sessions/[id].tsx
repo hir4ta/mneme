@@ -164,9 +164,13 @@ function ContextRestorationCard({ session }: { session: Session }) {
   const [copied, setCopied] = useState(false);
 
   // Collect all modified files from session.files
+  // Handle both string[] and {path: string}[] formats
   const modifiedFiles = new Set<string>();
-  for (const file of (session as { files?: { path: string }[] }).files || []) {
-    modifiedFiles.add(file.path);
+  const files =
+    (session as { files?: (string | { path: string })[] }).files || [];
+  for (const file of files) {
+    const path = typeof file === "string" ? file : file.path;
+    if (path) modifiedFiles.add(path);
   }
 
   const projectDir = session.context?.projectDir;
