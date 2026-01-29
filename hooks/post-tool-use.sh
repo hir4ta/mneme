@@ -4,9 +4,9 @@
 #
 # This hook is called after Bash tool execution.
 # It detects errors, searches for matching patterns in memoria,
-# and suggests solutions or /memoria:debug for systematic debugging.
+# and suggests solutions from past error-solution patterns.
 #
-# Input (stdin): JSON with tool_name, tool_input, tool_result, cwd
+# Input (stdin): JSON with tool_name, tool_input, tool_response, cwd
 # Output: JSON with continue (boolean) and optional additionalContext
 
 set -euo pipefail
@@ -14,9 +14,9 @@ set -euo pipefail
 # Read stdin
 input_json=$(cat)
 
-# Extract relevant fields
-exit_code=$(echo "$input_json" | jq -r '.tool_result.exit_code // 0')
-stderr=$(echo "$input_json" | jq -r '.tool_result.stderr // ""')
+# Extract relevant fields (tool_response is the official field name)
+exit_code=$(echo "$input_json" | jq -r '.tool_response.exit_code // .tool_result.exit_code // 0')
+stderr=$(echo "$input_json" | jq -r '.tool_response.stderr // .tool_result.stderr // ""')
 command=$(echo "$input_json" | jq -r '.tool_input.command // ""')
 cwd=$(echo "$input_json" | jq -r '.cwd // empty')
 
@@ -79,10 +79,10 @@ if [[ "$exit_code" != "0" && -n "$stderr" ]]; then
     if [ -n "$matched_reasoning" ]; then
       suggestion+="Reasoning: ${matched_reasoning}\\n"
     fi
-    suggestion+="\\nApply this solution? Or use /memoria:debug for fresh investigation."
+    suggestion+="\\nApply this solution?"
   else
-    # No match - suggest debug skill
-    suggestion="Error detected (exit code: $exit_code). Consider using /memoria:debug for systematic root cause analysis."
+    # No match - just note the error
+    suggestion="Error detected (exit code: $exit_code). No matching pattern found in memoria."
   fi
 
   # Output with additionalContext

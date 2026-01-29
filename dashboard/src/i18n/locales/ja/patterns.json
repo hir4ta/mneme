@@ -1,8 +1,8 @@
 {
   "title": "学習されたパターン",
-  "subtitle": "開発セッションから学習されたパターン",
+  "subtitle": "/memoria:saveで開発セッションから抽出されたパターン",
   "searchPlaceholder": "パターンを検索...",
-  "noPatterns": "まだパターンが学習されていません。パターンは開発セッションから抽出されます。",
+  "noPatterns": "まだパターンがありません。/memoria:saveを実行してセッションからパターンを抽出してください。",
   "noMatchingFilters": "フィルターに一致するパターンがありません。",
   "deleteTitle": "パターンを削除しますか？",
   "explanation": {
@@ -10,7 +10,7 @@
     "goodPattern": "推奨されるコーディングパターン（例：Promise.allで並列化）",
     "antiPattern": "避けるべきパターン（例：N+1クエリ）",
     "errorSolution": "一般的なエラーとその修正（例：JWT署名エラー → PEM形式に変換）",
-    "description": "<code>/memoria:debug</code>または<code>/memoria:tdd</code>で発見されたパターンは自動的に記録されます。"
+    "description": "<code>/memoria:save</code>を実行するとセッションからパターンが抽出されます。遭遇したエラーと解決策が自動的に記録されます。"
   },
   "types": {
     "good": "良いパターン",

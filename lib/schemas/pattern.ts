@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PRSourceSchema } from "./common.js";
 
 // Pattern type
 export const PatternTypeSchema = z.enum(["good", "bad", "error-solution"]);
@@ -17,6 +18,8 @@ export const LearnedPatternSchema = z.object({
   sourceId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
+  // PR source tracking
+  prSource: PRSourceSchema.optional(),
 });
 
 export type LearnedPattern = z.infer<typeof LearnedPatternSchema>;

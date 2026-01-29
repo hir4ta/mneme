@@ -7,43 +7,30 @@ description: How to use memoria - auto-loaded at session start
 
 memoria is a long-term memory plugin for Claude Code.
 
-## Session Start Greeting (Important)
-
-**When a new session starts**, check the additionalContext for "Recent sessions" section.
-If present, proactively inform the user about recent sessions they can resume:
-
-Example greeting:
-```
-Recent sessions:
-1. [abc12345] Title (date, branch)
-2. [def67890] Title (date, branch)
-
-To continue from a previous session, use `/memoria:resume <id>`.
-```
-
-This helps users quickly resume previous work without having to search.
-
 ## Features
 
 1. **Auto-save interactions**: Conversations auto-saved at session end (jq-based, no Claude needed)
 2. **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
-3. **Manual save**: `/memoria:save` for full data extraction (summary, decisions, patterns, rules)
+3. **Manual save**: `/memoria:save` for full data extraction (interactions, summary, decisions, patterns, rules)
 4. **Smart planning**: `/memoria:plan` for memory-informed design and task breakdown
 5. **Session resume**: `/memoria:resume` to restore past sessions with chain tracking
 6. **Knowledge search**: `/memoria:search` to find saved information
-7. **Rule-based review**: `/memoria:review` for code review based on rules
-8. **Weekly reports**: `/memoria:report` to generate review summary
-9. **Web dashboard**: Visual management of sessions and decisions
+7. **Rule-based review**: `/memoria:review` for code review based on rules (supports PR URLs)
+8. **Knowledge harvesting**: `/memoria:harvest` to extract rules/patterns from PR comments
+9. **Weekly reports**: `/memoria:report` to generate review summary
+10. **Web dashboard**: Visual management of sessions and decisions
 
 ## Core Commands
 
 | Command | Description |
 |---------|-------------|
-| `/memoria:save` | Extract all data: summary, decisions, patterns, rules |
+| `/memoria:save` | Save all data: interactions, summary, decisions, patterns, rules |
 | `/memoria:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
 | `/memoria:resume [id]` | Resume session (omit ID for list) |
 | `/memoria:search <query>` | Search knowledge |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based review |
+| `/memoria:review <PR URL>` | Review GitHub PR |
+| `/memoria:harvest <PR URL>` | Extract knowledge from PR review comments |
 | `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
 
 ## Session Saving
@@ -64,10 +51,11 @@ Automatically saved:
 
 ### Manual Save (`/memoria:save`)
 
-**Run at the end of meaningful sessions** to extract:
+**Run anytime** to save all session data (no need to exit first):
 
 | Data | Destination |
 |------|-------------|
+| **Interactions** (conversation history) | sessions/*.json |
 | Summary (title, goal, outcome) | sessions/*.json |
 | Discussions → **Decisions** | decisions/*.json |
 | Errors → **Patterns** | patterns/*.json |
@@ -124,9 +112,9 @@ npx @hir4ta/memoria --dashboard
 
 | Field | Trigger | Source |
 |-------|---------|--------|
-| interactions | SessionEnd | Auto (jq) |
-| files | SessionEnd | Auto (jq) |
-| metrics | SessionEnd | Auto (jq) |
+| interactions | SessionEnd or /memoria:save | Auto (jq) or Manual |
+| files | SessionEnd or /memoria:save | Auto (jq) or Manual |
+| metrics | SessionEnd or /memoria:save | Auto (jq) or Manual |
 | title, tags | /memoria:save | Manual |
 | summary | /memoria:save | Manual |
 | discussions → decisions/ | /memoria:save | Manual |
@@ -134,6 +122,8 @@ npx @hir4ta/memoria --dashboard
 | rules/ | /memoria:save | Manual |
 | handoff | /memoria:save | Manual |
 | references | /memoria:save | Manual |
+
+**Note:** `/memoria:save` now saves interactions too - no need to exit first.
 
 ## tags.json (Tag Master)
 
@@ -146,7 +136,7 @@ Reference when selecting tags:
     {
       "id": "frontend",
       "label": "Frontend",
-      "aliases": ["front", "フロント", "client"],
+      "aliases": ["front", "client", "ui"],
       "category": "domain",
       "color": "#3B82F6"
     }

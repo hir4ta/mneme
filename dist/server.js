@@ -2900,11 +2900,24 @@ function ensureDir(dirPath) {
 // lib/index/builder.ts
 import * as fs2 from "node:fs";
 import * as path from "node:path";
-function listDatedJsonFiles(dir) {
-  if (!fs2.existsSync(dir)) {
+function listMonthJsonFiles(monthDir) {
+  if (!fs2.existsSync(monthDir)) {
     return [];
   }
   const files = [];
+  const entries = fs2.readdirSync(monthDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      files.push(path.join(monthDir, entry.name));
+    }
+  }
+  return files;
+}
+function listYearMonths(dir) {
+  if (!fs2.existsSync(dir)) {
+    return [];
+  }
+  const results = [];
   const years = fs2.readdirSync(dir, { withFileTypes: true });
   for (const year of years) {
     if (!year.isDirectory() || !/^\d{4}$/.test(year.name)) continue;
@@ -2912,20 +2925,20 @@ function listDatedJsonFiles(dir) {
     const months = fs2.readdirSync(yearPath, { withFileTypes: true });
     for (const month of months) {
       if (!month.isDirectory() || !/^\d{2}$/.test(month.name)) continue;
-      const monthPath = path.join(yearPath, month.name);
-      const jsonFiles = fs2.readdirSync(monthPath, { withFileTypes: true });
-      for (const file of jsonFiles) {
-        if (file.isFile() && file.name.endsWith(".json")) {
-          files.push(path.join(monthPath, file.name));
-        }
-      }
+      results.push({ year: year.name, month: month.name });
     }
   }
-  return files;
+  results.sort((a, b) => {
+    const aKey = `${a.year}${a.month}`;
+    const bKey = `${b.year}${b.month}`;
+    return bKey.localeCompare(aKey);
+  });
+  return results;
 }
-function buildSessionIndex(memoriaDir2) {
+function buildSessionIndexForMonth(memoriaDir2, year, month) {
   const sessionsDir = path.join(memoriaDir2, "sessions");
-  const files = listDatedJsonFiles(sessionsDir);
+  const monthDir = path.join(sessionsDir, year, month);
+  const files = listMonthJsonFiles(monthDir);
   const items = [];
   for (const filePath of files) {
     try {
@@ -2936,17 +2949,20 @@ function buildSessionIndex(memoriaDir2) {
       const context = session.context || {};
       const user = context.user;
       const summary = session.summary || {};
+      const title = summary.title || session.title || "";
+      const sessionType = session.sessionType || summary.sessionType || null;
       items.push({
         id: session.id,
-        title: summary.title || session.title || "Untitled",
+        title: title || "Untitled",
         goal: summary.goal || session.goal || void 0,
         createdAt: session.createdAt,
         tags: session.tags || [],
-        sessionType: session.sessionType || null,
+        sessionType,
         branch: context.branch || null,
         user: user?.name,
         interactionCount: interactions.length,
-        filePath: relativePath
+        filePath: relativePath,
+        hasSummary: !!title && title !== "Untitled"
       });
     } catch {
     }
@@ -2960,9 +2976,23 @@ function buildSessionIndex(memoriaDir2) {
     items
   };
 }
-function buildDecisionIndex(memoriaDir2) {
+function buildAllSessionIndexes(memoriaDir2) {
+  const sessionsDir = path.join(memoriaDir2, "sessions");
+  const yearMonths = listYearMonths(sessionsDir);
+  const indexes = /* @__PURE__ */ new Map();
+  for (const { year, month } of yearMonths) {
+    const key = `${year}/${month}`;
+    const index = buildSessionIndexForMonth(memoriaDir2, year, month);
+    if (index.items.length > 0) {
+      indexes.set(key, index);
+    }
+  }
+  return indexes;
+}
+function buildDecisionIndexForMonth(memoriaDir2, year, month) {
   const decisionsDir = path.join(memoriaDir2, "decisions");
-  const files = listDatedJsonFiles(decisionsDir);
+  const monthDir = path.join(decisionsDir, year, month);
+  const files = listMonthJsonFiles(monthDir);
   const items = [];
   for (const filePath of files) {
     try {
@@ -2992,20 +3022,41 @@ function buildDecisionIndex(memoriaDir2) {
     items
   };
 }
+function buildAllDecisionIndexes(memoriaDir2) {
+  const decisionsDir = path.join(memoriaDir2, "decisions");
+  const yearMonths = listYearMonths(decisionsDir);
+  const indexes = /* @__PURE__ */ new Map();
+  for (const { year, month } of yearMonths) {
+    const key = `${year}/${month}`;
+    const index = buildDecisionIndexForMonth(memoriaDir2, year, month);
+    if (index.items.length > 0) {
+      indexes.set(key, index);
+    }
+  }
+  return indexes;
+}
+function getSessionYearMonths(memoriaDir2) {
+  const sessionsDir = path.join(memoriaDir2, "sessions");
+  return listYearMonths(sessionsDir);
+}
+function getDecisionYearMonths(memoriaDir2) {
+  const decisionsDir = path.join(memoriaDir2, "decisions");
+  return listYearMonths(decisionsDir);
+}
 
 // lib/index/manager.ts
 var INDEXES_DIR = ".indexes";
 function getIndexDir(memoriaDir2) {
   return path2.join(memoriaDir2, INDEXES_DIR);
 }
-function getSessionIndexPath(memoriaDir2) {
-  return path2.join(getIndexDir(memoriaDir2), "sessions.json");
+function getSessionIndexPath(memoriaDir2, year, month) {
+  return path2.join(getIndexDir(memoriaDir2), "sessions", year, `${month}.json`);
 }
-function getDecisionIndexPath(memoriaDir2) {
-  return path2.join(getIndexDir(memoriaDir2), "decisions.json");
+function getDecisionIndexPath(memoriaDir2, year, month) {
+  return path2.join(getIndexDir(memoriaDir2), "decisions", year, `${month}.json`);
 }
-function readSessionIndex(memoriaDir2) {
-  const indexPath = getSessionIndexPath(memoriaDir2);
+function readSessionIndexForMonth(memoriaDir2, year, month) {
+  const indexPath = getSessionIndexPath(memoriaDir2, year, month);
   if (!fs3.existsSync(indexPath)) {
     return null;
   }
@@ -3015,8 +3066,8 @@ function readSessionIndex(memoriaDir2) {
     items: []
   });
 }
-function readDecisionIndex(memoriaDir2) {
-  const indexPath = getDecisionIndexPath(memoriaDir2);
+function readDecisionIndexForMonth(memoriaDir2, year, month) {
+  const indexPath = getDecisionIndexPath(memoriaDir2, year, month);
   if (!fs3.existsSync(indexPath)) {
     return null;
   }
@@ -3026,46 +3077,147 @@ function readDecisionIndex(memoriaDir2) {
     items: []
   });
 }
-function writeSessionIndex(memoriaDir2, index) {
-  const indexDir = getIndexDir(memoriaDir2);
-  ensureDir(indexDir);
-  const indexPath = getSessionIndexPath(memoriaDir2);
+function writeSessionIndexForMonth(memoriaDir2, year, month, index) {
+  const indexPath = getSessionIndexPath(memoriaDir2, year, month);
+  ensureDir(path2.dirname(indexPath));
   fs3.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
-function writeDecisionIndex(memoriaDir2, index) {
-  const indexDir = getIndexDir(memoriaDir2);
-  ensureDir(indexDir);
-  const indexPath = getDecisionIndexPath(memoriaDir2);
+function writeDecisionIndexForMonth(memoriaDir2, year, month, index) {
+  const indexPath = getDecisionIndexPath(memoriaDir2, year, month);
+  ensureDir(path2.dirname(indexPath));
   fs3.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
-function rebuildSessionIndex(memoriaDir2) {
-  const index = buildSessionIndex(memoriaDir2);
-  writeSessionIndex(memoriaDir2, index);
+function rebuildSessionIndexForMonth(memoriaDir2, year, month) {
+  const index = buildSessionIndexForMonth(memoriaDir2, year, month);
+  if (index.items.length > 0) {
+    writeSessionIndexForMonth(memoriaDir2, year, month, index);
+  }
   return index;
 }
-function rebuildDecisionIndex(memoriaDir2) {
-  const index = buildDecisionIndex(memoriaDir2);
-  writeDecisionIndex(memoriaDir2, index);
+function rebuildDecisionIndexForMonth(memoriaDir2, year, month) {
+  const index = buildDecisionIndexForMonth(memoriaDir2, year, month);
+  if (index.items.length > 0) {
+    writeDecisionIndexForMonth(memoriaDir2, year, month, index);
+  }
   return index;
 }
-function rebuildAllIndexes(memoriaDir2) {
-  const sessions = rebuildSessionIndex(memoriaDir2);
-  const decisions = rebuildDecisionIndex(memoriaDir2);
-  return { sessions, decisions };
-}
-function getOrCreateSessionIndex(memoriaDir2) {
-  const existing = readSessionIndex(memoriaDir2);
-  if (existing && existing.items.length > 0) {
-    return existing;
+function rebuildAllSessionIndexes(memoriaDir2) {
+  const allIndexes = buildAllSessionIndexes(memoriaDir2);
+  for (const [key, index] of allIndexes) {
+    const [year, month] = key.split("/");
+    writeSessionIndexForMonth(memoriaDir2, year, month, index);
   }
-  return rebuildSessionIndex(memoriaDir2);
+  return allIndexes;
 }
-function getOrCreateDecisionIndex(memoriaDir2) {
-  const existing = readDecisionIndex(memoriaDir2);
-  if (existing && existing.items.length > 0) {
-    return existing;
+function rebuildAllDecisionIndexes(memoriaDir2) {
+  const allIndexes = buildAllDecisionIndexes(memoriaDir2);
+  for (const [key, index] of allIndexes) {
+    const [year, month] = key.split("/");
+    writeDecisionIndexForMonth(memoriaDir2, year, month, index);
   }
-  return rebuildDecisionIndex(memoriaDir2);
+  return allIndexes;
+}
+function readRecentSessionIndexes(memoriaDir2, monthCount = 6) {
+  const yearMonths = getSessionYearMonths(memoriaDir2);
+  const recentMonths = yearMonths.slice(0, monthCount);
+  const allItems = [];
+  let latestUpdate = "";
+  for (const { year, month } of recentMonths) {
+    let index = readSessionIndexForMonth(memoriaDir2, year, month);
+    if (!index || isIndexStale(index)) {
+      index = rebuildSessionIndexForMonth(memoriaDir2, year, month);
+    }
+    if (index.items.length > 0) {
+      allItems.push(...index.items);
+      if (index.updatedAt > latestUpdate) {
+        latestUpdate = index.updatedAt;
+      }
+    }
+  }
+  allItems.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  return {
+    version: 1,
+    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
+    items: allItems
+  };
+}
+function readRecentDecisionIndexes(memoriaDir2, monthCount = 6) {
+  const yearMonths = getDecisionYearMonths(memoriaDir2);
+  const recentMonths = yearMonths.slice(0, monthCount);
+  const allItems = [];
+  let latestUpdate = "";
+  for (const { year, month } of recentMonths) {
+    let index = readDecisionIndexForMonth(memoriaDir2, year, month);
+    if (!index || isIndexStale(index)) {
+      index = rebuildDecisionIndexForMonth(memoriaDir2, year, month);
+    }
+    if (index.items.length > 0) {
+      allItems.push(...index.items);
+      if (index.updatedAt > latestUpdate) {
+        latestUpdate = index.updatedAt;
+      }
+    }
+  }
+  allItems.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  return {
+    version: 1,
+    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
+    items: allItems
+  };
+}
+function readAllSessionIndexes(memoriaDir2) {
+  const yearMonths = getSessionYearMonths(memoriaDir2);
+  const allItems = [];
+  let latestUpdate = "";
+  for (const { year, month } of yearMonths) {
+    let index = readSessionIndexForMonth(memoriaDir2, year, month);
+    if (!index || isIndexStale(index)) {
+      index = rebuildSessionIndexForMonth(memoriaDir2, year, month);
+    }
+    if (index.items.length > 0) {
+      allItems.push(...index.items);
+      if (index.updatedAt > latestUpdate) {
+        latestUpdate = index.updatedAt;
+      }
+    }
+  }
+  allItems.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  return {
+    version: 1,
+    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
+    items: allItems
+  };
+}
+function readAllDecisionIndexes(memoriaDir2) {
+  const yearMonths = getDecisionYearMonths(memoriaDir2);
+  const allItems = [];
+  let latestUpdate = "";
+  for (const { year, month } of yearMonths) {
+    let index = readDecisionIndexForMonth(memoriaDir2, year, month);
+    if (!index || isIndexStale(index)) {
+      index = rebuildDecisionIndexForMonth(memoriaDir2, year, month);
+    }
+    if (index.items.length > 0) {
+      allItems.push(...index.items);
+      if (index.updatedAt > latestUpdate) {
+        latestUpdate = index.updatedAt;
+      }
+    }
+  }
+  allItems.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  return {
+    version: 1,
+    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
+    items: allItems
+  };
 }
 function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
   if (!index || !index.updatedAt) {
@@ -3111,7 +3263,7 @@ var listJsonFiles = (dir) => {
     return [];
   });
 };
-var listDatedJsonFiles2 = (dir) => {
+var listDatedJsonFiles = (dir) => {
   const files = listJsonFiles(dir);
   return files.filter((filePath) => {
     const rel = path3.relative(dir, filePath);
@@ -3167,7 +3319,9 @@ function parsePaginationParams(c) {
     tag: c.req.query("tag"),
     type: c.req.query("type"),
     project: c.req.query("project"),
-    search: c.req.query("search")
+    search: c.req.query("search"),
+    showUntitled: c.req.query("showUntitled") === "true",
+    allMonths: c.req.query("allMonths") === "true"
   };
 }
 function paginateArray(items, page, limit) {
@@ -3195,11 +3349,11 @@ app.get("/api/sessions", async (c) => {
   try {
     let items;
     if (useIndex) {
-      const index = getOrCreateSessionIndex(memoriaDir2);
+      const index = params.allMonths ? readAllSessionIndexes(memoriaDir2) : readRecentSessionIndexes(memoriaDir2);
       items = index.items;
     } else {
       const sessionsDir = path3.join(memoriaDir2, "sessions");
-      const files = listDatedJsonFiles2(sessionsDir);
+      const files = listDatedJsonFiles(sessionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
           data: [],
@@ -3222,6 +3376,9 @@ app.get("/api/sessions", async (c) => {
       );
     }
     let filtered = items;
+    if (!params.showUntitled) {
+      filtered = filtered.filter((s) => s.hasSummary === true);
+    }
     if (params.tag) {
       filtered = filtered.filter(
         (s) => s.tags?.includes(params.tag)
@@ -3258,9 +3415,11 @@ app.get("/api/sessions", async (c) => {
 });
 app.get("/api/sessions/graph", async (c) => {
   const memoriaDir2 = getMemoriaDir();
+  const showUntitled = c.req.query("showUntitled") === "true";
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir2);
-    const nodes = sessionsIndex.items.map((session) => ({
+    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const filteredItems = showUntitled ? sessionsIndex.items : sessionsIndex.items.filter((s) => s.hasSummary === true);
+    const nodes = filteredItems.map((session) => ({
       id: session.id,
       title: session.title,
       type: session.sessionType || "unknown",
@@ -3268,10 +3427,10 @@ app.get("/api/sessions/graph", async (c) => {
       createdAt: session.createdAt
     }));
     const edges = [];
-    for (let i = 0; i < sessionsIndex.items.length; i++) {
-      for (let j = i + 1; j < sessionsIndex.items.length; j++) {
-        const s1 = sessionsIndex.items[i];
-        const s2 = sessionsIndex.items[j];
+    for (let i = 0; i < filteredItems.length; i++) {
+      for (let j = i + 1; j < filteredItems.length; j++) {
+        const s1 = filteredItems[i];
+        const s2 = filteredItems[j];
         const sharedTags = (s1.tags || []).filter(
           (t) => (s2.tags || []).includes(t)
         );
@@ -3335,11 +3494,11 @@ app.get("/api/decisions", async (c) => {
   try {
     let items;
     if (useIndex) {
-      const index = getOrCreateDecisionIndex(memoriaDir2);
+      const index = params.allMonths ? readAllDecisionIndexes(memoriaDir2) : readRecentDecisionIndexes(memoriaDir2);
       items = index.items;
     } else {
       const decisionsDir = path3.join(memoriaDir2, "decisions");
-      const files = listDatedJsonFiles2(decisionsDir);
+      const files = listDatedJsonFiles(decisionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
           data: [],
@@ -3432,7 +3591,7 @@ app.get("/api/rules/:id", async (c) => {
 app.get("/api/timeline", async (c) => {
   const sessionsDir = path3.join(getMemoriaDir(), "sessions");
   try {
-    const files = listDatedJsonFiles2(sessionsDir);
+    const files = listDatedJsonFiles(sessionsDir);
     if (files.length === 0) {
       return c.json({ timeline: {} });
     }
@@ -3468,7 +3627,7 @@ app.get("/api/timeline", async (c) => {
 app.get("/api/tag-network", async (c) => {
   const sessionsDir = path3.join(getMemoriaDir(), "sessions");
   try {
-    const files = listDatedJsonFiles2(sessionsDir);
+    const files = listDatedJsonFiles(sessionsDir);
     const tagCounts = /* @__PURE__ */ new Map();
     const coOccurrences = /* @__PURE__ */ new Map();
     for (const filePath of files) {
@@ -3506,7 +3665,7 @@ app.get("/api/decisions/:id/impact", async (c) => {
   try {
     const impactedSessions = [];
     const impactedPatterns = [];
-    const sessionFiles = listDatedJsonFiles2(sessionsDir);
+    const sessionFiles = listDatedJsonFiles(sessionsDir);
     for (const filePath of sessionFiles) {
       const content = fs4.readFileSync(filePath, "utf-8");
       const session = JSON.parse(content);
@@ -3551,8 +3710,8 @@ app.get("/api/summary/weekly", async (c) => {
   const memoriaDir2 = getMemoriaDir();
   const apiKey = getOpenAIKey();
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir2);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir2);
+    const sessionsIndex = readRecentSessionIndexes(memoriaDir2);
+    const decisionsIndex = readRecentDecisionIndexes(memoriaDir2);
     const now = /* @__PURE__ */ new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     const recentSessions = sessionsIndex.items.filter(
@@ -3678,8 +3837,8 @@ async function generateAISummary(apiKey, prompt) {
 app.get("/api/stats/overview", async (c) => {
   const memoriaDir2 = getMemoriaDir();
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir2);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
     const sessionTypeCount = {};
     for (const session of sessionsIndex.items) {
       const type = session.sessionType || "unknown";
@@ -3718,10 +3877,12 @@ app.get("/api/stats/activity", async (c) => {
   const MAX_DAYS = 365;
   const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir2);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
     const now = /* @__PURE__ */ new Date();
-    const startDate = new Date(now.getTime() - safeDays * 24 * 60 * 60 * 1e3);
+    const startDate = new Date(
+      now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1e3
+    );
     const activityByDate = {};
     for (let i = 0; i < safeDays; i++) {
       const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1e3);
@@ -3750,7 +3911,7 @@ app.get("/api/stats/activity", async (c) => {
 app.get("/api/stats/tags", async (c) => {
   const memoriaDir2 = getMemoriaDir();
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
     const tagCount = {};
     for (const session of sessionsIndex.items) {
       for (const tag of session.tags || []) {
@@ -4052,19 +4213,19 @@ app.get("/api/tags", async (c) => {
 app.get("/api/indexes/status", async (c) => {
   const memoriaDir2 = getMemoriaDir();
   try {
-    const sessionsIndex = readSessionIndex(memoriaDir2);
-    const decisionsIndex = readDecisionIndex(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
     return c.json({
       sessions: {
-        exists: !!sessionsIndex,
-        itemCount: sessionsIndex?.items.length ?? 0,
-        updatedAt: sessionsIndex?.updatedAt ?? null,
+        exists: sessionsIndex.items.length > 0,
+        itemCount: sessionsIndex.items.length,
+        updatedAt: sessionsIndex.updatedAt,
         isStale: isIndexStale(sessionsIndex)
       },
       decisions: {
-        exists: !!decisionsIndex,
-        itemCount: decisionsIndex?.items.length ?? 0,
-        updatedAt: decisionsIndex?.updatedAt ?? null,
+        exists: decisionsIndex.items.length > 0,
+        itemCount: decisionsIndex.items.length,
+        updatedAt: decisionsIndex.updatedAt,
         isStale: isIndexStale(decisionsIndex)
       }
     });
@@ -4076,16 +4237,35 @@ app.get("/api/indexes/status", async (c) => {
 app.post("/api/indexes/rebuild", async (c) => {
   const memoriaDir2 = getMemoriaDir();
   try {
-    const result = rebuildAllIndexes(memoriaDir2);
+    const sessionIndexes = rebuildAllSessionIndexes(memoriaDir2);
+    const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir2);
+    let sessionCount = 0;
+    let sessionUpdatedAt = "";
+    for (const index of sessionIndexes.values()) {
+      sessionCount += index.items.length;
+      if (index.updatedAt > sessionUpdatedAt) {
+        sessionUpdatedAt = index.updatedAt;
+      }
+    }
+    let decisionCount = 0;
+    let decisionUpdatedAt = "";
+    for (const index of decisionIndexes.values()) {
+      decisionCount += index.items.length;
+      if (index.updatedAt > decisionUpdatedAt) {
+        decisionUpdatedAt = index.updatedAt;
+      }
+    }
     return c.json({
       success: true,
       sessions: {
-        itemCount: result.sessions.items.length,
-        updatedAt: result.sessions.updatedAt
+        itemCount: sessionCount,
+        monthCount: sessionIndexes.size,
+        updatedAt: sessionUpdatedAt || (/* @__PURE__ */ new Date()).toISOString()
       },
       decisions: {
-        itemCount: result.decisions.items.length,
-        updatedAt: result.decisions.updatedAt
+        itemCount: decisionCount,
+        monthCount: decisionIndexes.size,
+        updatedAt: decisionUpdatedAt || (/* @__PURE__ */ new Date()).toISOString()
       }
     });
   } catch (error) {
@@ -4112,13 +4292,22 @@ var maxPortAttempts = 10;
 var memoriaDir = getMemoriaDir();
 if (fs4.existsSync(memoriaDir)) {
   try {
-    const sessionsIndex = readSessionIndex(memoriaDir);
-    const decisionsIndex = readDecisionIndex(memoriaDir);
+    const sessionsIndex = readRecentSessionIndexes(memoriaDir, 1);
+    const decisionsIndex = readRecentDecisionIndexes(memoriaDir, 1);
     if (isIndexStale(sessionsIndex) || isIndexStale(decisionsIndex)) {
       console.log("Building indexes...");
-      const result = rebuildAllIndexes(memoriaDir);
+      const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
+      const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+      let sessionCount = 0;
+      for (const index of sessionIndexes.values()) {
+        sessionCount += index.items.length;
+      }
+      let decisionCount = 0;
+      for (const index of decisionIndexes.values()) {
+        decisionCount += index.items.length;
+      }
       console.log(
-        `Indexed ${result.sessions.items.length} sessions, ${result.decisions.items.length} decisions`
+        `Indexed ${sessionCount} sessions, ${decisionCount} decisions`
       );
     }
   } catch (error) {

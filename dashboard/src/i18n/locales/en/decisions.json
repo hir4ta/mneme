@@ -1,11 +1,11 @@
 {
   "title": "Decisions",
-  "subtitle": "Track technical decisions with reasoning and alternatives.",
+  "subtitle": "Technical decisions extracted via /memoria:save with reasoning and alternatives.",
   "decisionCount": "{{count}} decision",
   "decisionCount_other": "{{count}} decisions",
   "searchPlaceholder": "Search decisions...",
   "noDecisionsFound": "No decisions found.",
-  "noDecisionsDescription": "Use /memoria:decision to record design decisions.",
+  "noDecisionsDescription": "Run /memoria:save to extract decisions from sessions.",
   "noMatchingFilters": "No decisions match your filters.",
   "deleteTitle": "Delete decision?",
   "detail": {

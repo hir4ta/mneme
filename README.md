@@ -15,6 +15,8 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 - **Session Resume**: Resume past sessions with `/memoria:resume` (with chain tracking)
 - **Session Suggestion**: Recent 3 sessions shown at session start
 - **Rule-based Review**: Code review based on `dev-rules.json` / `review-guidelines.json`
+- **GitHub PR Review**: Review GitHub PRs with `/memoria:review <PR URL>`
+- **Knowledge Harvesting**: Extract rules and patterns from PR comments with `/memoria:harvest`
 - **Weekly Reports**: Auto-generate Markdown reports aggregating review results
 - **Web Dashboard**: View sessions, decisions, patterns, and rules
 
@@ -132,6 +134,8 @@ Continue from a previous session? Use `/memoria:resume <id>`
 | `/memoria:resume [id]` | Resume session (show list if ID omitted) |
 | `/memoria:search "query"` | Search sessions, decisions, and patterns |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review |
+| `/memoria:review <PR URL>` | Review GitHub PR |
+| `/memoria:harvest <PR URL>` | Extract knowledge from PR review comments |
 | `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
 
 ### Recommended Workflow

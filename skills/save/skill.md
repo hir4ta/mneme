@@ -34,10 +34,83 @@ Extract and save all meaningful data from the current session.
 
 ## Execution Steps
 
+### Phase 0: Save Conversation History (interactions)
+
+**IMPORTANT: Do this FIRST before any other extraction.**
+
+1. Get session path from additionalContext (e.g., `.memoria/sessions/2026/01/abc12345.json`)
+2. Read current session file
+3. **Check for existing data**:
+   - Read `.interactions` (may have data from previous SessionEnd)
+   - Read `.preCompactBackups` (may have data from auto-compact)
+
+4. **Determine the most complete source**:
+   - If `preCompactBackups` exists, use the **LAST entry** (most complete, includes all previous)
+   - Compare with existing `.interactions` - use whichever has more entries or later timestamps
+   - The most complete source becomes the "base"
+
+5. **Extract NEW interactions** from current conversation:
+   - Scan conversation for messages NOT already in the base
+   - Use `timestamp` or `user` message content for matching
+   - Typically: everything after the last interaction in base
+
+6. **Merge with deduplication**:
+   ```
+   base_interactions = most complete source (preCompactBackups[-1] or existing .interactions)
+   new_interactions = conversations after the last base interaction
+
+   Final = base_interactions + new_interactions (deduplicated by timestamp)
+   ```
+   - **Exact match by timestamp** - skip if already exists
+   - **Fallback: match by user message content** (first 100 chars) if timestamps differ
+   - Preserve `isCompactSummary` flag on summary entries
+
+6. **Format each interaction**:
+```json
+{
+  "id": "int-001",
+  "timestamp": "2026-01-29T10:00:00Z",
+  "user": "User's message text",
+  "thinking": "Claude's thinking/reasoning (if visible)",
+  "assistant": "Claude's response text",
+  "isCompactSummary": false
+}
+```
+
+7. **Extract file changes** from tool usage (Edit/Write tools):
+```json
+{
+  "files": [
+    {"path": "src/index.ts", "action": "edit"},
+    {"path": "src/new-file.ts", "action": "create"}
+  ]
+}
+```
+
+8. **Calculate metrics** (from ALL interactions including backups):
+```json
+{
+  "metrics": {
+    "userMessages": 10,
+    "assistantResponses": 10,
+    "thinkingBlocks": 8,
+    "toolUsage": [
+      {"name": "Edit", "count": 5},
+      {"name": "Read", "count": 12}
+    ]
+  }
+}
+```
+
+9. **Update session JSON** with merged interactions, files, metrics using Edit tool
+10. Set `updatedAt` to current timestamp
+
+**Note:** This ensures ALL conversation history is saved, including pre-auto-compact conversations.
+
 ### Phase 1: Extract Session Data
 
 1. Get session path from additionalContext
-2. Read current session file
+2. Read current session file (already updated with interactions in Phase 0)
 3. **Scan entire conversation** (including long sessions) to extract:
 
 #### Summary
@@ -47,9 +120,20 @@ Extract and save all meaningful data from the current session.
   "goal": "What was trying to be achieved",
   "outcome": "success | partial | failed | ongoing",
   "description": "What was accomplished",
-  "sessionType": "implementation | decision | research | debug | review"
+  "sessionType": "decision | implementation | research | exploration | discussion | debug | review"
 }
 ```
+
+**sessionType selection criteria:**
+| Type | When to use |
+|------|-------------|
+| `decision` | Made design choices or technology selections |
+| `implementation` | Made code changes |
+| `research` | Researched, learned, or investigated topics |
+| `exploration` | Explored and understood the codebase |
+| `discussion` | Discussion only (no code changes) |
+| `debug` | Debugged or investigated bugs |
+| `review` | Performed code review |
 
 #### Discussions (→ also saved to decisions/)
 ```json
@@ -217,6 +301,9 @@ Session saved.
 Session ID: abc12345
 Path: .memoria/sessions/2026/01/abc12345.json
 
+Interactions: 15 saved
+Files changed: 8
+
 Summary:
   Title: JWT authentication implementation
   Goal: Implement JWT-based auth
@@ -242,6 +329,7 @@ Rules updated:
 ## Notes
 
 - Session path is shown in additionalContext at session start
-- Interactions are auto-saved by SessionEnd hook
+- **Interactions are saved in Phase 0** - no need to `/exit` first
+- Interactions are also auto-saved by SessionEnd hook (backup)
 - Decisions and patterns are also kept in session JSON for context
 - Duplicate checking prevents bloat in decisions/ and patterns/

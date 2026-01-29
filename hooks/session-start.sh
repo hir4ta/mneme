@@ -124,10 +124,10 @@ if [ -d "$sessions_dir" ] && [ "$is_resumed" = false ]; then
         if [ -n "$sid" ] && [ "$sid" != "$file_id" ] && [ $count -lt 3 ]; then
             count=$((count + 1))
             # Format: [id] title (date, branch)
-            date_part=$(echo "$screated" | cut -d'T' -f1 2>/dev/null || echo "")
+            date_part_session=$(echo "$screated" | cut -d'T' -f1 2>/dev/null || echo "")
             title_display="${stitle:-no title}"
             branch_display="${sbranch:-no branch}"
-            recent_sessions_info="${recent_sessions_info}  ${count}. [${sid}] ${title_display} (${date_part}, ${branch_display})\n"
+            recent_sessions_info="${recent_sessions_info}  ${count}. [${sid}] ${title_display} (${date_part_session}, ${branch_display})\n"
         fi
     done <<< "$recent_sessions"
 fi

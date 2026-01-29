@@ -136,6 +136,8 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             thinkingBlocks: ($extracted.metrics.thinkingBlocks // 0),
             toolUsage: ($extracted.toolUsage // [])
         } |
+        # Clear preCompactBackups (no longer needed after full extraction)
+        .preCompactBackups = [] |
         # Set status and timestamps
         .status = $status |
         .endedAt = $endedAt |

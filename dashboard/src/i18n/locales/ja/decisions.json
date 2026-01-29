@@ -1,10 +1,10 @@
 {
   "title": "意思決定",
-  "subtitle": "技術的な意思決定を理由と代替案とともに追跡します。",
+  "subtitle": "/memoria:saveで抽出された技術的な意思決定（理由と代替案付き）。",
   "decisionCount": "{{count}}件の意思決定",
   "searchPlaceholder": "意思決定を検索...",
   "noDecisionsFound": "意思決定が見つかりません。",
-  "noDecisionsDescription": "/memoria:decisionを使用して設計の意思決定を記録してください。",
+  "noDecisionsDescription": "/memoria:saveを実行してセッションから意思決定を抽出してください。",
   "noMatchingFilters": "フィルターに一致する意思決定がありません。",
   "deleteTitle": "意思決定を削除しますか？",
   "detail": {

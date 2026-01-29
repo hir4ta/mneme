@@ -18,3 +18,14 @@ export const SessionContextSchema = z.object({
 });
 
 export type SessionContext = z.infer<typeof SessionContextSchema>;
+
+// PR Source schema - for tracking knowledge extracted from GitHub PRs
+export const PRSourceSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  prNumber: z.number(),
+  url: z.string(),
+  commentId: z.number().optional(),
+});
+
+export type PRSource = z.infer<typeof PRSourceSchema>;

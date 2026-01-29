@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserSchema } from "./common.js";
+import { PRSourceSchema, UserSchema } from "./common.js";
 
 // Alternative schema
 export const AlternativeSchema = z.object({
@@ -42,6 +42,8 @@ export const DecisionSchema = z.object({
   context: DecisionContextSchema.optional(),
   source: z.enum(["auto", "manual"]).optional(),
   status: DecisionStatusSchema,
+  // PR source tracking
+  prSource: PRSourceSchema.optional(),
 });
 
 export type Decision = z.infer<typeof DecisionSchema>;

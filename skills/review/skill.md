@@ -15,12 +15,21 @@ Code review based on repository-specific rules (`dev-rules.json` / `review-guide
 /memoria:review --all     # Review all changes
 /memoria:review --diff=main  # Review diff against branch
 /memoria:review --full    # Two-stage review (Stage 1: Spec + Stage 2: Code)
+/memoria:review https://github.com/owner/repo/pull/123  # Review GitHub PR
 ```
 
 ### Default Behavior
 
 - **`--staged` is default**
 - If staged is empty, suggest `--all` / `--diff=branch`
+
+### PR URL Review
+
+When a GitHub PR URL is provided:
+1. Parse URL to extract owner, repo, and PR number
+2. Fetch PR diff using `gh pr diff {number} --repo {owner}/{repo}`
+3. Apply the same rule-based review as local diffs
+4. Save result with `target.type: "pr"` and `target.prSource`
 
 ### Two-Stage Review (--full)
 
@@ -39,12 +48,26 @@ When `--full` is specified, perform two-stage review:
 
 ## Execution Steps
 
+### PR URL Detection
+
+Before processing flags, check if the argument is a GitHub PR URL:
+```
+Pattern: https://github.com/{owner}/{repo}/pull/{number}
+```
+
+If PR URL detected:
+1. Parse URL → `{ owner, repo, prNumber, url }`
+2. Fetch diff: `gh pr diff {prNumber} --repo {owner}/{repo}`
+3. Skip to step 2 (Load rules)
+4. Save result with PR-specific target format
+
 ### Standard Review (default)
 
 1. **Get target diff**
    - `--staged`: `git diff --staged`
    - `--all`: `git diff`
    - `--diff=branch`: `git diff <branch>...HEAD`
+   - PR URL: `gh pr diff {number} --repo {owner}/{repo}`
 2. **Load rules**
    - `.memoria/rules/dev-rules.json`
    - `.memoria/rules/review-guidelines.json`
@@ -204,7 +227,7 @@ Save to `.memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`:
   "id": "review-2026-01-25_145500",
   "createdAt": "2026-01-25T14:55:00Z",
   "target": {
-    "type": "staged",
+    "type": "staged",  // or "pr" for GitHub PRs
     "branch": "main"
   },
   "summary": {
@@ -247,6 +270,31 @@ Save to `.memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`:
   }
 }
 ```
+
+### PR Review Target Format
+
+When reviewing a GitHub PR, use this target format:
+
+```json
+{
+  "target": {
+    "type": "pr",
+    "prSource": {
+      "owner": "owner",
+      "repo": "repo",
+      "prNumber": 123,
+      "url": "https://github.com/owner/repo/pull/123"
+    }
+  }
+}
+```
+
+### Updating Rule Effectiveness
+
+When rules are applied during review:
+1. Increment `appliedCount` for each matched rule
+2. After user feedback (accepted/rejected), update `acceptedCount`
+3. Update `lastAppliedAt` timestamp
 
 ## Two-Stage Review JSON Format (--full)
 

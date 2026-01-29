@@ -5,12 +5,13 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
-  getOrCreateDecisionIndex,
-  getOrCreateSessionIndex,
   isIndexStale,
-  readDecisionIndex,
-  readSessionIndex,
-  rebuildAllIndexes,
+  readAllDecisionIndexes,
+  readAllSessionIndexes,
+  readRecentDecisionIndexes,
+  readRecentSessionIndexes,
+  rebuildAllDecisionIndexes,
+  rebuildAllSessionIndexes,
 } from "../../lib/index/manager.js";
 
 // =============================================================================
@@ -136,6 +137,8 @@ interface PaginationParams {
   type?: string;
   project?: string;
   search?: string;
+  showUntitled?: boolean;
+  allMonths?: boolean;
 }
 
 function parsePaginationParams(c: {
@@ -151,6 +154,8 @@ function parsePaginationParams(c: {
     type: c.req.query("type"),
     project: c.req.query("project"),
     search: c.req.query("search"),
+    showUntitled: c.req.query("showUntitled") === "true",
+    allMonths: c.req.query("allMonths") === "true",
   };
 }
 
@@ -185,7 +190,10 @@ app.get("/api/sessions", async (c) => {
 
     // Use index for listing (faster)
     if (useIndex) {
-      const index = getOrCreateSessionIndex(memoriaDir);
+      // Use allMonths to decide between recent or all indexes
+      const index = params.allMonths
+        ? readAllSessionIndexes(memoriaDir)
+        : readRecentSessionIndexes(memoriaDir);
       items = index.items as Record<string, unknown>[];
     } else {
       // Fallback: read all files directly
@@ -220,6 +228,12 @@ app.get("/api/sessions", async (c) => {
 
     // Apply filters
     let filtered = items;
+
+    // Filter out Untitled sessions by default (unless showUntitled=true)
+    if (!params.showUntitled) {
+      filtered = filtered.filter((s) => s.hasSummary === true);
+    }
+
     if (params.tag) {
       filtered = filtered.filter((s) =>
         (s.tags as string[])?.includes(params.tag as string),
@@ -268,11 +282,16 @@ app.get("/api/sessions", async (c) => {
 // Session Graph API - must be before /api/sessions/:id
 app.get("/api/sessions/graph", async (c) => {
   const memoriaDir = getMemoriaDir();
+  const showUntitled = c.req.query("showUntitled") === "true";
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    // Filter out Untitled sessions for graph unless explicitly requested
+    const filteredItems = showUntitled
+      ? sessionsIndex.items
+      : sessionsIndex.items.filter((s) => s.hasSummary === true);
 
     // Build nodes from sessions
-    const nodes = sessionsIndex.items.map((session) => ({
+    const nodes = filteredItems.map((session) => ({
       id: session.id,
       title: session.title,
       type: session.sessionType || "unknown",
@@ -283,10 +302,10 @@ app.get("/api/sessions/graph", async (c) => {
     // Build edges based on shared tags
     const edges: { source: string; target: string; weight: number }[] = [];
 
-    for (let i = 0; i < sessionsIndex.items.length; i++) {
-      for (let j = i + 1; j < sessionsIndex.items.length; j++) {
-        const s1 = sessionsIndex.items[i];
-        const s2 = sessionsIndex.items[j];
+    for (let i = 0; i < filteredItems.length; i++) {
+      for (let j = i + 1; j < filteredItems.length; j++) {
+        const s1 = filteredItems[i];
+        const s2 = filteredItems[j];
 
         // Count shared tags
         const sharedTags = (s1.tags || []).filter((t) =>
@@ -366,7 +385,9 @@ app.get("/api/decisions", async (c) => {
 
     // Use index for listing (faster)
     if (useIndex) {
-      const index = getOrCreateDecisionIndex(memoriaDir);
+      const index = params.allMonths
+        ? readAllDecisionIndexes(memoriaDir)
+        : readRecentDecisionIndexes(memoriaDir);
       items = index.items as Record<string, unknown>[];
     } else {
       // Fallback: read all files directly
@@ -645,8 +666,8 @@ app.get("/api/summary/weekly", async (c) => {
   const apiKey = getOpenAIKey();
 
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir);
+    const sessionsIndex = readRecentSessionIndexes(memoriaDir);
+    const decisionsIndex = readRecentDecisionIndexes(memoriaDir);
 
     // Get last 7 days
     const now = new Date();
@@ -819,8 +840,8 @@ async function generateAISummary(
 app.get("/api/stats/overview", async (c) => {
   const memoriaDir = getMemoriaDir();
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
 
     // Count by session type
     const sessionTypeCount: Record<string, number> = {};
@@ -870,12 +891,15 @@ app.get("/api/stats/activity", async (c) => {
   const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
 
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
-    const decisionsIndex = getOrCreateDecisionIndex(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
 
-    // Calculate date range
+    // Calculate date range (include today)
     const now = new Date();
-    const startDate = new Date(now.getTime() - safeDays * 24 * 60 * 60 * 1000);
+    // Start from (safeDays - 1) days ago to include today
+    const startDate = new Date(
+      now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1000,
+    );
 
     // Group sessions by date
     const activityByDate: Record<
@@ -883,7 +907,7 @@ app.get("/api/stats/activity", async (c) => {
       { sessions: number; decisions: number }
     > = {};
 
-    // Initialize all dates (safe iteration with counter)
+    // Initialize all dates including today (safe iteration with counter)
     for (let i = 0; i < safeDays; i++) {
       const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       const dateKey = d.toISOString().split("T")[0];
@@ -921,7 +945,7 @@ app.get("/api/stats/activity", async (c) => {
 app.get("/api/stats/tags", async (c) => {
   const memoriaDir = getMemoriaDir();
   try {
-    const sessionsIndex = getOrCreateSessionIndex(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir);
 
     // Count tag usage
     const tagCount: Record<string, number> = {};
@@ -1294,20 +1318,20 @@ app.get("/api/tags", async (c) => {
 app.get("/api/indexes/status", async (c) => {
   const memoriaDir = getMemoriaDir();
   try {
-    const sessionsIndex = readSessionIndex(memoriaDir);
-    const decisionsIndex = readDecisionIndex(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
 
     return c.json({
       sessions: {
-        exists: !!sessionsIndex,
-        itemCount: sessionsIndex?.items.length ?? 0,
-        updatedAt: sessionsIndex?.updatedAt ?? null,
+        exists: sessionsIndex.items.length > 0,
+        itemCount: sessionsIndex.items.length,
+        updatedAt: sessionsIndex.updatedAt,
         isStale: isIndexStale(sessionsIndex),
       },
       decisions: {
-        exists: !!decisionsIndex,
-        itemCount: decisionsIndex?.items.length ?? 0,
-        updatedAt: decisionsIndex?.updatedAt ?? null,
+        exists: decisionsIndex.items.length > 0,
+        itemCount: decisionsIndex.items.length,
+        updatedAt: decisionsIndex.updatedAt,
         isStale: isIndexStale(decisionsIndex),
       },
     });
@@ -1320,16 +1344,40 @@ app.get("/api/indexes/status", async (c) => {
 app.post("/api/indexes/rebuild", async (c) => {
   const memoriaDir = getMemoriaDir();
   try {
-    const result = rebuildAllIndexes(memoriaDir);
+    // Rebuild all indexes by month
+    const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
+    const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+
+    // Count total items
+    let sessionCount = 0;
+    let sessionUpdatedAt = "";
+    for (const index of sessionIndexes.values()) {
+      sessionCount += index.items.length;
+      if (index.updatedAt > sessionUpdatedAt) {
+        sessionUpdatedAt = index.updatedAt;
+      }
+    }
+
+    let decisionCount = 0;
+    let decisionUpdatedAt = "";
+    for (const index of decisionIndexes.values()) {
+      decisionCount += index.items.length;
+      if (index.updatedAt > decisionUpdatedAt) {
+        decisionUpdatedAt = index.updatedAt;
+      }
+    }
+
     return c.json({
       success: true,
       sessions: {
-        itemCount: result.sessions.items.length,
-        updatedAt: result.sessions.updatedAt,
+        itemCount: sessionCount,
+        monthCount: sessionIndexes.size,
+        updatedAt: sessionUpdatedAt || new Date().toISOString(),
       },
       decisions: {
-        itemCount: result.decisions.items.length,
-        updatedAt: result.decisions.updatedAt,
+        itemCount: decisionCount,
+        monthCount: decisionIndexes.size,
+        updatedAt: decisionUpdatedAt || new Date().toISOString(),
       },
     });
   } catch (error) {
@@ -1363,15 +1411,25 @@ const maxPortAttempts = 10;
 const memoriaDir = getMemoriaDir();
 if (fs.existsSync(memoriaDir)) {
   try {
-    const sessionsIndex = readSessionIndex(memoriaDir);
-    const decisionsIndex = readDecisionIndex(memoriaDir);
+    const sessionsIndex = readRecentSessionIndexes(memoriaDir, 1);
+    const decisionsIndex = readRecentDecisionIndexes(memoriaDir, 1);
 
     // Rebuild if indexes are stale or missing
     if (isIndexStale(sessionsIndex) || isIndexStale(decisionsIndex)) {
       console.log("Building indexes...");
-      const result = rebuildAllIndexes(memoriaDir);
+      const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
+      const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+
+      let sessionCount = 0;
+      for (const index of sessionIndexes.values()) {
+        sessionCount += index.items.length;
+      }
+      let decisionCount = 0;
+      for (const index of decisionIndexes.values()) {
+        decisionCount += index.items.length;
+      }
       console.log(
-        `Indexed ${result.sessions.items.length} sessions, ${result.decisions.items.length} decisions`,
+        `Indexed ${sessionCount} sessions, ${decisionCount} decisions`,
       );
     }
   } catch (error) {

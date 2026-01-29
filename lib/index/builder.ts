@@ -9,14 +9,34 @@ import type {
 import { safeReadJson } from "../utils.js";
 
 /**
- * List JSON files in dated directory structure (YYYY/MM/*.json)
+ * List JSON files in a specific month directory
  */
-function listDatedJsonFiles(dir: string): string[] {
-  if (!fs.existsSync(dir)) {
+function listMonthJsonFiles(monthDir: string): string[] {
+  if (!fs.existsSync(monthDir)) {
     return [];
   }
 
   const files: string[] = [];
+  const entries = fs.readdirSync(monthDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      files.push(path.join(monthDir, entry.name));
+    }
+  }
+
+  return files;
+}
+
+/**
+ * List all year/month combinations in a directory
+ */
+function listYearMonths(dir: string): { year: string; month: string }[] {
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+
+  const results: { year: string; month: string }[] = [];
   const years = fs.readdirSync(dir, { withFileTypes: true });
 
   for (const year of years) {
@@ -27,27 +47,31 @@ function listDatedJsonFiles(dir: string): string[] {
 
     for (const month of months) {
       if (!month.isDirectory() || !/^\d{2}$/.test(month.name)) continue;
-
-      const monthPath = path.join(yearPath, month.name);
-      const jsonFiles = fs.readdirSync(monthPath, { withFileTypes: true });
-
-      for (const file of jsonFiles) {
-        if (file.isFile() && file.name.endsWith(".json")) {
-          files.push(path.join(monthPath, file.name));
-        }
-      }
+      results.push({ year: year.name, month: month.name });
     }
   }
 
-  return files;
+  // Sort by year/month descending (most recent first)
+  results.sort((a, b) => {
+    const aKey = `${a.year}${a.month}`;
+    const bKey = `${b.year}${b.month}`;
+    return bKey.localeCompare(aKey);
+  });
+
+  return results;
 }
 
 /**
- * Build session index from session files
+ * Build session index for a specific month
  */
-export function buildSessionIndex(memoriaDir: string): SessionIndex {
+export function buildSessionIndexForMonth(
+  memoriaDir: string,
+  year: string,
+  month: string,
+): SessionIndex {
   const sessionsDir = path.join(memoriaDir, "sessions");
-  const files = listDatedJsonFiles(sessionsDir);
+  const monthDir = path.join(sessionsDir, year, month);
+  const files = listMonthJsonFiles(monthDir);
 
   const items: SessionIndexItem[] = [];
 
@@ -62,20 +86,27 @@ export function buildSessionIndex(memoriaDir: string): SessionIndex {
       const context = (session.context as Record<string, unknown>) || {};
       const user = context.user as { name?: string } | undefined;
       const summary = (session.summary as Record<string, unknown>) || {};
+      const title =
+        (summary.title as string) || (session.title as string) || "";
+
+      // sessionType can be at root level or in summary
+      const sessionType =
+        (session.sessionType as SessionIndexItem["sessionType"]) ||
+        (summary.sessionType as SessionIndexItem["sessionType"]) ||
+        null;
 
       items.push({
         id: session.id as string,
-        title:
-          (summary.title as string) || (session.title as string) || "Untitled",
+        title: title || "Untitled",
         goal: (summary.goal as string) || (session.goal as string) || undefined,
         createdAt: session.createdAt as string,
         tags: (session.tags as string[]) || [],
-        sessionType:
-          (session.sessionType as SessionIndexItem["sessionType"]) || null,
+        sessionType,
         branch: (context.branch as string) || null,
         user: user?.name,
         interactionCount: interactions.length,
         filePath: relativePath,
+        hasSummary: !!title && title !== "Untitled",
       });
     } catch {
       // Skip invalid files
@@ -95,11 +126,37 @@ export function buildSessionIndex(memoriaDir: string): SessionIndex {
 }
 
 /**
- * Build decision index from decision files
+ * Build all session indexes (one per month)
  */
-export function buildDecisionIndex(memoriaDir: string): DecisionIndex {
+export function buildAllSessionIndexes(
+  memoriaDir: string,
+): Map<string, SessionIndex> {
+  const sessionsDir = path.join(memoriaDir, "sessions");
+  const yearMonths = listYearMonths(sessionsDir);
+  const indexes = new Map<string, SessionIndex>();
+
+  for (const { year, month } of yearMonths) {
+    const key = `${year}/${month}`;
+    const index = buildSessionIndexForMonth(memoriaDir, year, month);
+    if (index.items.length > 0) {
+      indexes.set(key, index);
+    }
+  }
+
+  return indexes;
+}
+
+/**
+ * Build decision index for a specific month
+ */
+export function buildDecisionIndexForMonth(
+  memoriaDir: string,
+  year: string,
+  month: string,
+): DecisionIndex {
   const decisionsDir = path.join(memoriaDir, "decisions");
-  const files = listDatedJsonFiles(decisionsDir);
+  const monthDir = path.join(decisionsDir, year, month);
+  const files = listMonthJsonFiles(monthDir);
 
   const items: DecisionIndexItem[] = [];
 
@@ -140,7 +197,95 @@ export function buildDecisionIndex(memoriaDir: string): DecisionIndex {
 }
 
 /**
- * Build all indexes
+ * Build all decision indexes (one per month)
+ */
+export function buildAllDecisionIndexes(
+  memoriaDir: string,
+): Map<string, DecisionIndex> {
+  const decisionsDir = path.join(memoriaDir, "decisions");
+  const yearMonths = listYearMonths(decisionsDir);
+  const indexes = new Map<string, DecisionIndex>();
+
+  for (const { year, month } of yearMonths) {
+    const key = `${year}/${month}`;
+    const index = buildDecisionIndexForMonth(memoriaDir, year, month);
+    if (index.items.length > 0) {
+      indexes.set(key, index);
+    }
+  }
+
+  return indexes;
+}
+
+/**
+ * Get list of available year/months for sessions
+ */
+export function getSessionYearMonths(
+  memoriaDir: string,
+): { year: string; month: string }[] {
+  const sessionsDir = path.join(memoriaDir, "sessions");
+  return listYearMonths(sessionsDir);
+}
+
+/**
+ * Get list of available year/months for decisions
+ */
+export function getDecisionYearMonths(
+  memoriaDir: string,
+): { year: string; month: string }[] {
+  const decisionsDir = path.join(memoriaDir, "decisions");
+  return listYearMonths(decisionsDir);
+}
+
+// Legacy functions for backwards compatibility
+/**
+ * @deprecated Use buildAllSessionIndexes instead
+ */
+export function buildSessionIndex(memoriaDir: string): SessionIndex {
+  const allIndexes = buildAllSessionIndexes(memoriaDir);
+  const items: SessionIndexItem[] = [];
+
+  for (const index of allIndexes.values()) {
+    items.push(...index.items);
+  }
+
+  // Sort by createdAt descending
+  items.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    items,
+  };
+}
+
+/**
+ * @deprecated Use buildAllDecisionIndexes instead
+ */
+export function buildDecisionIndex(memoriaDir: string): DecisionIndex {
+  const allIndexes = buildAllDecisionIndexes(memoriaDir);
+  const items: DecisionIndexItem[] = [];
+
+  for (const index of allIndexes.values()) {
+    items.push(...index.items);
+  }
+
+  // Sort by createdAt descending
+  items.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    items,
+  };
+}
+
+/**
+ * @deprecated Use buildAllSessionIndexes and buildAllDecisionIndexes instead
  */
 export function buildAllIndexes(memoriaDir: string): {
   sessions: SessionIndex;

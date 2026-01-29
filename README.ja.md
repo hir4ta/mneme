@@ -15,6 +15,8 @@ Claude Codeの長期記憶を実現するプラグイン
 - **セッション再開**: `/memoria:resume` で過去のセッションを再開（チェーン追跡付き）
 - **セッション提案**: セッション開始時に最新3件を提案
 - **ルールベースレビュー**: `dev-rules.json` / `review-guidelines.json` に基づくレビュー
+- **GitHub PRレビュー**: `/memoria:review <PR URL>` でGitHub PRをレビュー
+- **知見の抽出**: `/memoria:harvest` でPRコメントからルール・パターンを抽出
 - **週次レポート**: レビュー結果を集計したMarkdownレポートを自動生成
 - **Webダッシュボード**: セッション・判断・パターン・ルールの閲覧
 
@@ -132,6 +134,8 @@ Continue from a previous session? Use `/memoria:resume <id>`
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
 | `/memoria:search "クエリ"` | セッション・判断・パターンを検索 |
 | `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | ルールに基づくレビュー |
+| `/memoria:review <PR URL>` | GitHub PRをレビュー |
+| `/memoria:harvest <PR URL>` | PRレビューコメントから知見を抽出 |
 | `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | 週次レビューレポート |
 
 ### 推奨ワークフロー

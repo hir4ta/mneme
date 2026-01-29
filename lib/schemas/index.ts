@@ -1,5 +1,7 @@
 // Common schemas
 export {
+  type PRSource,
+  PRSourceSchema,
   type SessionContext,
   SessionContextSchema,
   type User,

@@ -41,15 +41,49 @@ fi
 
 # Extract keywords from prompt (first 5 significant words, excluding common words)
 # Simple extraction: take words longer than 3 chars, limit to 5
-keywords=$(echo "$prompt" | tr '[:upper:]' '[:lower:]' | \
+raw_keywords=$(echo "$prompt" | tr '[:upper:]' '[:lower:]' | \
     tr -cs '[:alnum:]' '\n' | \
     awk 'length > 3' | \
     grep -vE '^(this|that|with|from|have|will|would|could|should|what|when|where|which|there|their|them|they|been|being|were|does|done|make|just|only|also|into|over|such|than|then|some|these|those|very|after|before|about|through)$' | \
-    head -5 | \
-    tr '\n' '|' | \
-    sed 's/|$//')
+    head -5)
 
 # Exit if no keywords extracted
+if [ -z "$raw_keywords" ]; then
+    exit 0
+fi
+
+# Expand keywords using tag aliases from tags.json (fuzzy-search style)
+tags_path="${memoria_dir}/tags.json"
+expanded_keywords="$raw_keywords"
+
+if [ -f "$tags_path" ]; then
+    # For each keyword, check if it matches any tag id, label, or alias
+    # If matched, expand to include all related terms
+    while IFS= read -r kw; do
+        [ -z "$kw" ] && continue
+        # Search for matching tag and get all related terms
+        related_terms=$(jq -r --arg kw "$kw" '
+            .tags[]? |
+            select(
+                (.id | ascii_downcase) == $kw or
+                (.label | ascii_downcase) == $kw or
+                (.aliases[]? | ascii_downcase) == $kw
+            ) |
+            [.id, .label] + .aliases | .[] | ascii_downcase
+        ' "$tags_path" 2>/dev/null | sort -u)
+
+        if [ -n "$related_terms" ]; then
+            # Add related terms to expanded keywords
+            expanded_keywords="${expanded_keywords}
+${related_terms}"
+        fi
+    done <<< "$raw_keywords"
+fi
+
+# Remove duplicates and build grep pattern
+keywords=$(echo "$expanded_keywords" | sort -u | tr '\n' '|' | sed 's/|$//')
+
+# Exit if no keywords
 if [ -z "$keywords" ]; then
     exit 0
 fi

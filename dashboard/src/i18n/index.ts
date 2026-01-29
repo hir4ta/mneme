@@ -1,5 +1,4 @@
 import i18n from "i18next";
-import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 
 // English translations
@@ -49,32 +48,43 @@ const resources = {
   },
 };
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: "en",
-    defaultNS: "common",
-    ns: [
-      "common",
-      "layout",
-      "sessions",
-      "decisions",
-      "rules",
-      "patterns",
-      "stats",
-      "graph",
-      "errors",
-    ],
-    interpolation: {
-      escapeValue: false,
-    },
-    detection: {
-      order: ["localStorage", "navigator"],
-      lookupLocalStorage: "memoria-lang",
-      caches: ["localStorage"],
-    },
-  });
+// Get initial language from localStorage (managed by jotai atom)
+const STORAGE_KEY = "memoria-lang";
+const getInitialLanguage = (): string => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      // jotai stores as JSON string
+      const parsed = JSON.parse(stored);
+      if (parsed === "ja" || parsed === "en") {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return "en";
+};
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: getInitialLanguage(),
+  fallbackLng: "en",
+  defaultNS: "common",
+  ns: [
+    "common",
+    "layout",
+    "sessions",
+    "decisions",
+    "rules",
+    "patterns",
+    "stats",
+    "graph",
+    "errors",
+  ],
+  interpolation: {
+    escapeValue: false,
+  },
+});
 
 export default i18n;

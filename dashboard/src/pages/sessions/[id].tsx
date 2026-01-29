@@ -23,6 +23,48 @@ function formatTimestamp(dateStr: string): string {
   return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
 }
 
+// Parse command message format from Claude Code
+// e.g., "<command-name>/release</command-name><command-args>0.12.9</command-args>"
+interface ParsedCommand {
+  isCommand: boolean;
+  commandName?: string;
+  commandArgs?: string;
+  originalText: string;
+}
+
+function parseCommandMessage(text: string): ParsedCommand {
+  const commandNameMatch = text.match(/<command-name>([^<]+)<\/command-name>/);
+  const commandArgsMatch = text.match(/<command-args>([^<]*)<\/command-args>/);
+
+  if (commandNameMatch) {
+    return {
+      isCommand: true,
+      commandName: commandNameMatch[1].trim(),
+      commandArgs: commandArgsMatch?.[1]?.trim() || "",
+      originalText: text,
+    };
+  }
+
+  return { isCommand: false, originalText: text };
+}
+
+// Command message display component
+function CommandBadge({
+  commandName,
+  commandArgs,
+}: {
+  commandName: string;
+  commandArgs: string;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1.5 font-mono text-sm text-stone-300">
+      <span className="text-stone-400">$</span>
+      <span className="text-white font-medium">{commandName}</span>
+      {commandArgs && <span className="text-stone-400">{commandArgs}</span>}
+    </div>
+  );
+}
+
 // Auto-compact summary card - displayed differently from regular interactions
 function CompactSummaryCard({ interaction }: { interaction: Interaction }) {
   const { t } = useTranslation("sessions");
@@ -77,6 +119,9 @@ function InteractionCard({ interaction }: { interaction: Interaction }) {
   const hasThinking =
     interaction.thinking && interaction.thinking.trim() !== "";
 
+  // Check if user message is a command
+  const parsedCommand = parseCommandMessage(interaction.user);
+
   return (
     <div className="space-y-3">
       {/* Timestamp header */}
@@ -91,13 +136,24 @@ function InteractionCard({ interaction }: { interaction: Interaction }) {
         <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 mr-1">
           {t("interaction.user")}
         </span>
-        <div className="max-w-[85%] bg-[#39414B] text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
-          <MarkdownRenderer
-            content={interaction.user}
-            variant="dark"
-            className="text-sm text-white prose-headings:text-white prose-strong:text-white"
-          />
-        </div>
+        {parsedCommand.isCommand ? (
+          // Command message - terminal style
+          <div className="max-w-[85%] bg-stone-800/80 backdrop-blur rounded-lg px-3 py-1.5 shadow-sm border border-stone-700/50">
+            <CommandBadge
+              commandName={parsedCommand.commandName || ""}
+              commandArgs={parsedCommand.commandArgs || ""}
+            />
+          </div>
+        ) : (
+          // Regular message
+          <div className="max-w-[85%] bg-[#39414B] text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
+            <MarkdownRenderer
+              content={interaction.user}
+              variant="dark"
+              className="text-sm text-white prose-headings:text-white prose-strong:text-white"
+            />
+          </div>
+        )}
       </div>
 
       {/* Assistant response - left aligned - Claude cream/beige */}
@@ -395,7 +451,6 @@ export function SessionDetailPage() {
         <Link to="/" className="text-muted-foreground hover:text-foreground">
           &larr; {tc("back")}
         </Link>
-        <h1 className="text-2xl font-bold">{t("detail.title")}</h1>
       </div>
 
       {/* Two-column layout: Overview (30%) | Main Content (70%) */}
