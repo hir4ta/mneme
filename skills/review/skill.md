@@ -1,6 +1,10 @@
 ---
 name: review
-description: Code review based on repository-specific rules (`dev-rules.json` / `review-guidelines.json`).
+description: |
+  Code review based on repository-specific rules (dev-rules.json / review-guidelines.json).
+  Use when: (1) reviewing staged changes before commit, (2) reviewing a GitHub PR,
+  (3) checking code quality against team standards.
+argument-hint: "[--staged|--all|--diff=branch|PR-URL]"
 ---
 
 # /memoria:review
@@ -45,6 +49,22 @@ When `--full` is specified, perform two-stage review:
 - Apply dev-rules.json / review-guidelines.json
 - Check language/framework best practices
 - Generate findings
+
+## Execution
+
+**Recommended**: Use the `memoria-reviewer` subagent for isolated review context:
+
+```typescript
+Task({
+  subagent_type: "memoria-reviewer",
+  prompt: "Review staged changes against memoria rules",
+  description: "Code review"
+})
+```
+
+The subagent has the review skill preloaded and operates with isolated context for focused review.
+
+**Alternative**: Execute steps manually (see below).
 
 ## Execution Steps
 

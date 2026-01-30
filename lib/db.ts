@@ -1,21 +1,22 @@
 /**
  * memoria SQLite Database Utilities
  *
- * Local-only database for private interactions and backups.
- * This file provides CRUD operations for interactions and pre_compact_backups.
+ * Global database for private interactions across all projects.
+ * Location: ~/.claude/memoria/global.db (or MEMORIA_DATA_DIR env var)
  *
  * Uses Node.js built-in sqlite module (node:sqlite) for platform independence.
  */
 
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Suppress Node.js SQLite experimental warning
 const originalEmit = process.emit;
 // @ts-expect-error - process.emit override for warning suppression
-process.emit = function (name, data, ...args) {
+process.emit = (name, data, ...args) => {
   if (
     name === "warning" &&
     typeof data === "object" &&
@@ -36,6 +37,10 @@ const __dirname = dirname(__filename);
 export interface Interaction {
   id?: number;
   session_id: string;
+  project_path: string;
+  repository?: string | null;
+  repository_url?: string | null;
+  repository_root?: string | null;
   owner: string;
   role: "user" | "assistant";
   content: string;
@@ -49,9 +54,16 @@ export interface Interaction {
 export interface PreCompactBackup {
   id?: number;
   session_id: string;
+  project_path: string;
   owner: string;
   interactions: string; // JSON string
   created_at?: string;
+}
+
+export interface RepositoryInfo {
+  repository: string | null; // owner/repo
+  repository_url: string | null; // normalized remote URL
+  repository_root: string | null; // absolute path to repo root
 }
 
 /**
@@ -70,21 +82,54 @@ export function getCurrentUser(): string {
 }
 
 /**
- * Get database path for a memoria directory
+ * Get global database directory path
+ * Uses MEMORIA_DATA_DIR env var or defaults to ~/.claude/memoria/
+ */
+export function getGlobalDbDir(): string {
+  const envDir = process.env.MEMORIA_DATA_DIR;
+  if (envDir) {
+    return envDir;
+  }
+  return join(homedir(), ".claude", "memoria");
+}
+
+/**
+ * Get global database path
+ */
+export function getGlobalDbPath(): string {
+  return join(getGlobalDbDir(), "global.db");
+}
+
+/**
+ * @deprecated Use getGlobalDbPath() instead. Kept for migration compatibility.
  */
 export function getDbPath(memoriaDir: string): string {
   return join(memoriaDir, "local.db");
 }
 
 /**
- * Initialize database with schema
+ * Configure database pragmas for optimal performance
  */
-export function initDatabase(memoriaDir: string): DatabaseSync {
-  const dbPath = getDbPath(memoriaDir);
+function configurePragmas(db: DatabaseSync): void {
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec("PRAGMA synchronous = NORMAL");
+}
+
+/**
+ * Initialize global database with schema
+ */
+export function initGlobalDatabase(): DatabaseSync {
+  const dbDir = getGlobalDbDir();
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true });
+  }
+
+  const dbPath = getGlobalDbPath();
   const db = new DatabaseSync(dbPath);
 
-  // Enable WAL mode for better concurrent access
-  db.exec("PRAGMA journal_mode = WAL");
+  // Configure pragmas
+  configurePragmas(db);
 
   // Read and execute schema
   const schemaPath = join(__dirname, "schema.sql");
@@ -97,7 +142,37 @@ export function initDatabase(memoriaDir: string): DatabaseSync {
 }
 
 /**
- * Open existing database
+ * @deprecated Use initGlobalDatabase() instead.
+ */
+export function initDatabase(memoriaDir: string): DatabaseSync {
+  const dbPath = getDbPath(memoriaDir);
+  const db = new DatabaseSync(dbPath);
+  configurePragmas(db);
+
+  const schemaPath = join(__dirname, "schema.sql");
+  if (existsSync(schemaPath)) {
+    const schema = readFileSync(schemaPath, "utf-8");
+    db.exec(schema);
+  }
+
+  return db;
+}
+
+/**
+ * Open global database
+ */
+export function openGlobalDatabase(): DatabaseSync | null {
+  const dbPath = getGlobalDbPath();
+  if (!existsSync(dbPath)) {
+    return null;
+  }
+  const db = new DatabaseSync(dbPath);
+  configurePragmas(db);
+  return db;
+}
+
+/**
+ * @deprecated Use openGlobalDatabase() instead.
  */
 export function openDatabase(memoriaDir: string): DatabaseSync | null {
   const dbPath = getDbPath(memoriaDir);
@@ -105,8 +180,56 @@ export function openDatabase(memoriaDir: string): DatabaseSync | null {
     return null;
   }
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL");
+  configurePragmas(db);
   return db;
+}
+
+/**
+ * Get repository info from a project directory
+ */
+export function getRepositoryInfo(projectPath: string): RepositoryInfo {
+  const result: RepositoryInfo = {
+    repository: null,
+    repository_url: null,
+    repository_root: null,
+  };
+
+  try {
+    // Check if it's a git repository
+    execSync("git rev-parse --git-dir", {
+      cwd: projectPath,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    // Get repository root
+    result.repository_root = execSync("git rev-parse --show-toplevel", {
+      cwd: projectPath,
+      encoding: "utf-8",
+    }).trim();
+
+    // Get remote URL
+    try {
+      result.repository_url = execSync("git remote get-url origin", {
+        cwd: projectPath,
+        encoding: "utf-8",
+      }).trim();
+
+      // Extract owner/repo from URL
+      // git@github.com:owner/repo.git → owner/repo
+      // https://github.com/owner/repo.git → owner/repo
+      const match = result.repository_url.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+      if (match) {
+        result.repository = match[1].replace(/\.git$/, "");
+      }
+    } catch {
+      // No remote origin, that's OK
+    }
+  } catch {
+    // Not a git repository
+  }
+
+  return result;
 }
 
 /**
@@ -117,8 +240,8 @@ export function insertInteractions(
   interactions: Interaction[],
 ): void {
   const insert = db.prepare(`
-    INSERT INTO interactions (session_id, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   // Manual transaction management (node:sqlite doesn't have db.transaction())
@@ -127,6 +250,10 @@ export function insertInteractions(
     for (const item of interactions) {
       insert.run(
         item.session_id,
+        item.project_path,
+        item.repository || null,
+        item.repository_url || null,
+        item.repository_root || null,
         item.owner,
         item.role,
         item.content,
@@ -264,10 +391,15 @@ export function insertPreCompactBackup(
   backup: PreCompactBackup,
 ): void {
   const stmt = db.prepare(`
-    INSERT INTO pre_compact_backups (session_id, owner, interactions)
-    VALUES (?, ?, ?)
+    INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions)
+    VALUES (?, ?, ?, ?)
   `);
-  stmt.run(backup.session_id, backup.owner, backup.interactions);
+  stmt.run(
+    backup.session_id,
+    backup.project_path,
+    backup.owner,
+    backup.interactions,
+  );
 }
 
 /**
@@ -359,4 +491,138 @@ export function getDbStats(db: DatabaseSync): {
     interactions: interactionsCount.count,
     backups: backupsCount.count,
   };
+}
+
+/**
+ * Get interactions by project path
+ */
+export function getInteractionsByProject(
+  db: DatabaseSync,
+  projectPath: string,
+): Interaction[] {
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE project_path = ?
+    ORDER BY timestamp ASC
+  `);
+  return stmt.all(projectPath) as Interaction[];
+}
+
+/**
+ * Get interactions by repository
+ */
+export function getInteractionsByRepository(
+  db: DatabaseSync,
+  repository: string,
+): Interaction[] {
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE repository = ?
+    ORDER BY timestamp ASC
+  `);
+  return stmt.all(repository) as Interaction[];
+}
+
+/**
+ * Get unique projects from database
+ */
+export function getUniqueProjects(db: DatabaseSync): string[] {
+  const stmt = db.prepare(`
+    SELECT DISTINCT project_path FROM interactions
+    ORDER BY project_path
+  `);
+  const rows = stmt.all() as Array<{ project_path: string }>;
+  return rows.map((r) => r.project_path);
+}
+
+/**
+ * Get unique repositories from database
+ */
+export function getUniqueRepositories(db: DatabaseSync): string[] {
+  const stmt = db.prepare(`
+    SELECT DISTINCT repository FROM interactions
+    WHERE repository IS NOT NULL
+    ORDER BY repository
+  `);
+  const rows = stmt.all() as Array<{ repository: string }>;
+  return rows.map((r) => r.repository);
+}
+
+/**
+ * Delete interactions by project path
+ */
+export function deleteInteractionsByProject(
+  db: DatabaseSync,
+  projectPath: string,
+): number {
+  const stmt = db.prepare("DELETE FROM interactions WHERE project_path = ?");
+  const result = stmt.run(projectPath);
+  return result.changes;
+}
+
+/**
+ * Delete interactions before a specific date
+ */
+export function deleteInteractionsBefore(
+  db: DatabaseSync,
+  beforeDate: string,
+): number {
+  const stmt = db.prepare("DELETE FROM interactions WHERE timestamp < ?");
+  const result = stmt.run(beforeDate);
+  return result.changes;
+}
+
+/**
+ * Delete backups by project path
+ */
+export function deleteBackupsByProject(
+  db: DatabaseSync,
+  projectPath: string,
+): number {
+  const stmt = db.prepare(
+    "DELETE FROM pre_compact_backups WHERE project_path = ?",
+  );
+  const result = stmt.run(projectPath);
+  return result.changes;
+}
+
+/**
+ * Count interactions matching filter criteria
+ */
+export function countInteractions(
+  db: DatabaseSync,
+  filter: {
+    sessionId?: string;
+    projectPath?: string;
+    repository?: string;
+    before?: string;
+  },
+): number {
+  const conditions: string[] = [];
+  const params: string[] = [];
+
+  if (filter.sessionId) {
+    conditions.push("session_id = ?");
+    params.push(filter.sessionId);
+  }
+  if (filter.projectPath) {
+    conditions.push("project_path = ?");
+    params.push(filter.projectPath);
+  }
+  if (filter.repository) {
+    conditions.push("repository = ?");
+    params.push(filter.repository);
+  }
+  if (filter.before) {
+    conditions.push("timestamp < ?");
+    params.push(filter.before);
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const stmt = db.prepare(
+    `SELECT COUNT(*) as count FROM interactions ${whereClause}`,
+  );
+  const result = stmt.get(...params) as { count: number };
+  return result.count;
 }

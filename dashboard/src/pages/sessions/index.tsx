@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -31,8 +31,6 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
   const date = new Date(session.createdAt).toLocaleDateString(
     i18n.language === "ja" ? "ja-JP" : "en-US",
   );
-  const userName = session.context?.user?.name;
-  const interactionCount = session.interactions?.length || 0;
 
   // Get tag color from tags.json
   const getTagColor = (tagId: string) => {
@@ -42,58 +40,36 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
 
   return (
     <Link to={`/sessions/${session.id}`}>
-      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium text-stone-800 dark:text-stone-100 line-clamp-1">
-            {session.title || t("untitled")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {session.goal && (
-            <p className="text-sm text-stone-600 dark:text-stone-400 mb-3 line-clamp-1">
-              {session.goal}
-            </p>
-          )}
-          <div className="flex items-center gap-2 flex-wrap text-xs text-stone-500 dark:text-stone-400">
-            <span>{date}</span>
-            {userName && (
-              <>
-                <span>·</span>
-                <span>{userName}</span>
-              </>
+      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer h-full">
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <CardTitle className="text-sm font-medium text-stone-800 dark:text-stone-100 line-clamp-2">
+              {session.title || t("untitled")}
+            </CardTitle>
+            {session.sessionType && (
+              <Badge variant="outline" className="text-xs font-normal shrink-0">
+                {t(`types.${session.sessionType}`)}
+              </Badge>
             )}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap text-xs text-stone-500 dark:text-stone-400 mb-2">
+            <span>{date}</span>
             {session.context?.branch && (
               <>
                 <span>·</span>
-                <span className="font-mono bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">
+                <span className="font-mono bg-stone-100 dark:bg-stone-800 px-1 py-0.5 rounded text-xs">
                   {session.context.branch}
-                </span>
-              </>
-            )}
-            {session.sessionType && (
-              <>
-                <span>·</span>
-                <Badge variant="outline" className="text-xs font-normal">
-                  {t(`types.${session.sessionType}`)}
-                </Badge>
-              </>
-            )}
-            {interactionCount > 0 && (
-              <>
-                <span>·</span>
-                <span>
-                  {t("interactionCount", { count: interactionCount })}
                 </span>
               </>
             )}
           </div>
           {session.tags && session.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
-              {session.tags.slice(0, 5).map((tagId) => (
+            <div className="flex flex-wrap gap-1">
+              {session.tags.slice(0, 4).map((tagId) => (
                 <Badge
                   key={tagId}
                   variant="secondary"
-                  className="text-xs"
+                  className="text-xs px-1.5 py-0"
                   style={{
                     backgroundColor: `${getTagColor(tagId)}20`,
                     color: getTagColor(tagId),
@@ -103,9 +79,9 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
                   {tagId}
                 </Badge>
               ))}
-              {session.tags.length > 5 && (
-                <Badge variant="outline" className="text-xs">
-                  +{session.tags.length - 5}
+              {session.tags.length > 4 && (
+                <Badge variant="outline" className="text-xs px-1.5 py-0">
+                  +{session.tags.length - 4}
                 </Badge>
               )}
             </div>
@@ -287,7 +263,7 @@ export function SessionsPage() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4">
+              <div className="grid gap-3 md:grid-cols-2">
                 {sessions.map((session) => (
                   <SessionCard key={session.id} session={session} tags={tags} />
                 ))}

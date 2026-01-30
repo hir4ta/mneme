@@ -189,6 +189,24 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 The dashboard supports English and Japanese. Click the language toggle (EN/JA) in the header to switch. The preference is saved to localStorage.
 
+### MCP Tools
+
+memoria provides MCP servers with search and database tools callable directly from Claude Code:
+
+| Server | Tool | Description |
+|--------|------|-------------|
+| memoria-search | `memoria_search` | Unified search (FTS5, tag alias resolution) |
+| memoria-search | `memoria_get_session` | Get session details |
+| memoria-search | `memoria_get_decision` | Get decision details |
+| memoria-db | `memoria_list_projects` | List all projects |
+| memoria-db | `memoria_cross_project_search` | Cross-project search |
+
+### Subagents
+
+| Agent | Description |
+|-------|-------------|
+| `memoria-reviewer` | Rule-based code review (isolated context) |
+
 ## How It Works
 
 ```mermaid
@@ -238,27 +256,42 @@ flowchart TB
 
 ## Data Storage
 
-memoria uses a **hybrid storage** approach for privacy and collaboration:
+memoria uses a **hybrid storage** approach for privacy, collaboration, and cross-project knowledge sharing:
 
-| Storage | Purpose | Sharing |
-|---------|---------|---------|
-| **JSON** | Summaries, decisions, patterns, rules | Git-managed (team shared) |
-| **SQLite** | Interactions, backups | Local only (.gitignore) |
+| Storage | Location | Purpose | Sharing |
+|---------|----------|---------|---------|
+| **JSON** | `.memoria/` | Summaries, decisions, patterns, rules | Git-managed (team shared) |
+| **SQLite** | `~/.claude/memoria/global.db` | Interactions, backups | Local only (cross-project) |
 
 **Why hybrid?**
 - **Privacy**: Conversation history (interactions) stays local to each developer
+- **Cross-project**: Global database enables knowledge sharing across all your projects
 - **Lightweight**: JSON files reduced from 100KB+ to ~5KB (interactions excluded)
 - **Future-ready**: Embeddings table prepared for semantic search
 
+### Global Database
+
+Interactions are stored in a **global SQLite database** at `~/.claude/memoria/global.db`. This enables:
+- **Cross-project search**: Find related work from any project
+- **Unified history**: View all interactions across projects in the dashboard
+- **Project filtering**: Filter by `project_path` or `repository` in the dashboard
+
+To customize the database location, set the `MEMORIA_DATA_DIR` environment variable:
+
+```bash
+# Custom location (defaults to ~/.claude/memoria/)
+export MEMORIA_DATA_DIR="$HOME/.local/share/memoria"
+```
+
 ### Directory Structure
 
+**Project-local (`.memoria/`)** - Git-managed, team-shared:
 ```text
 .memoria/
-├── local.db          # SQLite (local only, .gitignore)
 ├── tags.json         # Tag master file (93 tags, prevents notation variations)
 ├── sessions/         # Session metadata (YYYY/MM)
 │   └── YYYY/MM/
-│       └── {id}.json # Metadata only (interactions in SQLite)
+│       └── {id}.json # Metadata only (interactions in global SQLite)
 ├── decisions/        # Technical decisions (from /save)
 │   └── YYYY/MM/
 │       └── {id}.json
@@ -269,7 +302,13 @@ memoria uses a **hybrid storage** approach for privacy and collaboration:
 └── reports/          # Weekly reports (YYYY-MM)
 ```
 
-Git-manageable. The `local.db` file is automatically added to `.gitignore`.
+**Global (`~/.claude/memoria/`)** - Local only, cross-project:
+```text
+~/.claude/memoria/
+└── global.db         # SQLite with interactions from ALL projects
+```
+
+Each interaction in the global database includes `project_path` and `repository` fields for filtering.
 
 ### Session JSON Schema
 
@@ -365,6 +404,16 @@ Tags are selected from `.memoria/tags.json` to prevent notation variations (e.g.
 - **ai**: llm, ai-agent, mcp, rag, vector-db, embedding
 - **cloud**: serverless, microservices, edge, wasm
 - And more...
+
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/).
+
+**⚠️ While in 0.x (pre-1.0), breaking changes may occur between minor versions.**
+
+If you encounter issues after an update:
+1. Check the [releases](https://github.com/hir4ta/memoria/releases) for migration notes
+2. Re-initialize with `npx @hir4ta/memoria --init` if needed
 
 ## License
 

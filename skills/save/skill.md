@@ -1,6 +1,9 @@
 ---
 name: save
-description: Extract all data from session - summary, decisions, patterns, rules.
+description: |
+  Extract and persist session knowledge including summary, decisions, patterns, and rules.
+  Use when: (1) completing a significant work session, (2) making important technical decisions,
+  (3) solving complex errors worth documenting, (4) before ending a long session.
 ---
 
 # /memoria:save
@@ -106,74 +109,33 @@ Execute all phases in order. Each phase builds on the previous.
 
 **Important:** After this phase, all subsequent operations work on the MASTER session.
 
-### Phase 1: Save Conversation History (interactions)
+### Phase 1: Create Session Link (for SessionEnd hook)
 
-Execute this phase after identifying the master session.
-Interactions are stored in SQLite (`local.db`) for privacy.
-If auto-compact occurred, `pre_compact_backups` table contains earlier conversations.
+**IMPORTANT:** Do NOT save interactions to SQLite in this phase. The `session-end.sh` hook will automatically extract and save complete interactions from the transcript when the session ends.
 
-**Storage Location:**
-- **Interactions**: SQLite (`local.db`) - private to each developer
-- **Metadata**: JSON (`sessions/*.json`) - shared via Git
-
-**Example scenario:**
-```
-Session start → 16 interactions → auto-compact → 8 more interactions → /memoria:save
-
-Without merge: Only 8 interactions saved (data loss)
-With merge: All 24 interactions saved in SQLite
-```
+This phase creates a session-link file so that `session-end.sh` can find the correct memoria session.
 
 1. Use master session ID from Phase 0 (e.g., `abc12345`)
-2. Collect all related session IDs: `[masterSessionId] + childSessionIds`
+2. Get Claude Code session ID from the system (available in session context)
 
-3. **Check for existing data in SQLite (all related sessions)**:
+3. **Create session-link file**:
    ```bash
-   # Check for pre_compact_backups from ALL related sessions
-   sqlite3 .memoria/local.db "SELECT session_id, interactions FROM pre_compact_backups WHERE session_id IN ('abc12345', 'xyz78901') ORDER BY created_at DESC;"
-
-   # Get interactions from ALL related sessions
-   sqlite3 .memoria/local.db "SELECT * FROM interactions WHERE session_id IN ('abc12345', 'xyz78901') ORDER BY timestamp ASC;"
+   mkdir -p .memoria/session-links
    ```
-
-4. **Determine the most complete source**:
-   - If `pre_compact_backups` exists, use the **LAST entry** (most complete)
-   - Compare with existing `interactions` table - use whichever has more entries
-   - The most complete source becomes the "base"
-
-5. **Extract NEW interactions** from current conversation:
-   - Scan conversation for messages NOT already in the base
-   - Use `timestamp` or `user` message content for matching
-   - Typically: everything after the last interaction in base
-
-6. **Merge with deduplication**:
+   Write to `.memoria/session-links/{claude-session-short-id}.json`:
+   ```json
+   {
+     "masterSessionId": "abc12345",
+     "claudeSessionId": "<full-claude-session-id>",
+     "createdAt": "<current ISO timestamp>"
+   }
    ```
-   base_interactions = most complete source (pre_compact_backups or existing interactions table)
-   new_interactions = conversations after the last base interaction
+   The claude-session-short-id is the first 8 characters of the Claude Code session ID.
 
-   Final = base_interactions + new_interactions (deduplicated by timestamp)
-   ```
-   - **Exact match by timestamp** - skip if already exists
-   - Preserve `isCompactSummary` flag on summary entries
+4. **Update session JSON** with files and metrics only
+5. Set `updatedAt` to current timestamp
 
-7. **Insert merged interactions into SQLite**:
-   ```bash
-   # Clear existing interactions for this session
-   sqlite3 .memoria/local.db "DELETE FROM interactions WHERE session_id = 'abc12345';"
-
-   # Insert each interaction
-   sqlite3 .memoria/local.db "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES (...);"
-   ```
-
-8. **Clear pre_compact_backups** (merged into interactions):
-   ```bash
-   sqlite3 .memoria/local.db "DELETE FROM pre_compact_backups WHERE session_id = 'abc12345';"
-   ```
-
-9. **Update session JSON** with files and metrics only (interactions are in SQLite)
-10. Set `updatedAt` to current timestamp
-
-**Note:** Interactions are stored in SQLite for privacy. JSON contains only metadata.
+**Note:** Interactions are automatically saved by `session-end.sh` when the session ends. This ensures complete conversation history is captured from the transcript.
 
 ### Phase 2: Extract Session Data
 
@@ -385,9 +347,10 @@ Before adding:
 ### File Operations
 
 ```bash
-# SQLite (interactions - private)
-Read + Write: .memoria/local.db
-  - interactions table
+# Global SQLite (interactions - private)
+# Location: ~/.claude/memoria/global.db (or MEMORIA_DATA_DIR env var)
+Read + Write: ${MEMORIA_DATA_DIR:-~/.claude/memoria}/global.db
+  - interactions table (includes project_path, repository for filtering)
   - pre_compact_backups table
 
 # Session JSON (metadata - shared)
@@ -472,9 +435,11 @@ If no rules are found, report what was scanned:
 ## Notes
 
 - Session path is shown in additionalContext at session start
-- **Interactions are saved to SQLite in Phase 0** - no need to `/exit` first
-- Interactions are also auto-saved by SessionEnd hook to SQLite
+- **Interactions are saved to global SQLite** - no need to `/exit` first
+- Interactions are also auto-saved by SessionEnd hook to global SQLite
 - **Privacy**: Interactions in SQLite are local to each developer (not in Git)
+- **Global storage**: `~/.claude/memoria/global.db` stores interactions from all projects
+- **Project filtering**: Each interaction includes `project_path` and `repository` fields
 - **JSON lightness**: Session JSON contains only metadata (no interactions)
 - Decisions and patterns are also kept in session JSON for context
 - Duplicate checking prevents bloat in decisions/ and patterns/

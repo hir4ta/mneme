@@ -1,6 +1,10 @@
 ---
 name: search
-description: Search saved sessions, decisions, and patterns.
+description: |
+  Search saved sessions, decisions, and patterns in memoria's knowledge base.
+  Use when: (1) looking for past solutions to similar problems, (2) finding previous decisions,
+  (3) recalling how something was implemented before.
+argument-hint: "<query>"
 ---
 
 # /memoria:search
@@ -23,26 +27,29 @@ Search saved sessions, decisions, and patterns.
 
 ## Execution Steps
 
-1. Read all JSON files under `.memoria/`
-2. Read `.memoria/tags.json` to include aliases in search
-3. Text search on all relevant fields (title, interactions, summary, discussions, errors, etc.)
-4. Score and display results
-5. If user wants details, re-read the file
+**Use the `memoria_search` MCP tool for fast, unified search:**
 
-### File Operations
+1. Call `memoria_search` with the query
+2. Display scored results
+3. If user wants details, use `memoria_get_session` or `memoria_get_decision`
 
-```bash
-# Load tags.json for alias search
-Read: .memoria/tags.json
+### MCP Tools
 
-# Get files by type
-Glob: .memoria/sessions/**/*.json
-Glob: .memoria/decisions/**/*.json
-Glob: .memoria/patterns/*.json
+```typescript
+// Search all types
+memoria_search({ query: "JWT auth", limit: 10 })
 
-# Read each file for search
-Read: .memoria/{type}/{filename}.json
+// Filter by type
+memoria_search({ query: "JWT auth", types: ["decision", "session"] })
+
+// Get full session details
+memoria_get_session({ sessionId: "abc123" })
+
+// Get full decision details
+memoria_get_decision({ decisionId: "jwt-auth-001" })
 ```
+
+**Fallback (if MCP unavailable):** Read JSON files directly using Glob + Read tools.
 
 ## Search Algorithm
 

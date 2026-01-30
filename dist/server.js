@@ -2879,11 +2879,12 @@ var cors = (options) => {
 
 // lib/db.ts
 import { execSync } from "node:child_process";
-import { existsSync as existsSync2, readFileSync } from "node:fs";
+import { existsSync as existsSync2, mkdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join as join2 } from "node:path";
 import { fileURLToPath } from "node:url";
 var originalEmit = process.emit;
-process.emit = function(name, data, ...args) {
+process.emit = (name, data, ...args) => {
   if (name === "warning" && typeof data === "object" && data?.name === "ExperimentalWarning" && data?.message?.includes("SQLite")) {
     return false;
   }
@@ -2903,8 +2904,32 @@ function getCurrentUser() {
     }
   }
 }
+function getGlobalDbDir() {
+  const envDir = process.env.MEMORIA_DATA_DIR;
+  if (envDir) {
+    return envDir;
+  }
+  return join2(homedir(), ".claude", "memoria");
+}
+function getGlobalDbPath() {
+  return join2(getGlobalDbDir(), "global.db");
+}
 function getDbPath(memoriaDir2) {
   return join2(memoriaDir2, "local.db");
+}
+function configurePragmas(db) {
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec("PRAGMA synchronous = NORMAL");
+}
+function openGlobalDatabase() {
+  const dbPath = getGlobalDbPath();
+  if (!existsSync2(dbPath)) {
+    return null;
+  }
+  const db = new DatabaseSync(dbPath);
+  configurePragmas(db);
+  return db;
 }
 function openDatabase(memoriaDir2) {
   const dbPath = getDbPath(memoriaDir2);
@@ -2912,7 +2937,7 @@ function openDatabase(memoriaDir2) {
     return null;
   }
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL");
+  configurePragmas(db);
   return db;
 }
 function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
@@ -2938,6 +2963,42 @@ function hasInteractionsForSessionIds(db, sessionIds, owner) {
   `);
   const result = stmt.get(...sessionIds, owner);
   return result.count > 0;
+}
+function deleteInteractions(db, sessionId) {
+  const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
+  stmt.run(sessionId);
+}
+function deleteBackups(db, sessionId) {
+  const stmt = db.prepare(
+    "DELETE FROM pre_compact_backups WHERE session_id = ?"
+  );
+  stmt.run(sessionId);
+}
+function countInteractions(db, filter) {
+  const conditions = [];
+  const params = [];
+  if (filter.sessionId) {
+    conditions.push("session_id = ?");
+    params.push(filter.sessionId);
+  }
+  if (filter.projectPath) {
+    conditions.push("project_path = ?");
+    params.push(filter.projectPath);
+  }
+  if (filter.repository) {
+    conditions.push("repository = ?");
+    params.push(filter.repository);
+  }
+  if (filter.before) {
+    conditions.push("timestamp < ?");
+    params.push(filter.before);
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const stmt = db.prepare(
+    `SELECT COUNT(*) as count FROM interactions ${whereClause}`
+  );
+  const result = stmt.get(...params);
+  return result.count;
 }
 
 // lib/index/manager.ts
@@ -3549,6 +3610,133 @@ app.get("/api/sessions/:id/markdown", async (c) => {
     return c.json({ error: "Failed to read session markdown" }, 500);
   }
 });
+app.delete("/api/sessions/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const dryRun = c.req.query("dry-run") === "true";
+  const memoriaDir2 = getMemoriaDir();
+  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  try {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    safeParseJsonFile(filePath);
+    const db = openGlobalDatabase();
+    let interactionCount = 0;
+    if (db) {
+      interactionCount = countInteractions(db, { sessionId: id });
+      if (!dryRun) {
+        deleteInteractions(db, id);
+        deleteBackups(db, id);
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      fs4.unlinkSync(filePath);
+      const mdPath = filePath.replace(/\.json$/, ".md");
+      if (fs4.existsSync(mdPath)) {
+        fs4.unlinkSync(mdPath);
+      }
+      const sessionLinksDir = path3.join(memoriaDir2, "session-links");
+      const linkPath = path3.join(sessionLinksDir, `${id}.json`);
+      if (fs4.existsSync(linkPath)) {
+        fs4.unlinkSync(linkPath);
+      }
+    }
+    return c.json({
+      deleted: dryRun ? 0 : 1,
+      interactionsDeleted: dryRun ? 0 : interactionCount,
+      dryRun,
+      sessionId: id
+    });
+  } catch (error) {
+    console.error("Failed to delete session:", error);
+    return c.json({ error: "Failed to delete session" }, 500);
+  }
+});
+app.delete("/api/sessions", async (c) => {
+  const dryRun = c.req.query("dry-run") === "true";
+  const projectFilter = c.req.query("project");
+  const repositoryFilter = c.req.query("repository");
+  const beforeFilter = c.req.query("before");
+  const memoriaDir2 = getMemoriaDir();
+  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    const sessionsToDelete = [];
+    for (const filePath of files) {
+      try {
+        const content = fs4.readFileSync(filePath, "utf-8");
+        const session = JSON.parse(content);
+        let shouldDelete = true;
+        if (projectFilter) {
+          const sessionProject = session.context?.projectDir;
+          if (sessionProject !== projectFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (repositoryFilter && shouldDelete) {
+          const sessionRepo = session.context?.repository;
+          if (sessionRepo !== repositoryFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (beforeFilter && shouldDelete) {
+          const sessionDate = session.createdAt?.split("T")[0];
+          if (!sessionDate || sessionDate >= beforeFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (shouldDelete) {
+          sessionsToDelete.push({ id: session.id, path: filePath });
+        }
+      } catch {
+      }
+    }
+    let totalInteractions = 0;
+    const db = openGlobalDatabase();
+    if (db) {
+      for (const session of sessionsToDelete) {
+        totalInteractions += countInteractions(db, { sessionId: session.id });
+      }
+      if (!dryRun) {
+        for (const session of sessionsToDelete) {
+          deleteInteractions(db, session.id);
+          deleteBackups(db, session.id);
+        }
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      for (const session of sessionsToDelete) {
+        fs4.unlinkSync(session.path);
+        const mdPath = session.path.replace(/\.json$/, ".md");
+        if (fs4.existsSync(mdPath)) {
+          fs4.unlinkSync(mdPath);
+        }
+        const sessionLinksDir = path3.join(memoriaDir2, "session-links");
+        const linkPath = path3.join(sessionLinksDir, `${session.id}.json`);
+        if (fs4.existsSync(linkPath)) {
+          fs4.unlinkSync(linkPath);
+        }
+      }
+    }
+    return c.json({
+      deleted: dryRun ? 0 : sessionsToDelete.length,
+      interactionsDeleted: dryRun ? 0 : totalInteractions,
+      wouldDelete: sessionsToDelete.length,
+      dryRun,
+      filters: {
+        project: projectFilter || null,
+        repository: repositoryFilter || null,
+        before: beforeFilter || null
+      }
+    });
+  } catch (error) {
+    console.error("Failed to delete sessions:", error);
+    return c.json({ error: "Failed to delete sessions" }, 500);
+  }
+});
 app.get("/api/current-user", async (c) => {
   try {
     const user = getCurrentUser();
@@ -3565,7 +3753,10 @@ app.get("/api/sessions/:id/interactions", async (c) => {
   const sessionsDir = path3.join(memoriaDir2, "sessions");
   try {
     const currentUser = getCurrentUser();
-    const db = openDatabase(memoriaDir2);
+    let db = openGlobalDatabase();
+    if (!db) {
+      db = openDatabase(memoriaDir2);
+    }
     if (!db) {
       return c.json({ interactions: [], count: 0, isOwner: false });
     }

@@ -2,12 +2,13 @@
 
 import { fork } from "node:child_process";
 import fs from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Suppress Node.js SQLite experimental warning (must be before dynamic import)
 const originalEmit = process.emit;
-process.emit = function (name, data, ...args) {
+process.emit = (name, data, ...args) => {
   if (
     name === "warning" &&
     data?.name === "ExperimentalWarning" &&
@@ -55,13 +56,24 @@ function checkMemoriaDir() {
   }
 }
 
+function getGlobalDbDir() {
+  const envDir = process.env.MEMORIA_DATA_DIR;
+  if (envDir) {
+    return envDir;
+  }
+  return path.join(homedir(), ".claude", "memoria");
+}
+
 function initMemoria() {
   const memoriaDir = path.join(projectRoot, ".memoria");
   const sessionsDir = path.join(memoriaDir, "sessions");
   const rulesDir = path.join(memoriaDir, "rules");
   const patternsDir = path.join(memoriaDir, "patterns");
   const tagsPath = path.join(memoriaDir, "tags.json");
-  const dbPath = path.join(memoriaDir, "local.db");
+
+  // Global database path
+  const globalDbDir = getGlobalDbDir();
+  const globalDbPath = path.join(globalDbDir, "global.db");
 
   // Check if already initialized
   if (fs.existsSync(memoriaDir)) {
@@ -99,11 +111,18 @@ function initMemoria() {
   );
   fs.writeFileSync(path.join(rulesDir, "dev-rules.json"), rulesTemplate);
 
-  // Initialize SQLite database
+  // Initialize global SQLite database
   const schemaPath = path.join(packageDir, "lib", "schema.sql");
   try {
-    const db = new DatabaseSync(dbPath);
+    // Create global db directory if not exists
+    if (!fs.existsSync(globalDbDir)) {
+      fs.mkdirSync(globalDbDir, { recursive: true });
+    }
+
+    const db = new DatabaseSync(globalDbPath);
     db.exec("PRAGMA journal_mode = WAL");
+    db.exec("PRAGMA busy_timeout = 5000");
+    db.exec("PRAGMA synchronous = NORMAL");
     if (fs.existsSync(schemaPath)) {
       const schema = fs.readFileSync(schemaPath, "utf-8");
       db.exec(schema);
@@ -124,7 +143,9 @@ Created:
   ${tagsPath}
   ${rulesDir}/review-guidelines.json
   ${rulesDir}/dev-rules.json
-  ${dbPath}
+
+Global database initialized:
+  ${globalDbPath}
 
 You can now use memoria with Claude Code in this project.
 `);

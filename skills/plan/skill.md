@@ -1,9 +1,10 @@
 ---
 name: plan
 description: |
-  Memory-informed design and implementation planning.
-  Searches past sessions/decisions/patterns, asks clarifying questions,
-  then creates detailed task breakdown.
+  Memory-informed design and implementation planning with past knowledge lookup.
+  Use when: (1) starting a new feature or task, (2) designing architecture,
+  (3) needing to consider past decisions before implementing.
+argument-hint: "[topic]"
 ---
 
 # /memoria:plan

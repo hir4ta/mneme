@@ -1,7 +1,7 @@
-import { Link2 } from "lucide-react";
+import { Link2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SessionContextCard } from "@/components/session-context-card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  deleteSession,
   getSession,
   getSessionInteractions,
   getTags,
@@ -403,12 +404,15 @@ export function SessionDetailPage() {
   const { t, i18n } = useTranslation("sessions");
   const { t: tc } = useTranslation("common");
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [interactions, setInteractions] = useState<InteractionFromSQLite[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -452,6 +456,19 @@ export function SessionDetailPage() {
   const getTagColor = (tagId: string) => {
     const tag = tags.find((t) => t.id === tagId);
     return tag?.color || "#6B7280";
+  };
+
+  const handleDelete = async () => {
+    if (!id || !deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await deleteSession(id);
+      navigate("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete session");
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
   };
 
   if (loading) {
@@ -610,6 +627,49 @@ export function SessionDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* Delete Session - only for owner */}
+              {isOwner && (
+                <div className="pt-2 border-t">
+                  {!deleteConfirm ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteConfirm(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {t("detail.deleteSession")}
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-destructive">
+                        {t("detail.deleteConfirmMessage")}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                          onClick={handleDelete}
+                          disabled={deleting}
+                        >
+                          {deleting ? tc("deleting") : tc("delete")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setDeleteConfirm(false)}
+                          disabled={deleting}
+                        >
+                          {tc("cancel")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

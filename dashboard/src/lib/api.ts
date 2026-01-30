@@ -65,8 +65,28 @@ export async function getSession(id: string): Promise<Session> {
   return res.json();
 }
 
-// Note: updateSession and deleteSession removed - dashboard is read-only
-// Data modifications should be done via /memoria:* commands
+// Delete session (owner-only)
+export interface DeleteSessionResponse {
+  deleted: number;
+  interactionsDeleted: number;
+  dryRun: boolean;
+  sessionId: string;
+}
+
+export async function deleteSession(
+  id: string,
+  dryRun = false,
+): Promise<DeleteSessionResponse> {
+  const url = dryRun
+    ? `${API_BASE}/sessions/${id}?dry-run=true`
+    : `${API_BASE}/sessions/${id}`;
+  const res = await fetch(url, { method: "DELETE" });
+  if (res.status === 403) {
+    throw new Error("Not authorized to delete this session");
+  }
+  if (!res.ok) throw new Error("Failed to delete session");
+  return res.json();
+}
 
 export interface SessionMarkdown {
   exists: boolean;

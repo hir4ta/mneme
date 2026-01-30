@@ -189,6 +189,24 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 ダッシュボードは日本語と英語に対応しています。ヘッダーの言語切り替えボタン（EN/JA）をクリックして切り替えできます。設定はlocalStorageに保存されます。
 
+### MCPツール
+
+memoriaはMCPサーバーを提供し、Claude Codeから直接呼び出せる検索・データベースツールを提供：
+
+| サーバー | ツール | 説明 |
+|---------|--------|------|
+| memoria-search | `memoria_search` | 統合検索（FTS5、タグエイリアス解決） |
+| memoria-search | `memoria_get_session` | セッション詳細取得 |
+| memoria-search | `memoria_get_decision` | 決定詳細取得 |
+| memoria-db | `memoria_list_projects` | 全プロジェクト一覧 |
+| memoria-db | `memoria_cross_project_search` | クロスプロジェクト検索 |
+
+### サブエージェント
+
+| エージェント | 説明 |
+|-------------|------|
+| `memoria-reviewer` | ルールベースのコードレビュー（独立コンテキスト） |
+
 ## 仕組み
 
 ```mermaid
@@ -252,9 +270,9 @@ memoriaは**ハイブリッドストレージ**方式でプライバシーと共
 
 ### ディレクトリ構成
 
+**プロジェクト内** (`.memoria/`) - Git管理、チーム共有:
 ```text
 .memoria/
-├── local.db          # SQLite（ローカル専用、.gitignore）
 ├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
 ├── sessions/         # セッションメタデータ
 │   └── YYYY/MM/
@@ -269,7 +287,13 @@ memoriaは**ハイブリッドストレージ**方式でプライバシーと共
 └── reports/          # 週次レポート (YYYY-MM)
 ```
 
-Gitでバージョン管理可能です。`local.db`は自動で`.gitignore`に追加されます。
+**グローバル** (`~/.claude/memoria/`) - ローカル専用、クロスプロジェクト:
+```text
+~/.claude/memoria/
+└── global.db         # SQLite（全プロジェクトのinteractions）
+```
+
+環境変数 `MEMORIA_DATA_DIR` でDBの場所をカスタマイズ可能。
 
 ### セッションJSONスキーマ
 

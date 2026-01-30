@@ -2,7 +2,8 @@
 #
 # pre-compact.sh - Backup interactions before Auto-Compact
 #
-# Saves current interactions to SQLite (pre_compact_backups table) before context is compressed.
+# Saves current interactions to global SQLite (~/.claude/memoria/global.db)
+# pre_compact_backups table before context is compressed.
 # Does NOT create summary - summary creation is manual via /memoria:save.
 #
 # Input (stdin): JSON with session_id, transcript_path, cwd, trigger
@@ -35,7 +36,10 @@ fi
 session_short_id="${session_id:0:8}"
 memoria_dir="${cwd}/.memoria"
 sessions_dir="${memoria_dir}/sessions"
-db_path="${memoria_dir}/local.db"
+
+# Global database path
+global_db_dir="${MEMORIA_DATA_DIR:-$HOME/.claude/memoria}"
+db_path="${global_db_dir}/global.db"
 
 session_file=$(find "$sessions_dir" -name "${session_short_id}.json" -type f 2>/dev/null | head -1)
 
@@ -47,23 +51,33 @@ fi
 # Get git user for owner field
 owner=$(git -C "$cwd" config user.name 2>/dev/null || whoami || echo "unknown")
 
+# Escape project path for SQL
+project_path_escaped="${cwd//\'/\'\'}"
+
 # Determine plugin root directory for schema
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 
-# Initialize SQLite database if not exists
+# Initialize global SQLite database if not exists
 init_database() {
+    if [ ! -d "$global_db_dir" ]; then
+        mkdir -p "$global_db_dir"
+    fi
     if [ ! -f "$db_path" ]; then
         if [ -f "$schema_path" ]; then
             sqlite3 "$db_path" < "$schema_path"
-            echo "[memoria] SQLite database initialized: ${db_path}" >&2
+            echo "[memoria] Global SQLite database initialized: ${db_path}" >&2
         else
             # Minimal schema if schema.sql not found
             sqlite3 "$db_path" <<'SQLEOF'
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
+    repository TEXT,
+    repository_url TEXT,
+    repository_root TEXT,
     owner TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -75,18 +89,23 @@ CREATE TABLE IF NOT EXISTS interactions (
 );
 CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
+CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
 
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
     owner TEXT NOT NULL,
     interactions TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
+CREATE INDEX IF NOT EXISTS idx_backups_project ON pre_compact_backups(project_path);
 SQLEOF
         fi
     fi
+    # Configure pragmas
+    sqlite3 "$db_path" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;" 2>/dev/null || true
 }
 
 echo "[memoria] PreCompact: Backing up interactions before Auto-Compact..." >&2
@@ -136,10 +155,10 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         # Escape single quotes for SQL
         interactions_escaped="${interactions_json//\'/\'\'}"
 
-        # Insert backup into SQLite
-        sqlite3 "$db_path" "INSERT INTO pre_compact_backups (session_id, owner, interactions) VALUES ('${session_short_id}', '${owner}', '${interactions_escaped}');" 2>/dev/null || true
+        # Insert backup into global SQLite with project_path
+        sqlite3 "$db_path" "INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions) VALUES ('${session_short_id}', '${project_path_escaped}', '${owner}', '${interactions_escaped}');" 2>/dev/null || true
 
-        echo "[memoria] PreCompact: Backed up ${interaction_count} interactions to SQLite" >&2
+        echo "[memoria] PreCompact: Backed up ${interaction_count} interactions to global DB" >&2
     else
         echo "[memoria] PreCompact: No interactions to backup" >&2
     fi

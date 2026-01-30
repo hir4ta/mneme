@@ -1,11 +1,16 @@
--- memoria SQLite Schema
--- Local-only database for private interactions and backups
+-- memoria SQLite Schema (v2)
+-- Global database for private interactions across all projects
+-- Location: ~/.claude/memoria/global.db
 
--- interactions: 会話履歴（プライベート）
+-- interactions: 会話履歴（プライベート、全プロジェクト横断）
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
-    owner TEXT NOT NULL,
+    project_path TEXT NOT NULL,              -- プロジェクトの絶対パス
+    repository TEXT,                         -- 表示用: owner/repo
+    repository_url TEXT,                     -- 正規化した remote origin URL
+    repository_root TEXT,                    -- リポジトリの絶対パス
+    owner TEXT NOT NULL,                     -- git config user.name
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
     content TEXT NOT NULL,
     thinking TEXT,
@@ -18,17 +23,21 @@ CREATE TABLE IF NOT EXISTS interactions (
 CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
 CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp);
+CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
+CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
 
 -- pre_compact_backups: Auto-Compact前のバックアップ
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
     owner TEXT NOT NULL,
     interactions TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
+CREATE INDEX IF NOT EXISTS idx_backups_project ON pre_compact_backups(project_path);
 
 -- interactions_fts: 全文検索（FTS5）
 CREATE VIRTUAL TABLE IF NOT EXISTS interactions_fts USING fts5(
@@ -66,11 +75,11 @@ CREATE TABLE IF NOT EXISTS interaction_embeddings (
     FOREIGN KEY (interaction_id) REFERENCES interactions(id) ON DELETE CASCADE
 );
 
--- schema_version: マイグレーション管理
+-- schema_version: スキーマバージョン管理
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,
     applied_at TEXT DEFAULT (datetime('now'))
 );
 
--- 初期バージョン
-INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+-- スキーマバージョン 2（グローバルDB対応）
+INSERT OR IGNORE INTO schema_version (version) VALUES (2);

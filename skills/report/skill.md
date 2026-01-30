@@ -1,6 +1,10 @@
 ---
 name: report
-description: Generate weekly report from review results (`.memoria/reviews/`).
+description: |
+  Generate weekly report aggregating review results from .memoria/reviews/.
+  Use when: (1) preparing weekly status updates, (2) summarizing team review activity,
+  (3) tracking code quality trends over time.
+argument-hint: "[--from YYYY-MM-DD] [--to YYYY-MM-DD]"
 ---
 
 # /memoria:report

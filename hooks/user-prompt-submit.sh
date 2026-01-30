@@ -39,6 +39,10 @@ fi
 # Define memoria directory
 memoria_dir="${cwd}/.memoria"
 
+# Global database path
+global_db_dir="${MEMORIA_DATA_DIR:-$HOME/.claude/memoria}"
+global_db_path="${global_db_dir}/global.db"
+
 # Exit if no .memoria directory
 if [ ! -d "$memoria_dir" ]; then
     exit 0
@@ -98,6 +102,48 @@ if [ -z "$keywords" ]; then
     exit 0
 fi
 
+# Search global SQLite database for interactions
+search_global_db() {
+    local pattern="$1"
+    local results=""
+
+    # Check if sqlite3 is available and global DB exists
+    if ! command -v sqlite3 &> /dev/null || [ ! -f "$global_db_path" ]; then
+        echo ""
+        return
+    fi
+
+    # Convert pattern to SQLite FTS5 or LIKE-compatible format
+    # Replace | with OR for FTS5, escape special chars
+    local fts_pattern=$(echo "$pattern" | sed 's/|/ OR /g')
+    local like_pattern=$(echo "$pattern" | sed 's/|/%/g')
+
+    # Try FTS5 first, fallback to LIKE
+    local db_matches=""
+
+    # Search interactions for current project (by project_path)
+    # Limit to 3 most recent matches
+    db_matches=$(sqlite3 -separator '|' "$global_db_path" "
+        SELECT DISTINCT session_id, substr(content, 1, 100) as snippet
+        FROM interactions
+        WHERE project_path = '${cwd}'
+          AND (content LIKE '%${like_pattern}%' OR thinking LIKE '%${like_pattern}%')
+        ORDER BY timestamp DESC
+        LIMIT 3;
+    " 2>/dev/null || echo "")
+
+    if [ -n "$db_matches" ]; then
+        while IFS='|' read -r session_id snippet; do
+            [ -z "$session_id" ] && continue
+            # Truncate snippet and clean up
+            snippet=$(echo "$snippet" | tr '\n' ' ' | sed 's/  */ /g' | head -c 80)
+            results="${results}[interaction:${session_id:0:8}] ${snippet}...\n"
+        done <<< "$db_matches"
+    fi
+
+    echo -e "$results"
+}
+
 # Search function - simple grep-based search
 search_memoria() {
     local pattern="$1"
@@ -149,6 +195,12 @@ search_memoria() {
                 fi
             fi
         done
+    fi
+
+    # Search global SQLite database
+    local db_results=$(search_global_db "$pattern")
+    if [ -n "$db_results" ]; then
+        results="${results}${db_results}"
     fi
 
     echo -e "$results"

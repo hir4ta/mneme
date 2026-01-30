@@ -16,6 +16,8 @@
     "goal": "Goal",
     "relatedSessions": "Related Sessions",
     "deleteTitle": "Delete this session?",
+    "deleteSession": "Delete Session",
+    "deleteConfirmMessage": "This will permanently delete this session and all its interactions. This action cannot be undone.",
     "sessionContext": "Session Context",
     "noInteractions": "No interactions recorded in this session."
   },

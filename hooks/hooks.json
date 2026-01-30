@@ -1,4 +1,5 @@
 {
+  "description": "memoria plugin hooks for session management, auto-save, and memory search",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -13,7 +14,6 @@
     ],
     "SessionStart": [
       {
-        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",

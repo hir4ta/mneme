@@ -257,6 +257,27 @@ if [ ! -f "$tags_path" ]; then
 fi
 
 # ============================================
+# Initialize global database
+# ============================================
+global_db_dir="${MEMORIA_DATA_DIR:-$HOME/.claude/memoria}"
+global_db_path="${global_db_dir}/global.db"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+schema_path="${PLUGIN_ROOT}/lib/schema.sql"
+
+# Initialize global database if not exists
+if [ ! -d "$global_db_dir" ]; then
+    mkdir -p "$global_db_dir"
+fi
+if [ ! -f "$global_db_path" ]; then
+    if [ -f "$schema_path" ]; then
+        sqlite3 "$global_db_path" < "$schema_path"
+        echo "[memoria] Global database initialized: ${global_db_path}" >&2
+    fi
+fi
+# Configure pragmas
+sqlite3 "$global_db_path" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;" 2>/dev/null || true
+
+# ============================================
 # Ensure rules templates exist
 # ============================================
 rules_timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

@@ -3,7 +3,7 @@
 # session-end.sh - SessionEnd hook for memoria plugin
 #
 # Auto-save session by extracting interactions from transcript using jq.
-# Interactions are stored in SQLite (local.db) for privacy.
+# Interactions are stored in global SQLite (~/.claude/memoria/global.db) for cross-project search.
 # JSON file contains only metadata (no interactions).
 #
 # IMPORTANT: This script merges pre_compact_backups from SQLite with
@@ -39,14 +39,52 @@ cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 memoria_dir="${cwd}/.memoria"
 sessions_dir="${memoria_dir}/sessions"
 session_links_dir="${memoria_dir}/session-links"
-db_path="${memoria_dir}/local.db"
+
+# Global database path
+global_db_dir="${MEMORIA_DATA_DIR:-$HOME/.claude/memoria}"
+db_path="${global_db_dir}/global.db"
 
 # Find session file
 session_short_id="${session_id:0:8}"
 session_file=""
+memoria_session_id="$session_short_id"
 
 if [ -d "$sessions_dir" ]; then
     session_file=$(find "$sessions_dir" -type f -name "${session_short_id}.json" 2>/dev/null | head -1)
+fi
+
+# If not found, check session-links for master session ID
+if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
+    session_link_file="${session_links_dir}/${session_short_id}.json"
+    if [ -f "$session_link_file" ]; then
+        master_session_id=$(jq -r '.masterSessionId // empty' "$session_link_file" 2>/dev/null || echo "")
+        if [ -n "$master_session_id" ]; then
+            session_file=$(find "$sessions_dir" -type f -name "${master_session_id}.json" 2>/dev/null | head -1)
+            if [ -n "$session_file" ] && [ -f "$session_file" ]; then
+                memoria_session_id="$master_session_id"
+                echo "[memoria] Using master session via session-link: ${master_session_id}" >&2
+            fi
+        fi
+    fi
+fi
+
+# If still not found, try to find the most recently modified session file
+if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
+    if [ -d "$sessions_dir" ]; then
+        # Find session file that was modified within the last 5 minutes
+        recent_file=$(find "$sessions_dir" -type f -name "*.json" -mmin -5 2>/dev/null | head -1)
+        if [ -n "$recent_file" ] && [ -f "$recent_file" ]; then
+            # Extract session ID from filename
+            recent_id=$(basename "$recent_file" .json)
+            session_file="$recent_file"
+            memoria_session_id="$recent_id"
+
+            # Create session-link for future reference
+            mkdir -p "$session_links_dir"
+            echo "{\"masterSessionId\": \"${recent_id}\", \"claudeSessionId\": \"${session_id}\", \"createdAt\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}" > "${session_links_dir}/${session_short_id}.json"
+            echo "[memoria] Created session-link: ${session_short_id} -> ${recent_id}" >&2
+        fi
+    fi
 fi
 
 if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
@@ -56,23 +94,49 @@ fi
 # Get git user for owner field
 owner=$(git -C "$cwd" config user.name 2>/dev/null || whoami || echo "unknown")
 
+# Get repository info
+repository=""
+repository_url=""
+repository_root=""
+if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
+    repository_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "")
+    repository_url=$(git -C "$cwd" remote get-url origin 2>/dev/null || echo "")
+    if [ -n "$repository_url" ]; then
+        # Extract owner/repo from URL
+        repository=$(echo "$repository_url" | sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|' | sed 's/\.git$//')
+    fi
+fi
+
+# Escape for SQL
+project_path_escaped="${cwd//\'/\'\'}"
+repository_escaped="${repository//\'/\'\'}"
+repository_url_escaped="${repository_url//\'/\'\'}"
+repository_root_escaped="${repository_root//\'/\'\'}"
+
 # Determine plugin root directory for schema
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 
-# Initialize SQLite database if not exists
+# Initialize global SQLite database if not exists
 init_database() {
+    if [ ! -d "$global_db_dir" ]; then
+        mkdir -p "$global_db_dir"
+    fi
     if [ ! -f "$db_path" ]; then
         if [ -f "$schema_path" ]; then
             sqlite3 "$db_path" < "$schema_path"
-            echo "[memoria] SQLite database initialized: ${db_path}" >&2
+            echo "[memoria] Global SQLite database initialized: ${db_path}" >&2
         else
             # Minimal schema if schema.sql not found
             sqlite3 "$db_path" <<'SQLEOF'
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
+    repository TEXT,
+    repository_url TEXT,
+    repository_root TEXT,
     owner TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -84,18 +148,29 @@ CREATE TABLE IF NOT EXISTS interactions (
 );
 CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
+CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
+CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
 
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
     owner TEXT NOT NULL,
     interactions TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
+CREATE INDEX IF NOT EXISTS idx_backups_project ON pre_compact_backups(project_path);
+
+CREATE TABLE IF NOT EXISTS migrations (
+    project_path TEXT PRIMARY KEY,
+    migrated_at TEXT DEFAULT (datetime('now'))
+);
 SQLEOF
         fi
     fi
+    # Configure pragmas
+    sqlite3 "$db_path" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;" 2>/dev/null || true
 }
 
 # Extract interactions from transcript if available
@@ -177,14 +252,14 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
 
     now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Get latest backup from SQLite (if any)
-    backup_json=$(sqlite3 "$db_path" "SELECT interactions FROM pre_compact_backups WHERE session_id = '${session_short_id}' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || echo "[]")
+    # Get latest backup from SQLite (if any) - check both session IDs and project path
+    backup_json=$(sqlite3 "$db_path" "SELECT interactions FROM pre_compact_backups WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || echo "[]")
     if [ -z "$backup_json" ] || [ "$backup_json" = "" ]; then
         backup_json="[]"
     fi
 
-    # Also check existing interactions in SQLite
-    existing_count=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM interactions WHERE session_id = '${session_short_id}';" 2>/dev/null || echo "0")
+    # Also check existing interactions in SQLite - check both session IDs
+    existing_count=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM interactions WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || echo "0")
 
     # Merge backup with extracted interactions
     merged_json=$(echo "$interactions_json" | jq --argjson backup "$backup_json" '
@@ -209,10 +284,10 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     merged_count=$(echo "$merged_json" | jq 'length')
     backup_count=$(echo "$backup_json" | jq 'if type == "array" then length else 0 end')
 
-    # Clear existing interactions for this session (will be replaced)
-    sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id = '${session_short_id}';" 2>/dev/null || true
+    # Clear existing interactions for this session (will be replaced) - delete both session IDs to avoid duplicates
+    sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
 
-    # Insert merged interactions into SQLite
+    # Insert merged interactions into SQLite (using memoria_session_id for consistency)
     if [ "$merged_count" -gt 0 ]; then
         echo "$merged_json" | jq -c '.[]' | while read -r interaction; do
             timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
@@ -226,18 +301,18 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             thinking_escaped="${thinking//\'/\'\'}"
             assistant_escaped="${assistant_content//\'/\'\'}"
 
-            # Insert user message
-            sqlite3 "$db_path" "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${session_short_id}', '${owner}', 'user', '${user_content_escaped}', NULL, '${timestamp}', ${is_compact});" 2>/dev/null || true
+            # Insert user message with project/repository info
+            sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${timestamp}', ${is_compact});" 2>/dev/null || true
 
-            # Insert assistant response
+            # Insert assistant response with project/repository info
             if [ -n "$assistant_content" ]; then
-                sqlite3 "$db_path" "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${session_short_id}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0);" 2>/dev/null || true
+                sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0);" 2>/dev/null || true
             fi
         done
     fi
 
-    # Clear pre_compact_backups for this session (merged into interactions)
-    sqlite3 "$db_path" "DELETE FROM pre_compact_backups WHERE session_id = '${session_short_id}';" 2>/dev/null || true
+    # Clear pre_compact_backups for this session (merged into interactions) - delete both session IDs
+    sqlite3 "$db_path" "DELETE FROM pre_compact_backups WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
 
     # Update JSON file (without interactions and preCompactBackups)
     jq --argjson extracted "$interactions_json" \
@@ -263,7 +338,7 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         .updatedAt = $updatedAt
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
-    echo "[memoria] Session auto-saved with ${merged_count} interactions in SQLite (${backup_count} from backup): ${session_file}" >&2
+    echo "[memoria] Session auto-saved with ${merged_count} interactions to global DB (${backup_count} from backup): ${session_file}" >&2
 else
     # No transcript, just update status
     now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

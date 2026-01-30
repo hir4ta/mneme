@@ -5,10 +5,14 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
+  countInteractions,
+  deleteBackups,
+  deleteInteractions,
   getCurrentUser,
   getInteractionsBySessionIdsAndOwner,
   hasInteractionsForSessionIds,
   openDatabase,
+  openGlobalDatabase,
 } from "../../lib/db.js";
 import {
   isIndexStale,
@@ -376,8 +380,178 @@ app.get("/api/sessions/:id/markdown", async (c) => {
   }
 });
 
-// Note: PUT/DELETE/POST endpoints removed - dashboard is read-only
-// Data modifications should be done via /memoria:* commands
+// =============================================================================
+// Delete APIs (added for data management)
+// =============================================================================
+
+// Delete a single session (JSON + SQLite interactions)
+app.delete("/api/sessions/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const dryRun = c.req.query("dry-run") === "true";
+  const memoriaDir = getMemoriaDir();
+  const sessionsDir = path.join(memoriaDir, "sessions");
+
+  try {
+    // Find JSON file
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+
+    // Read session (for potential future use)
+    safeParseJsonFile<{ context?: { projectDir?: string } }>(filePath);
+
+    // Count interactions in global DB
+    const db = openGlobalDatabase();
+    let interactionCount = 0;
+    if (db) {
+      interactionCount = countInteractions(db, { sessionId: id });
+      if (!dryRun) {
+        // Delete from SQLite
+        deleteInteractions(db, id);
+        deleteBackups(db, id);
+      }
+      db.close();
+    }
+
+    if (!dryRun) {
+      // Delete JSON file
+      fs.unlinkSync(filePath);
+
+      // Also delete associated markdown if exists
+      const mdPath = filePath.replace(/\.json$/, ".md");
+      if (fs.existsSync(mdPath)) {
+        fs.unlinkSync(mdPath);
+      }
+
+      // Delete session-link if exists
+      const sessionLinksDir = path.join(memoriaDir, "session-links");
+      const linkPath = path.join(sessionLinksDir, `${id}.json`);
+      if (fs.existsSync(linkPath)) {
+        fs.unlinkSync(linkPath);
+      }
+    }
+
+    return c.json({
+      deleted: dryRun ? 0 : 1,
+      interactionsDeleted: dryRun ? 0 : interactionCount,
+      dryRun,
+      sessionId: id,
+    });
+  } catch (error) {
+    console.error("Failed to delete session:", error);
+    return c.json({ error: "Failed to delete session" }, 500);
+  }
+});
+
+// Delete sessions in bulk (with filters)
+app.delete("/api/sessions", async (c) => {
+  const dryRun = c.req.query("dry-run") === "true";
+  const projectFilter = c.req.query("project");
+  const repositoryFilter = c.req.query("repository");
+  const beforeFilter = c.req.query("before");
+
+  const memoriaDir = getMemoriaDir();
+  const sessionsDir = path.join(memoriaDir, "sessions");
+
+  try {
+    // Get all session files
+    const files = listDatedJsonFiles(sessionsDir);
+    const sessionsToDelete: { id: string; path: string }[] = [];
+
+    for (const filePath of files) {
+      try {
+        const content = fs.readFileSync(filePath, "utf-8");
+        const session = JSON.parse(content);
+
+        let shouldDelete = true;
+
+        // Apply project filter
+        if (projectFilter) {
+          const sessionProject = session.context?.projectDir;
+          if (sessionProject !== projectFilter) {
+            shouldDelete = false;
+          }
+        }
+
+        // Apply repository filter
+        if (repositoryFilter && shouldDelete) {
+          const sessionRepo = session.context?.repository;
+          if (sessionRepo !== repositoryFilter) {
+            shouldDelete = false;
+          }
+        }
+
+        // Apply before date filter
+        if (beforeFilter && shouldDelete) {
+          const sessionDate = session.createdAt?.split("T")[0];
+          if (!sessionDate || sessionDate >= beforeFilter) {
+            shouldDelete = false;
+          }
+        }
+
+        if (shouldDelete) {
+          sessionsToDelete.push({ id: session.id, path: filePath });
+        }
+      } catch {
+        // Skip invalid files
+      }
+    }
+
+    // Count interactions
+    let totalInteractions = 0;
+    const db = openGlobalDatabase();
+    if (db) {
+      for (const session of sessionsToDelete) {
+        totalInteractions += countInteractions(db, { sessionId: session.id });
+      }
+
+      if (!dryRun) {
+        // Delete interactions from SQLite
+        for (const session of sessionsToDelete) {
+          deleteInteractions(db, session.id);
+          deleteBackups(db, session.id);
+        }
+      }
+      db.close();
+    }
+
+    if (!dryRun) {
+      // Delete JSON files
+      for (const session of sessionsToDelete) {
+        fs.unlinkSync(session.path);
+
+        // Delete associated markdown
+        const mdPath = session.path.replace(/\.json$/, ".md");
+        if (fs.existsSync(mdPath)) {
+          fs.unlinkSync(mdPath);
+        }
+
+        // Delete session-link
+        const sessionLinksDir = path.join(memoriaDir, "session-links");
+        const linkPath = path.join(sessionLinksDir, `${session.id}.json`);
+        if (fs.existsSync(linkPath)) {
+          fs.unlinkSync(linkPath);
+        }
+      }
+    }
+
+    return c.json({
+      deleted: dryRun ? 0 : sessionsToDelete.length,
+      interactionsDeleted: dryRun ? 0 : totalInteractions,
+      wouldDelete: sessionsToDelete.length,
+      dryRun,
+      filters: {
+        project: projectFilter || null,
+        repository: repositoryFilter || null,
+        before: beforeFilter || null,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to delete sessions:", error);
+    return c.json({ error: "Failed to delete sessions" }, 500);
+  }
+});
 
 // Current User API
 app.get("/api/current-user", async (c) => {
@@ -402,8 +576,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
     // Get current user
     const currentUser = getCurrentUser();
 
-    // Open SQLite database
-    const db = openDatabase(memoriaDir);
+    // Open global SQLite database (fallback to local for backward compatibility)
+    let db = openGlobalDatabase();
+    if (!db) {
+      // Try local database for backward compatibility
+      db = openDatabase(memoriaDir);
+    }
     if (!db) {
       return c.json({ interactions: [], count: 0, isOwner: false });
     }

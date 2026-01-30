@@ -1,6 +1,8 @@
 ---
 name: using-memoria
-description: How to use memoria - auto-loaded at session start
+description: |
+  Guide for using memoria plugin. Auto-loaded at session start to provide context.
+user-invocable: false
 ---
 
 # Using memoria

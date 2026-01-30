@@ -1,6 +1,10 @@
 ---
 name: harvest
-description: Learn from PR review comments and extract knowledge.
+description: |
+  Extract knowledge from GitHub PR review comments and save to memoria's knowledge base.
+  Use when: (1) a PR has valuable review feedback, (2) learning from code review discussions,
+  (3) capturing team knowledge from merged PRs.
+argument-hint: "<PR-URL>"
 ---
 
 # /memoria:harvest

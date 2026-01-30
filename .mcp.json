@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "memoria-search": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/search-server.js"],
+      "env": {
+        "MEMORIA_PROJECT_PATH": "${cwd}",
+        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}"
+      }
+    },
+    "memoria-db": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/db-server.js"],
+      "env": {
+        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}"
+      }
+    }
+  }
+}

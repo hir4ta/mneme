@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { DecisionCardSkeletonList } from "@/components/ui/decision-card-skeleton";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -25,29 +25,24 @@ function DecisionCard({ decision }: { decision: Decision }) {
 
   return (
     <Link to={`/decisions/${decision.id}`}>
-      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">
-            {decision.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-stone-600 dark:text-stone-400 line-clamp-2 mb-3">
-            {decision.decision}
-          </p>
-          <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
-            <span>{date}</span>
-            {decision.user?.name && (
-              <>
-                <span>·</span>
-                <span>{decision.user.name}</span>
-              </>
-            )}
+      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer h-full">
+        <CardContent className="p-3">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <CardTitle className="text-sm font-medium line-clamp-2">
+              {decision.title}
+            </CardTitle>
+          </div>
+          <div className="text-xs text-stone-500 dark:text-stone-400 mb-2">
+            {date}
           </div>
           {decision.tags && decision.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
-              {decision.tags.slice(0, 5).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
+            <div className="flex flex-wrap gap-1">
+              {decision.tags.slice(0, 3).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="text-xs px-1.5 py-0"
+                >
                   {tag}
                 </Badge>
               ))}
@@ -172,7 +167,7 @@ export function DecisionsPage() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {decisions.map((decision) => (
                   <DecisionCard key={decision.id} decision={decision} />
                 ))}
