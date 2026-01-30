@@ -2877,6 +2877,54 @@ var cors = (options) => {
   };
 };
 
+// lib/db.ts
+import { execSync } from "node:child_process";
+import { existsSync as existsSync2, readFileSync } from "node:fs";
+import { dirname, join as join2 } from "node:path";
+import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = dirname(__filename);
+function getCurrentUser() {
+  try {
+    return execSync("git config user.name", { encoding: "utf-8" }).trim();
+  } catch {
+    try {
+      return execSync("whoami", { encoding: "utf-8" }).trim();
+    } catch {
+      return "unknown";
+    }
+  }
+}
+function getDbPath(memoriaDir2) {
+  return join2(memoriaDir2, "local.db");
+}
+function openDatabase(memoriaDir2) {
+  const dbPath = getDbPath(memoriaDir2);
+  if (!existsSync2(dbPath)) {
+    return null;
+  }
+  const db = new Database(dbPath);
+  db.pragma("journal_mode = WAL");
+  return db;
+}
+function getInteractions(db, sessionId) {
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id = ?
+    ORDER BY timestamp ASC
+  `);
+  return stmt.all(sessionId);
+}
+function hasInteractions(db, sessionId, owner) {
+  const stmt = db.prepare(`
+    SELECT COUNT(*) as count FROM interactions
+    WHERE session_id = ? AND owner = ?
+  `);
+  const result = stmt.get(sessionId, owner);
+  return result.count > 0;
+}
+
 // lib/index/manager.ts
 import * as fs3 from "node:fs";
 import * as path2 from "node:path";
@@ -3486,6 +3534,67 @@ app.get("/api/sessions/:id/markdown", async (c) => {
     return c.json({ error: "Failed to read session markdown" }, 500);
   }
 });
+app.get("/api/current-user", async (c) => {
+  try {
+    const user = getCurrentUser();
+    return c.json({ user });
+  } catch (error) {
+    console.error("Failed to get current user:", error);
+    return c.json({ error: "Failed to get current user" }, 500);
+  }
+});
+app.get("/api/sessions/:id/interactions", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const memoriaDir2 = getMemoriaDir();
+  try {
+    const currentUser = getCurrentUser();
+    const db = openDatabase(memoriaDir2);
+    if (!db) {
+      return c.json({ interactions: [], count: 0, isOwner: false });
+    }
+    const isOwner = hasInteractions(db, id, currentUser);
+    if (!isOwner) {
+      db.close();
+      return c.json(
+        { error: "Forbidden: You are not the owner of this session" },
+        403
+      );
+    }
+    const interactions = getInteractions(db, id);
+    db.close();
+    const groupedInteractions = [];
+    let currentInteraction = null;
+    for (const interaction of interactions) {
+      if (interaction.role === "user") {
+        if (currentInteraction) {
+          groupedInteractions.push(currentInteraction);
+        }
+        currentInteraction = {
+          id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
+          timestamp: interaction.timestamp,
+          user: interaction.content,
+          assistant: "",
+          thinking: null,
+          isCompactSummary: !!interaction.is_compact_summary
+        };
+      } else if (interaction.role === "assistant" && currentInteraction) {
+        currentInteraction.assistant = interaction.content;
+        currentInteraction.thinking = interaction.thinking || null;
+      }
+    }
+    if (currentInteraction) {
+      groupedInteractions.push(currentInteraction);
+    }
+    return c.json({
+      interactions: groupedInteractions,
+      count: groupedInteractions.length,
+      isOwner: true
+    });
+  } catch (error) {
+    console.error("Failed to get session interactions:", error);
+    return c.json({ error: "Failed to get session interactions" }, 500);
+  }
+});
 app.get("/api/decisions", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
@@ -3980,7 +4089,7 @@ app.get("/api/patterns", async (c) => {
       try {
         const content = fs4.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
-        const patterns = data.patterns || [];
+        const patterns = data.items || data.patterns || [];
         for (const pattern of patterns) {
           allPatterns.push({
             ...pattern,
@@ -4013,7 +4122,7 @@ app.get("/api/patterns/stats", async (c) => {
       try {
         const content = fs4.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
-        const patterns = data.patterns || [];
+        const patterns = data.items || data.patterns || [];
         const sourceName = path3.basename(filePath, ".json");
         for (const pattern of patterns) {
           total++;

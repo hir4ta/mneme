@@ -64,8 +64,11 @@ Multiple filters can be combined:
 # Get session list
 Glob: .memoria/sessions/**/*.json
 
-# Read each session file
+# Read each session file (metadata)
 Read: .memoria/sessions/{year}/{month}/{filename}.json
+
+# Get interactions from SQLite (private, local only)
+sqlite3 .memoria/local.db "SELECT * FROM interactions WHERE session_id = '{id}' ORDER BY timestamp;"
 
 # Update CURRENT session with resumedFrom
 Edit: .memoria/sessions/{current_year}/{current_month}/{current_id}.json
@@ -147,7 +150,7 @@ Session chain: current ← abc123
 
 ---
 
-## Interactions Log:
+## Interactions Log (from SQLite):
 
 [int-001] 2026-01-24T10:00:00Z
   User: Implement authentication
@@ -159,6 +162,8 @@ Session chain: current ← abc123
   Thinking: Balance between security and UX...
   Assistant: Set to 7 days
 
+(Note: If this session was created by another user, interactions won't be available - only metadata from JSON)
+
 ---
 
 Ready to continue?
@@ -166,9 +171,9 @@ Ready to continue?
 
 ## Context Injection
 
-When resuming, inject the following context from the JSON file:
+When resuming, inject context from JSON (metadata) and SQLite (interactions):
 
-### Structured Data (set by /memoria:save):
+### Structured Data (from JSON, set by /memoria:save):
 1. **Summary**: title, goal, outcome, description, sessionType
 2. **Plan**: tasks, remaining → what was planned and what's left
 3. **Discussions**: decisions with reasoning and alternatives
@@ -177,14 +182,20 @@ When resuming, inject the following context from the JSON file:
 6. **Handoff**: stoppedReason, notes, nextSteps → critical for continuity
 7. **References**: documents and resources used
 
-### Log Data (auto-saved by SessionEnd):
+### Log Data (from JSON, auto-saved by SessionEnd):
 8. **Title/Tags**: For quick context
-9. **Interactions**: Full conversation log with thinking
-10. **Files**: What files were changed
-11. **PreCompactBackups**: Interactions from before auto-compact (if any)
+9. **Files**: What files were changed
+10. **Metrics**: Message counts, tool usage
+
+### Interactions (from SQLite, auto-saved by SessionEnd):
+11. **Interactions**: Full conversation log with thinking (private, local only)
+
+**Privacy Note**: Interactions are stored in SQLite (`local.db`) and are private to each developer.
+If you're resuming a session created by another team member, interactions won't be available.
 
 **Important**:
-- All session data is in the JSON file
+- JSON contains metadata (shared via Git)
+- SQLite contains interactions (local, private)
 - Always update the CURRENT session's JSON with `resumedFrom` to track session chains.
 
 ## Session Chain Tracking

@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDecision } from "@/lib/api";
 import type { Decision } from "@/lib/types";
 
 export function DecisionDetailPage() {
-  const { t, i18n } = useTranslation("decisions");
+  const { t } = useTranslation("decisions");
   const { t: tc } = useTranslation("common");
   const { id } = useParams<{ id: string }>();
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -42,17 +41,6 @@ export function DecisionDetailPage() {
     );
   }
 
-  const date = new Date(decision.createdAt).toLocaleString(
-    i18n.language === "ja" ? "ja-JP" : "en-US",
-  );
-
-  const statusColors = {
-    draft: "outline",
-    active: "default",
-    superseded: "secondary",
-    deprecated: "destructive",
-  } as const;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -62,94 +50,69 @@ export function DecisionDetailPage() {
         >
           &larr; {tc("back")}
         </Link>
-        <h1 className="text-2xl font-bold">{t("detail.title")}</h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{decision.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-muted-foreground">{tc("user")}:</span>{" "}
-              {decision.user.name}
+      <div className="space-y-6">
+        {/* Title */}
+        <h2 className="text-xl font-semibold">{decision.title}</h2>
+
+        {/* Decision - main content */}
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+            {t("detail.decision")}
+          </span>
+          <div className="bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded px-4 py-3">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">
+              {decision.decision}
+            </p>
+          </div>
+        </div>
+
+        {/* Reasoning */}
+        <div className="space-y-1">
+          <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+            {t("detail.reasoning")}
+          </span>
+          <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 rounded px-4 py-3">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+              {decision.reasoning}
+            </p>
+          </div>
+        </div>
+
+        {/* Alternatives */}
+        {decision.alternatives.length > 0 && (
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+              {t("detail.alternatives")}
+            </span>
+            <div className="space-y-2">
+              {decision.alternatives.map((alt) => (
+                <div
+                  key={`${alt.name}-${alt.reason}`}
+                  className="border border-stone-300 dark:border-stone-600 rounded px-4 py-3"
+                >
+                  <span className="font-medium text-sm">{alt.name}</span>
+                  <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
+                    {alt.reason}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div>
-              <span className="text-muted-foreground">{tc("date")}:</span>{" "}
-              {date}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">{tc("status")}:</span>
-              <Badge variant={statusColors[decision.status]}>
-                {t(`status.${decision.status}`)}
+          </div>
+        )}
+
+        {/* Tags */}
+        {decision.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 pt-2">
+            {decision.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
               </Badge>
-            </div>
-            {decision.source && (
-              <div>
-                <span className="text-muted-foreground">
-                  {t("detail.source")}:
-                </span>{" "}
-                <Badge variant="outline">
-                  {decision.source === "auto"
-                    ? t("detail.autoDetected")
-                    : t("detail.manual")}
-                </Badge>
-              </div>
-            )}
+            ))}
           </div>
-
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-              {t("detail.decision")}
-            </h3>
-            <p className="whitespace-pre-wrap">{decision.decision}</p>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">
-              {t("detail.reasoning")}
-            </h3>
-            <p className="whitespace-pre-wrap">{decision.reasoning}</p>
-          </div>
-
-          {decision.alternatives.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                {t("detail.alternatives")}
-              </h3>
-              <ul className="space-y-2">
-                {decision.alternatives.map((alt) => (
-                  <li key={`${alt.name}-${alt.reason}`} className="text-sm">
-                    <span className="font-medium">{alt.name}</span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      - {alt.reason}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div>
-            <span className="text-muted-foreground text-sm">{tc("tags")}:</span>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {decision.tags.length > 0 ? (
-                decision.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground text-sm">
-                  {tc("noTags")}
-                </span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 }

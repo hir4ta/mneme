@@ -8,8 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getSession, getTags } from "@/lib/api";
-import type { Interaction, Session, Tag } from "@/lib/types";
+import {
+  getSession,
+  getSessionInteractions,
+  getTags,
+  type InteractionFromSQLite,
+} from "@/lib/api";
+import type { Session, Tag } from "@/lib/types";
 
 // Format date as YYYY/M/D HH:MM:SS with leading zeros for time
 function formatTimestamp(dateStr: string): string {
@@ -66,7 +71,11 @@ function CommandBadge({
 }
 
 // Auto-compact summary card - displayed differently from regular interactions
-function CompactSummaryCard({ interaction }: { interaction: Interaction }) {
+function CompactSummaryCard({
+  interaction,
+}: {
+  interaction: InteractionFromSQLite;
+}) {
   const { t } = useTranslation("sessions");
   const [isExpanded, setIsExpanded] = useState(false);
   const timestamp = formatTimestamp(interaction.timestamp);
@@ -110,7 +119,11 @@ function CompactSummaryCard({ interaction }: { interaction: Interaction }) {
   );
 }
 
-function InteractionCard({ interaction }: { interaction: Interaction }) {
+function InteractionCard({
+  interaction,
+}: {
+  interaction: InteractionFromSQLite;
+}) {
   const { t } = useTranslation("sessions");
   const [isExpanded, setIsExpanded] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
@@ -392,6 +405,8 @@ export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [interactions, setInteractions] = useState<InteractionFromSQLite[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -404,6 +419,24 @@ export function SessionDetailPage() {
       ]);
       setSession(sessionData);
       setTags(tagsData.tags || []);
+
+      // Fetch interactions from SQLite (owner-restricted)
+      try {
+        const interactionsData = await getSessionInteractions(id);
+        if (interactionsData) {
+          setInteractions(interactionsData.interactions);
+          setIsOwner(interactionsData.isOwner);
+        } else {
+          // Not owner - no access to interactions
+          setInteractions([]);
+          setIsOwner(false);
+        }
+      } catch {
+        // Failed to fetch interactions - treat as not owner
+        setInteractions([]);
+        setIsOwner(false);
+      }
+
       setError(null);
     } catch {
       setError("Failed to load session");
@@ -442,7 +475,7 @@ export function SessionDetailPage() {
     i18n.language === "ja" ? "ja-JP" : "en-US",
   );
   const userName = session.context.user?.name || tc("unknown");
-  const interactionCount = session.interactions?.length || 0;
+  const interactionCount = interactions.length;
 
   return (
     <div className="h-[calc(100%+64px)] flex flex-col overflow-hidden -my-8 -mx-8 px-6 py-4">
@@ -591,9 +624,11 @@ export function SessionDetailPage() {
               <TabsTrigger value="context">
                 {t("detail.sessionContext")}
               </TabsTrigger>
-              <TabsTrigger value="interactions">
-                {t("detail.interactions")} ({interactionCount})
-              </TabsTrigger>
+              {isOwner && (
+                <TabsTrigger value="interactions">
+                  {t("detail.interactions")} ({interactionCount})
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Session Context Tab */}
@@ -608,37 +643,39 @@ export function SessionDetailPage() {
               </Card>
             </TabsContent>
 
-            {/* Interactions Tab */}
-            <TabsContent
-              value="interactions"
-              className="flex-1 min-h-0 data-[state=inactive]:hidden"
-            >
-              <Card className="h-full flex flex-col py-0 gap-0">
-                <CardContent className="py-4 flex-1 overflow-y-auto">
-                  {interactionCount > 0 ? (
-                    <div className="space-y-6">
-                      {session.interactions.map((interaction) =>
-                        interaction.isCompactSummary ? (
-                          <CompactSummaryCard
-                            key={interaction.id}
-                            interaction={interaction}
-                          />
-                        ) : (
-                          <InteractionCard
-                            key={interaction.id}
-                            interaction={interaction}
-                          />
-                        ),
-                      )}
-                    </div>
-                  ) : (
-                    <div className="py-8 text-center text-muted-foreground">
-                      {t("detail.noInteractions")}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* Interactions Tab - only shown if user is owner */}
+            {isOwner && (
+              <TabsContent
+                value="interactions"
+                className="flex-1 min-h-0 data-[state=inactive]:hidden"
+              >
+                <Card className="h-full flex flex-col py-0 gap-0">
+                  <CardContent className="py-4 flex-1 overflow-y-auto">
+                    {interactionCount > 0 ? (
+                      <div className="space-y-6">
+                        {interactions.map((interaction) =>
+                          interaction.isCompactSummary ? (
+                            <CompactSummaryCard
+                              key={interaction.id}
+                              interaction={interaction}
+                            />
+                          ) : (
+                            <InteractionCard
+                              key={interaction.id}
+                              interaction={interaction}
+                            />
+                          ),
+                        )}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        {t("detail.noInteractions")}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

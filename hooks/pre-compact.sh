@@ -2,14 +2,14 @@
 #
 # pre-compact.sh - Backup interactions before Auto-Compact
 #
-# Saves current interactions to preCompactBackups before context is compressed.
+# Saves current interactions to SQLite (pre_compact_backups table) before context is compressed.
 # Does NOT create summary - summary creation is manual via /memoria:save.
 #
 # Input (stdin): JSON with session_id, transcript_path, cwd, trigger
 # Output (stdout): JSON with {"continue": true}
 # Exit codes: 0 = success (non-blocking, always continues)
 #
-# Dependencies: jq
+# Dependencies: jq, sqlite3
 
 set -euo pipefail
 
@@ -35,6 +35,7 @@ fi
 session_short_id="${session_id:0:8}"
 memoria_dir="${cwd}/.memoria"
 sessions_dir="${memoria_dir}/sessions"
+db_path="${memoria_dir}/local.db"
 
 session_file=$(find "$sessions_dir" -name "${session_short_id}.json" -type f 2>/dev/null | head -1)
 
@@ -43,10 +44,58 @@ if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
     exit 0
 fi
 
+# Get git user for owner field
+owner=$(git -C "$cwd" config user.name 2>/dev/null || whoami || echo "unknown")
+
+# Determine plugin root directory for schema
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+schema_path="${PLUGIN_ROOT}/lib/schema.sql"
+
+# Initialize SQLite database if not exists
+init_database() {
+    if [ ! -f "$db_path" ]; then
+        if [ -f "$schema_path" ]; then
+            sqlite3 "$db_path" < "$schema_path"
+            echo "[memoria] SQLite database initialized: ${db_path}" >&2
+        else
+            # Minimal schema if schema.sql not found
+            sqlite3 "$db_path" <<'SQLEOF'
+CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    thinking TEXT,
+    tool_calls TEXT,
+    timestamp TEXT NOT NULL,
+    is_compact_summary INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
+
+CREATE TABLE IF NOT EXISTS pre_compact_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    interactions TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
+SQLEOF
+        fi
+    fi
+}
+
 echo "[memoria] PreCompact: Backing up interactions before Auto-Compact..." >&2
 
 # Extract current interactions from transcript (same logic as session-end.sh)
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    # Initialize database
+    init_database
+
     interactions_json=$(cat "$transcript_path" | jq -s '
         # User messages (text only, exclude tool results)
         [.[] | select(.type == "user" and .message.role == "user" and (.message.content | type) == "string") | {
@@ -81,23 +130,19 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         ]
     ' 2>/dev/null || echo '[]')
 
-    # Create backup entry
-    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    backup_entry=$(jq -n \
-        --arg timestamp "$now" \
-        --argjson interactions "$interactions_json" \
-        '{
-            timestamp: $timestamp,
-            interactions: $interactions
-        }')
-
-    # Add to preCompactBackups array
-    jq --argjson backup "$backup_entry" \
-       '.preCompactBackups = ((.preCompactBackups // []) + [$backup])' \
-       "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
-
     interaction_count=$(echo "$interactions_json" | jq 'length')
-    echo "[memoria] PreCompact: Backed up ${interaction_count} interactions to preCompactBackups" >&2
+
+    if [ "$interaction_count" -gt 0 ]; then
+        # Escape single quotes for SQL
+        interactions_escaped="${interactions_json//\'/\'\'}"
+
+        # Insert backup into SQLite
+        sqlite3 "$db_path" "INSERT INTO pre_compact_backups (session_id, owner, interactions) VALUES ('${session_short_id}', '${owner}', '${interactions_escaped}');" 2>/dev/null || true
+
+        echo "[memoria] PreCompact: Backed up ${interaction_count} interactions to SQLite" >&2
+    else
+        echo "[memoria] PreCompact: No interactions to backup" >&2
+    fi
 fi
 
 # Continue with compaction (non-blocking)

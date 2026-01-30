@@ -3,17 +3,17 @@
 # session-end.sh - SessionEnd hook for memoria plugin
 #
 # Auto-save session by extracting interactions from transcript using jq.
-# This ensures all thinking, user messages, and responses are preserved
-# without relying on Claude to update the session file.
+# Interactions are stored in SQLite (local.db) for privacy.
+# JSON file contains only metadata (no interactions).
 #
-# IMPORTANT: This script merges preCompactBackups with newly extracted interactions
-# to preserve conversations from before auto-compact events.
+# IMPORTANT: This script merges pre_compact_backups from SQLite with
+# newly extracted interactions to preserve conversations from before auto-compact.
 #
 # Input (stdin): JSON with session_id, transcript_path, cwd
 # Output (stderr): Log messages
 # Exit codes: 0 = success (SessionEnd cannot be blocked)
 #
-# Dependencies: jq
+# Dependencies: jq, sqlite3
 
 set -euo pipefail
 
@@ -36,7 +36,9 @@ fi
 
 # Resolve paths
 cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
-sessions_dir="${cwd}/.memoria/sessions"
+memoria_dir="${cwd}/.memoria"
+sessions_dir="${memoria_dir}/sessions"
+db_path="${memoria_dir}/local.db"
 
 # Find session file
 session_short_id="${session_id:0:8}"
@@ -50,8 +52,56 @@ if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
     exit 0
 fi
 
+# Get git user for owner field
+owner=$(git -C "$cwd" config user.name 2>/dev/null || whoami || echo "unknown")
+
+# Determine plugin root directory for schema
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+schema_path="${PLUGIN_ROOT}/lib/schema.sql"
+
+# Initialize SQLite database if not exists
+init_database() {
+    if [ ! -f "$db_path" ]; then
+        if [ -f "$schema_path" ]; then
+            sqlite3 "$db_path" < "$schema_path"
+            echo "[memoria] SQLite database initialized: ${db_path}" >&2
+        else
+            # Minimal schema if schema.sql not found
+            sqlite3 "$db_path" <<'SQLEOF'
+CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    thinking TEXT,
+    tool_calls TEXT,
+    timestamp TEXT NOT NULL,
+    is_compact_summary INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
+
+CREATE TABLE IF NOT EXISTS pre_compact_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    interactions TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
+SQLEOF
+        fi
+    fi
+}
+
 # Extract interactions from transcript if available
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    # Initialize database
+    init_database
+
     # Extract interactions using jq
     interactions_json=$(cat "$transcript_path" | jq -s '
         # User messages (text only, exclude tool results and local command outputs)
@@ -124,47 +174,22 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         }
     ' 2>/dev/null || echo '{"interactions":[],"toolUsage":[],"files":[],"metrics":{}}')
 
-    # Update session file with extracted data, merging with existing data
     now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Read existing data to merge: use the most complete source
-    # Priority: preCompactBackups (if exists) > existing .interactions > empty
-    existing_backup=$(jq -r '
-        # Get preCompactBackups last entry (most complete)
-        (if (.preCompactBackups | length) > 0 then
-            .preCompactBackups[-1].interactions
-        else
-            []
-        end) as $backup |
+    # Get latest backup from SQLite (if any)
+    backup_json=$(sqlite3 "$db_path" "SELECT interactions FROM pre_compact_backups WHERE session_id = '${session_short_id}' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || echo "[]")
+    if [ -z "$backup_json" ] || [ "$backup_json" = "" ]; then
+        backup_json="[]"
+    fi
 
-        # Get existing interactions
-        (.interactions // []) as $existing |
+    # Also check existing interactions in SQLite
+    existing_count=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM interactions WHERE session_id = '${session_short_id}';" 2>/dev/null || echo "0")
 
-        # Use whichever has more entries or later timestamps
-        if ($backup | length) > ($existing | length) then
-            $backup
-        elif ($backup | length) < ($existing | length) then
-            $existing
-        elif ($backup | length) > 0 and ($existing | length) > 0 then
-            # Same length: compare last timestamp
-            (($backup | last | .timestamp) // "1970-01-01") as $backup_ts |
-            (($existing | last | .timestamp) // "1970-01-01") as $existing_ts |
-            if $backup_ts > $existing_ts then $backup else $existing end
-        else
-            $existing
-        end
-    ' "$session_file" 2>/dev/null || echo '[]')
-
-    jq --argjson extracted "$interactions_json" \
-       --argjson backup "$existing_backup" \
-       --arg status "complete" \
-       --arg endedAt "$now" \
-       --arg updatedAt "$now" '
+    # Merge backup with extracted interactions
+    merged_json=$(echo "$interactions_json" | jq --argjson backup "$backup_json" '
         # Merge preCompactBackups with extracted interactions
-        # Strategy: Use backup as base, add NEW interactions from extracted
-        # that have timestamps after the last backup interaction
         ($backup | if type == "array" then . else [] end) as $backup_arr |
-        ($extracted.interactions // []) as $new_arr |
+        (.interactions // []) as $new_arr |
 
         # Get the last timestamp from backup (or epoch if empty)
         ($backup_arr | if length > 0 then .[-1].timestamp else "1970-01-01T00:00:00Z" end) as $last_backup_ts |
@@ -176,36 +201,74 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         ($backup_arr + $truly_new) as $merged |
 
         # Re-number IDs sequentially
-        [$merged | to_entries[] | .value + {id: ("int-" + ((.key + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end))}] as $final_interactions |
+        [$merged | to_entries[] | .value + {id: ("int-" + ((.key + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end))}]
+    ')
 
-        # Apply updates
-        .interactions = $final_interactions |
+    # Count merged interactions
+    merged_count=$(echo "$merged_json" | jq 'length')
+    backup_count=$(echo "$backup_json" | jq 'if type == "array" then length else 0 end')
+
+    # Clear existing interactions for this session (will be replaced)
+    sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id = '${session_short_id}';" 2>/dev/null || true
+
+    # Insert merged interactions into SQLite
+    if [ "$merged_count" -gt 0 ]; then
+        echo "$merged_json" | jq -c '.[]' | while read -r interaction; do
+            timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
+            user_content=$(echo "$interaction" | jq -r '.user // ""')
+            thinking=$(echo "$interaction" | jq -r '.thinking // ""')
+            assistant_content=$(echo "$interaction" | jq -r '.assistant // ""')
+            is_compact=$(echo "$interaction" | jq -r 'if .isCompactSummary then 1 else 0 end')
+
+            # Escape single quotes for SQL
+            user_content_escaped="${user_content//\'/\'\'}"
+            thinking_escaped="${thinking//\'/\'\'}"
+            assistant_escaped="${assistant_content//\'/\'\'}"
+
+            # Insert user message
+            sqlite3 "$db_path" "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${session_short_id}', '${owner}', 'user', '${user_content_escaped}', NULL, '${timestamp}', ${is_compact});" 2>/dev/null || true
+
+            # Insert assistant response
+            if [ -n "$assistant_content" ]; then
+                sqlite3 "$db_path" "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${session_short_id}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0);" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Clear pre_compact_backups for this session (merged into interactions)
+    sqlite3 "$db_path" "DELETE FROM pre_compact_backups WHERE session_id = '${session_short_id}';" 2>/dev/null || true
+
+    # Update JSON file (without interactions and preCompactBackups)
+    jq --argjson extracted "$interactions_json" \
+       --arg status "complete" \
+       --arg endedAt "$now" \
+       --arg updatedAt "$now" \
+       --argjson interactionCount "$merged_count" '
         # Update files
         .files = ((.files // []) + ($extracted.files // []) | unique_by(.path)) |
-        # Update metrics (recalculate from merged interactions)
+        # Update metrics
         .metrics = (.metrics // {}) + {
-            userMessages: ($final_interactions | length),
-            assistantResponses: ($final_interactions | length),
-            thinkingBlocks: ([$final_interactions[].thinking | select(. != "" and . != null)] | length),
+            userMessages: $interactionCount,
+            assistantResponses: $interactionCount,
+            thinkingBlocks: ($extracted.metrics.thinkingBlocks // 0),
             toolUsage: ($extracted.toolUsage // [])
         } |
-        # Clear preCompactBackups (merged into interactions)
-        .preCompactBackups = [] |
+        # Remove interactions and preCompactBackups (now in SQLite)
+        del(.interactions) |
+        del(.preCompactBackups) |
         # Set status and timestamps
         .status = $status |
         .endedAt = $endedAt |
         .updatedAt = $updatedAt
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
-    # Report merged count
-    merged_count=$(jq '.interactions | length' "$session_file")
-    backup_count=$(echo "$existing_backup" | jq 'if type == "array" then length else 0 end')
-    echo "[memoria] Session auto-saved with ${merged_count} interactions (${backup_count} from backup): ${session_file}" >&2
+    echo "[memoria] Session auto-saved with ${merged_count} interactions in SQLite (${backup_count} from backup): ${session_file}" >&2
 else
     # No transcript, just update status
     now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     jq --arg status "complete" --arg endedAt "$now" --arg updatedAt "$now" '
-        .status = $status | .endedAt = $endedAt | .updatedAt = $updatedAt
+        .status = $status | .endedAt = $endedAt | .updatedAt = $updatedAt |
+        del(.interactions) | del(.preCompactBackups)
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
     echo "[memoria] Session completed (no transcript): ${session_file}" >&2

@@ -17,54 +17,35 @@ import { useDecisions } from "@/hooks/use-decisions";
 import type { Decision } from "@/lib/types";
 
 function DecisionCard({ decision }: { decision: Decision }) {
-  const { t, i18n } = useTranslation("decisions");
+  const { i18n } = useTranslation("decisions");
 
   const date = new Date(decision.createdAt).toLocaleDateString(
     i18n.language === "ja" ? "ja-JP" : "en-US",
   );
 
-  const statusColors = {
-    draft: "outline",
-    active: "default",
-    superseded: "secondary",
-    deprecated: "destructive",
-  } as const;
-
   return (
     <Link to={`/decisions/${decision.id}`}>
-      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer">
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <CardTitle className="text-base font-medium">
-              {decision.title}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {decision.source === "auto" && (
-                <Badge variant="outline" className="text-xs">
-                  auto
-                </Badge>
-              )}
-              <Badge variant={statusColors[decision.status]}>
-                {t(`status.${decision.status}`)}
-              </Badge>
-            </div>
-          </div>
+          <CardTitle className="text-base font-medium">
+            {decision.title}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+          <p className="text-sm text-stone-600 dark:text-stone-400 line-clamp-2 mb-3">
             {decision.decision}
           </p>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+            <span>{date}</span>
             {decision.user?.name && (
               <>
+                <span>·</span>
                 <span>{decision.user.name}</span>
-                <span>-</span>
               </>
             )}
-            <span>{date}</span>
           </div>
           {decision.tags && decision.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-3">
               {decision.tags.slice(0, 5).map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-xs">
                   {tag}

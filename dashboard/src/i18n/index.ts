@@ -48,20 +48,12 @@ const resources = {
   },
 };
 
-// Get initial language from localStorage (managed by jotai atom)
+// Get initial language from localStorage
 const STORAGE_KEY = "memoria-lang";
 const getInitialLanguage = (): string => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      // jotai stores as JSON string
-      const parsed = JSON.parse(stored);
-      if (parsed === "ja" || parsed === "en") {
-        return parsed;
-      }
-    }
-  } catch {
-    // Ignore parse errors
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === "ja" || stored === "en") {
+    return stored;
   }
   return "en";
 };

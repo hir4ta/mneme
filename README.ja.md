@@ -74,6 +74,16 @@ Claude Code内で以下を実行
 /plugin install memoria@memoria-marketplace
 ```
 
+プロジェクトでmemoriaを初期化：
+
+```bash
+# Claude Code内で
+/memoria:init
+
+# またはターミナルから
+npx @hir4ta/memoria --init
+```
+
 Claude Codeを再起動して完了
 
 ## アップデート
@@ -129,6 +139,7 @@ Continue from a previous session? Use `/memoria:resume <id>`
 
 | コマンド | 説明 |
 | --------- | ------ |
+| `/memoria:init` | プロジェクトでmemoriaを初期化 |
 | `/memoria:save` | 全データ抽出: 要約・判断・パターン・ルール |
 | `/memoria:plan [トピック]` | 記憶参照 + ソクラティック質問 + タスク分割 |
 | `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
@@ -227,14 +238,27 @@ flowchart TB
 
 ## データ保存
 
-すべてのデータは `.memoria/` ディレクトリに保存
+memoriaは**ハイブリッドストレージ**方式でプライバシーと共有を両立：
+
+| ストレージ | 用途 | 共有 |
+|-----------|------|------|
+| **JSON** | 要約、決定、パターン、ルール | Git管理（チーム共有） |
+| **SQLite** | 会話履歴、バックアップ | ローカル専用（.gitignore） |
+
+**なぜハイブリッド？**
+- **プライバシー**: 会話履歴（interactions）は各開発者のローカルのみ
+- **軽量化**: JSONファイルが100KB+から約5KBに軽量化（interactions除外）
+- **将来対応**: セマンティック検索用のembeddingsテーブル準備済み
+
+### ディレクトリ構成
 
 ```text
 .memoria/
+├── local.db          # SQLite（ローカル専用、.gitignore）
 ├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
-├── sessions/         # セッション履歴（自動 + 手動保存）
+├── sessions/         # セッションメタデータ
 │   └── YYYY/MM/
-│       └── {id}.json
+│       └── {id}.json # メタデータのみ（interactionsはSQLite）
 ├── decisions/        # 技術的な判断（/saveから）
 │   └── YYYY/MM/
 │       └── {id}.json
@@ -245,11 +269,11 @@ flowchart TB
 └── reports/          # 週次レポート (YYYY-MM)
 ```
 
-Gitでバージョン管理可能です。`.gitignore` に追加するかはプロジェクトに応じて判断してください。
+Gitでバージョン管理可能です。`local.db`は自動で`.gitignore`に追加されます。
 
 ### セッションJSONスキーマ
 
-全てのセッションデータは単一のJSONファイルに保存されます：
+セッションメタデータはJSONに保存（interactionsはプライバシー保護のためSQLiteに保存）：
 
 ```json
 {
@@ -264,15 +288,6 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
     "projectDir": "/path/to/project",
     "user": { "name": "tanaka", "email": "tanaka@example.com" }
   },
-  "interactions": [
-    {
-      "id": "int-001",
-      "timestamp": "2026-01-27T10:15:00Z",
-      "user": "認証機能を実装して",
-      "thinking": "思考プロセスの重要なポイント",
-      "assistant": "RS256署名でJWT認証を実装しました"
-    }
-  ],
   "metrics": {
     "userMessages": 5,
     "assistantResponses": 5,
@@ -282,7 +297,6 @@ Gitでバージョン管理可能です。`.gitignore` に追加するかはプ�
   "files": [
     { "path": "src/auth/jwt.ts", "action": "create" }
   ],
-  "preCompactBackups": [],
   "resumedFrom": "def45678",
   "status": "complete",
 

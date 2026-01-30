@@ -127,3 +127,38 @@ export async function getTags(): Promise<TagsFile> {
   if (!res.ok) throw new Error("Failed to fetch tags");
   return res.json();
 }
+
+// Current User
+export async function getCurrentUser(): Promise<{ user: string }> {
+  const res = await fetch(`${API_BASE}/current-user`);
+  if (!res.ok) throw new Error("Failed to fetch current user");
+  return res.json();
+}
+
+// Session Interactions (from SQLite, owner-restricted)
+export interface InteractionFromSQLite {
+  id: string;
+  timestamp: string;
+  user: string;
+  assistant: string;
+  thinking: string | null;
+  isCompactSummary: boolean;
+}
+
+export interface SessionInteractionsResponse {
+  interactions: InteractionFromSQLite[];
+  count: number;
+  isOwner: boolean;
+}
+
+export async function getSessionInteractions(
+  id: string,
+): Promise<SessionInteractionsResponse | null> {
+  const res = await fetch(`${API_BASE}/sessions/${id}/interactions`);
+  if (res.status === 403) {
+    // Not owner - return null to indicate no access
+    return null;
+  }
+  if (!res.ok) throw new Error("Failed to fetch session interactions");
+  return res.json();
+}

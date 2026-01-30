@@ -43,10 +43,11 @@ sessions_dir="${memoria_dir}/sessions"
 rules_dir="${memoria_dir}/rules"
 patterns_dir="${memoria_dir}/patterns"
 
-# Ensure directories exist
-mkdir -p "$sessions_dir"
-mkdir -p "$rules_dir"
-mkdir -p "$patterns_dir"
+# Check if memoria is initialized
+if [ ! -d "$memoria_dir" ]; then
+    echo "[memoria] Not initialized in this project. Run: npx @hir4ta/memoria --init" >&2
+    exit 0
+fi
 
 # Current timestamp and date parts
 now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -179,7 +180,6 @@ else
                     email: (if $userEmail == "" then null else $userEmail end)
                 } | with_entries(select(.value != null))
             } | with_entries(select(.value != null)),
-            interactions: [],
             metrics: {
                 userMessages: 0,
                 assistantResponses: 0,
@@ -187,7 +187,6 @@ else
                 toolUsage: []
             },
             files: [],
-            preCompactBackups: [],
             status: null
         }')
 

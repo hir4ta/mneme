@@ -46,26 +46,36 @@ Execute all phases in order. Each phase builds on the previous.
 
 ### Phase 0: Save Conversation History (interactions)
 
-Execute this phase first. If auto-compact occurred during the session, `preCompactBackups`
-contains earlier conversations that must be merged with current interactions.
+Execute this phase first. Interactions are stored in SQLite (`local.db`) for privacy.
+If auto-compact occurred, `pre_compact_backups` table contains earlier conversations.
+
+**Storage Location:**
+- **Interactions**: SQLite (`local.db`) - private to each developer
+- **Metadata**: JSON (`sessions/*.json`) - shared via Git
 
 **Example scenario:**
 ```
 Session start → 16 interactions → auto-compact → 8 more interactions → /memoria:save
 
 Without merge: Only 8 interactions saved (data loss)
-With merge: All 24 interactions saved
+With merge: All 24 interactions saved in SQLite
 ```
 
 1. Get session path from additionalContext (e.g., `.memoria/sessions/2026/01/abc12345.json`)
-2. Read current session file
-3. **Check for existing data**:
-   - Read `.interactions` (may have data from previous SessionEnd)
-   - Read `.preCompactBackups` (may have data from auto-compact)
+2. Get session ID from the path (e.g., `abc12345`)
+
+3. **Check for existing data in SQLite**:
+   ```bash
+   # Check for pre_compact_backups (most complete source)
+   sqlite3 .memoria/local.db "SELECT interactions FROM pre_compact_backups WHERE session_id = 'abc12345' ORDER BY created_at DESC LIMIT 1;"
+
+   # Check existing interactions count
+   sqlite3 .memoria/local.db "SELECT COUNT(*) FROM interactions WHERE session_id = 'abc12345';"
+   ```
 
 4. **Determine the most complete source**:
-   - If `preCompactBackups` exists, use the **LAST entry** (most complete, includes all previous)
-   - Compare with existing `.interactions` - use whichever has more entries or later timestamps
+   - If `pre_compact_backups` exists, use the **LAST entry** (most complete)
+   - Compare with existing `interactions` table - use whichever has more entries
    - The most complete source becomes the "base"
 
 5. **Extract NEW interactions** from current conversation:
@@ -75,56 +85,32 @@ With merge: All 24 interactions saved
 
 6. **Merge with deduplication**:
    ```
-   base_interactions = most complete source (preCompactBackups[-1] or existing .interactions)
+   base_interactions = most complete source (pre_compact_backups or existing interactions table)
    new_interactions = conversations after the last base interaction
 
    Final = base_interactions + new_interactions (deduplicated by timestamp)
    ```
    - **Exact match by timestamp** - skip if already exists
-   - **Fallback: match by user message content** (first 100 chars) if timestamps differ
    - Preserve `isCompactSummary` flag on summary entries
 
-6. **Format each interaction**:
-```json
-{
-  "id": "int-001",
-  "timestamp": "2026-01-29T10:00:00Z",
-  "user": "User's message text",
-  "thinking": "Claude's thinking/reasoning (if visible)",
-  "assistant": "Claude's response text",
-  "isCompactSummary": false
-}
-```
+7. **Insert merged interactions into SQLite**:
+   ```bash
+   # Clear existing interactions for this session
+   sqlite3 .memoria/local.db "DELETE FROM interactions WHERE session_id = 'abc12345';"
 
-7. **Extract file changes** from tool usage (Edit/Write tools):
-```json
-{
-  "files": [
-    {"path": "src/index.ts", "action": "edit"},
-    {"path": "src/new-file.ts", "action": "create"}
-  ]
-}
-```
+   # Insert each interaction
+   sqlite3 .memoria/local.db "INSERT INTO interactions (session_id, owner, role, content, thinking, timestamp, is_compact_summary) VALUES (...);"
+   ```
 
-8. **Calculate metrics** (from ALL interactions including backups):
-```json
-{
-  "metrics": {
-    "userMessages": 10,
-    "assistantResponses": 10,
-    "thinkingBlocks": 8,
-    "toolUsage": [
-      {"name": "Edit", "count": 5},
-      {"name": "Read", "count": 12}
-    ]
-  }
-}
-```
+8. **Clear pre_compact_backups** (merged into interactions):
+   ```bash
+   sqlite3 .memoria/local.db "DELETE FROM pre_compact_backups WHERE session_id = 'abc12345';"
+   ```
 
-9. **Update session JSON** with merged interactions, files, metrics using Edit tool
+9. **Update session JSON** with files and metrics only (interactions are in SQLite)
 10. Set `updatedAt` to current timestamp
 
-**Note:** This ensures ALL conversation history is saved, including pre-auto-compact conversations.
+**Note:** Interactions are stored in SQLite for privacy. JSON contains only metadata.
 
 ### Phase 1: Extract Session Data
 
@@ -316,7 +302,7 @@ Rule: {
 ```
 
 **Required fields:** `id`, `key`, `text`, `category`, `status`, `createdAt`, `updatedAt`
-**Optional fields:** `rationale`, `tags`, `priority`, `scope`
+**Optional fields:** `rationale`, `priority`
 
 Categories: `code-style`, `architecture`, `error-handling`, `performance`, `security`, `testing`, `other`
 
@@ -336,7 +322,12 @@ Before adding:
 ### File Operations
 
 ```bash
-# Session JSON
+# SQLite (interactions - private)
+Read + Write: .memoria/local.db
+  - interactions table
+  - pre_compact_backups table
+
+# Session JSON (metadata - shared)
 Read + Edit: .memoria/sessions/YYYY/MM/{id}.json
 
 # Decisions (create if new)
@@ -374,7 +365,7 @@ Report each phase result:
 **Session ID:** abc12345
 **Path:** .memoria/sessions/2026/01/abc12345.json
 
-**Phase 0 - Interactions:** 15 saved (8 from preCompactBackups + 7 new)
+**Phase 0 - Interactions:** 15 saved to SQLite (8 from pre_compact_backups + 7 new)
 **Phase 1 - Summary:**
 | Field | Value |
 |-------|-------|
@@ -409,7 +400,9 @@ If no rules are found, report what was scanned:
 ## Notes
 
 - Session path is shown in additionalContext at session start
-- **Interactions are saved in Phase 0** - no need to `/exit` first
-- Interactions are also auto-saved by SessionEnd hook (backup)
+- **Interactions are saved to SQLite in Phase 0** - no need to `/exit` first
+- Interactions are also auto-saved by SessionEnd hook to SQLite
+- **Privacy**: Interactions in SQLite are local to each developer (not in Git)
+- **JSON lightness**: Session JSON contains only metadata (no interactions)
 - Decisions and patterns are also kept in session JSON for context
 - Duplicate checking prevents bloat in decisions/ and patterns/

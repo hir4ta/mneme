@@ -42,34 +42,37 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
 
   return (
     <Link to={`/sessions/${session.id}`}>
-      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+      <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <span className="line-clamp-1">
-              {session.title || t("untitled")}
-            </span>
+          <CardTitle className="text-base font-medium text-stone-800 dark:text-stone-100 line-clamp-1">
+            {session.title || t("untitled")}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          {session.goal && (
+            <p className="text-sm text-stone-600 dark:text-stone-400 mb-3 line-clamp-1">
+              {session.goal}
+            </p>
+          )}
+          <div className="flex items-center gap-2 flex-wrap text-xs text-stone-500 dark:text-stone-400">
+            <span>{date}</span>
             {userName && (
               <>
+                <span>·</span>
                 <span>{userName}</span>
-                <span>-</span>
               </>
             )}
-            <span>{date}</span>
             {session.context?.branch && (
               <>
-                <span>-</span>
-                <span className="font-mono text-xs">
+                <span>·</span>
+                <span className="font-mono bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">
                   {session.context.branch}
                 </span>
               </>
             )}
             {session.sessionType && (
               <>
-                <span>-</span>
+                <span>·</span>
                 <Badge variant="outline" className="text-xs font-normal">
                   {t(`types.${session.sessionType}`)}
                 </Badge>
@@ -77,20 +80,15 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
             )}
             {interactionCount > 0 && (
               <>
-                <span>-</span>
-                <span className="text-xs">
+                <span>·</span>
+                <span>
                   {t("interactionCount", { count: interactionCount })}
                 </span>
               </>
             )}
           </div>
-          {session.goal && (
-            <p className="text-sm text-muted-foreground mb-2 line-clamp-1">
-              {session.goal}
-            </p>
-          )}
           {session.tags && session.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 mt-3">
               {session.tags.slice(0, 5).map((tagId) => (
                 <Badge
                   key={tagId}

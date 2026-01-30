@@ -74,6 +74,16 @@ Run the following in Claude Code:
 /plugin install memoria@memoria-marketplace
 ```
 
+Then initialize memoria in your project:
+
+```bash
+# In Claude Code
+/memoria:init
+
+# Or from terminal
+npx @hir4ta/memoria --init
+```
+
 Restart Claude Code to complete installation.
 
 ## Update
@@ -129,6 +139,7 @@ Continue from a previous session? Use `/memoria:resume <id>`
 
 | Command | Description |
 |---------|-------------|
+| `/memoria:init` | Initialize memoria in current project |
 | `/memoria:save` | Extract all data: summary, decisions, patterns, rules |
 | `/memoria:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
 | `/memoria:resume [id]` | Resume session (show list if ID omitted) |
@@ -227,14 +238,27 @@ flowchart TB
 
 ## Data Storage
 
-All data is stored in `.memoria/` directory:
+memoria uses a **hybrid storage** approach for privacy and collaboration:
+
+| Storage | Purpose | Sharing |
+|---------|---------|---------|
+| **JSON** | Summaries, decisions, patterns, rules | Git-managed (team shared) |
+| **SQLite** | Interactions, backups | Local only (.gitignore) |
+
+**Why hybrid?**
+- **Privacy**: Conversation history (interactions) stays local to each developer
+- **Lightweight**: JSON files reduced from 100KB+ to ~5KB (interactions excluded)
+- **Future-ready**: Embeddings table prepared for semantic search
+
+### Directory Structure
 
 ```text
 .memoria/
+├── local.db          # SQLite (local only, .gitignore)
 ├── tags.json         # Tag master file (93 tags, prevents notation variations)
-├── sessions/         # Session history (YYYY/MM)
+├── sessions/         # Session metadata (YYYY/MM)
 │   └── YYYY/MM/
-│       └── {id}.json # All session data (auto + manual save)
+│       └── {id}.json # Metadata only (interactions in SQLite)
 ├── decisions/        # Technical decisions (from /save)
 │   └── YYYY/MM/
 │       └── {id}.json
@@ -245,11 +269,11 @@ All data is stored in `.memoria/` directory:
 └── reports/          # Weekly reports (YYYY-MM)
 ```
 
-Git-manageable. Add to `.gitignore` based on your project needs.
+Git-manageable. The `local.db` file is automatically added to `.gitignore`.
 
 ### Session JSON Schema
 
-All session data is stored in a single JSON file:
+Session metadata is stored in JSON (interactions are stored in SQLite for privacy):
 
 ```json
 {
@@ -264,15 +288,6 @@ All session data is stored in a single JSON file:
     "projectDir": "/path/to/project",
     "user": { "name": "tanaka", "email": "tanaka@example.com" }
   },
-  "interactions": [
-    {
-      "id": "int-001",
-      "timestamp": "2026-01-27T10:15:00Z",
-      "user": "Implement authentication",
-      "thinking": "Key insights from thinking process",
-      "assistant": "Implemented JWT auth with RS256 signing"
-    }
-  ],
   "metrics": {
     "userMessages": 5,
     "assistantResponses": 5,
@@ -282,7 +297,6 @@ All session data is stored in a single JSON file:
   "files": [
     { "path": "src/auth/jwt.ts", "action": "create" }
   ],
-  "preCompactBackups": [],
   "resumedFrom": "def45678",
   "status": "complete",
 

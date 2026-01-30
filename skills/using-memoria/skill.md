@@ -7,6 +7,20 @@ description: How to use memoria - auto-loaded at session start
 
 memoria is a long-term memory plugin for Claude Code.
 
+## Setup
+
+Initialize memoria in your project:
+
+```bash
+# From Claude Code (after /plugin add)
+/memoria:init
+
+# Or from terminal
+npx @hir4ta/memoria --init
+```
+
+This creates the `.memoria/` directory with the required structure. memoria will not track sessions until initialized.
+
 ## Features
 
 1. **Auto-save interactions**: Conversations auto-saved at session end (jq-based, no Claude needed)
@@ -24,6 +38,7 @@ memoria is a long-term memory plugin for Claude Code.
 
 | Command | Description |
 |---------|-------------|
+| `/memoria:init` | Initialize memoria in current project |
 | `/memoria:save` | Save all data: interactions, summary, decisions, patterns, rules |
 | `/memoria:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
 | `/memoria:resume [id]` | Resume session (omit ID for list) |

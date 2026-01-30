@@ -134,11 +134,11 @@ export function Sidebar() {
   const location = useLocation();
 
   return (
-    <aside className="w-60 shrink-0 rounded-xl border border-border/70 bg-white/60 px-4 py-6 backdrop-blur-md">
+    <aside className="w-60 shrink-0 rounded-lg border border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-900 px-4 py-6">
       <nav className="flex flex-col gap-6">
         {navGroups.map((group) => (
           <div key={group.labelKey} className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-500 dark:text-stone-400">
               {t(group.labelKey)}
             </p>
             <div className="flex flex-col gap-1">
@@ -155,14 +155,14 @@ export function Sidebar() {
                     key={item.href}
                     to={item.href}
                     className={cn(
-                      "relative flex items-center gap-4 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "relative flex items-center gap-4 rounded-md px-3 py-2 text-sm font-medium transition-all",
                       isActive
-                        ? "text-foreground pl-8"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "text-white bg-stone-700 dark:bg-stone-700 pl-8"
+                        : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800",
                     )}
                   >
                     {isActive && (
-                      <span className="absolute left-3 h-2 w-2 rounded-full bg-orange-400" />
+                      <span className="absolute left-3 h-1.5 w-1.5 rounded-full bg-amber-400" />
                     )}
                     {icons[item.icon]}
                     {t(item.labelKey)}

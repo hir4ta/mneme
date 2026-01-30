@@ -17,18 +17,7 @@ import type { RuleDocument, RuleItem } from "@/types/rules";
 const RULE_TYPES = ["dev-rules", "review-guidelines"] as const;
 type RuleType = (typeof RULE_TYPES)[number];
 
-type RuleDraft = Omit<RuleItem, "tags" | "appliesTo" | "exceptions"> & {
-  tagsText: string;
-  appliesToText: string;
-  exceptionsText: string;
-};
-
-const formatDate = (value: string | undefined, locale: string) => {
-  if (!value) return "N/A";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(locale === "ja" ? "ja-JP" : "en-US");
-};
+type RuleDraft = RuleItem;
 
 const statusColors: Record<string, "default" | "secondary" | "destructive"> = {
   active: "default",
@@ -42,17 +31,11 @@ const priorityColors: Record<string, "default" | "secondary" | "destructive"> =
     p2: "secondary",
   };
 
-const parseList = (value: string) =>
-  value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
 const uniqueSorted = (values: string[]) =>
   Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
 
 export function RulesPage() {
-  const { t, i18n } = useTranslation("rules");
+  const { t } = useTranslation("rules");
   const { t: tc } = useTranslation("common");
   const [documents, setDocuments] = useState<RuleDocument[]>([]);
   const [query, setQuery] = useState("");
@@ -64,8 +47,6 @@ export function RulesPage() {
     NonNullable<RuleItem["priority"]> | "all"
   >("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [scopeFilter, setScopeFilter] = useState("all");
-  const [tagFilter, setTagFilter] = useState("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -98,14 +79,6 @@ export function RulesPage() {
     () => uniqueSorted(items.map((item) => item.category ?? "general")),
     [items],
   );
-  const scopes = useMemo(
-    () => uniqueSorted(items.map((item) => item.scope ?? "general")),
-    [items],
-  );
-  const tags = useMemo(
-    () => uniqueSorted(items.flatMap((item) => item.tags ?? [])),
-    [items],
-  );
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -120,61 +93,27 @@ export function RulesPage() {
       if (categoryFilter !== "all" && categoryValue !== categoryFilter) {
         return false;
       }
-      const scopeValue = item.scope ?? "general";
-      if (scopeFilter !== "all" && scopeValue !== scopeFilter) {
-        return false;
-      }
-      if (tagFilter !== "all" && !(item.tags ?? []).includes(tagFilter)) {
-        return false;
-      }
       if (!normalizedQuery) return true;
       const haystack = [
         item.text,
         item.key,
         categoryValue,
-        scopeValue,
         item.status,
         effectivePriority,
         item.ruleType,
-        ...(item.tags ?? []),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [
-    items,
-    query,
-    typeFilter,
-    statusFilter,
-    priorityFilter,
-    categoryFilter,
-    scopeFilter,
-    tagFilter,
-  ]);
-
-  const renderChips = (values?: string[]) => {
-    if (!values || values.length === 0) return <span>—</span>;
-    return (
-      <div className="flex flex-wrap gap-1">
-        {values.map((value) => (
-          <Badge key={value} variant="outline" className="text-xs">
-            {value}
-          </Badge>
-        ))}
-      </div>
-    );
-  };
+  }, [items, query, typeFilter, statusFilter, priorityFilter, categoryFilter]);
 
   const startEdit = (item: RuleItem & { ruleType?: RuleType }) => {
     setError(null);
     setEditingId(item.id);
     setDraft({
       ...item,
-      tagsText: (item.tags ?? []).join(", "),
-      appliesToText: (item.appliesTo ?? []).join(", "),
-      exceptionsText: (item.exceptions ?? []).join(", "),
       status: item.status ?? "active",
       priority: item.priority ?? "p2",
     });
@@ -213,28 +152,14 @@ export function RulesPage() {
     setSavingId(draft.id);
     setError(null);
     try {
-      const {
-        tagsText,
-        appliesToText,
-        exceptionsText,
-        ruleType: _,
-        ...rest
-      } = draft;
-      const tagsValue = parseList(tagsText);
-      const appliesToValue = parseList(appliesToText);
-      const exceptionsValue = parseList(exceptionsText);
+      const { ruleType: _, ...rest } = draft;
       const cleanedCategory = rest.category?.trim() || undefined;
-      const cleanedScope = rest.scope?.trim() || undefined;
       const cleanedRationale = rest.rationale?.trim() || undefined;
       const updatedItem: RuleItem = {
         ...rest,
         text: trimmedText,
         category: cleanedCategory,
-        scope: cleanedScope,
         rationale: cleanedRationale,
-        tags: tagsValue.length ? tagsValue : undefined,
-        appliesTo: appliesToValue.length ? appliesToValue : undefined,
-        exceptions: exceptionsValue.length ? exceptionsValue : undefined,
         confidence: "manual",
         updatedAt: new Date().toISOString(),
       };
@@ -274,9 +199,7 @@ export function RulesPage() {
     typeFilter !== "all" ||
     statusFilter !== "all" ||
     priorityFilter !== "all" ||
-    categoryFilter !== "all" ||
-    scopeFilter !== "all" ||
-    tagFilter !== "all";
+    categoryFilter !== "all";
 
   const clearFilters = () => {
     setQuery("");
@@ -284,8 +207,6 @@ export function RulesPage() {
     setStatusFilter("all");
     setPriorityFilter("all");
     setCategoryFilter("all");
-    setScopeFilter("all");
-    setTagFilter("all");
   };
 
   return (
@@ -399,32 +320,6 @@ export function RulesPage() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={scopeFilter} onValueChange={setScopeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t("allScopes")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("allScopes")}</SelectItem>
-              {scopes.map((scope) => (
-                <SelectItem key={scope} value={scope}>
-                  {scope}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={tagFilter} onValueChange={setTagFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={tc("allTags")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{tc("allTags")}</SelectItem>
-              {tags.map((tag) => (
-                <SelectItem key={tag} value={tag}>
-                  {tag}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           {hasFilters && (
             <Button variant="outline" size="sm" onClick={clearFilters}>
               {tc("reset")}
@@ -448,7 +343,6 @@ export function RulesPage() {
             const isLocked = editingId !== null && editingId !== item.id;
             const effectivePriority = item.priority ?? "p2";
             const categoryValue = item.category ?? "general";
-            const scopeValue = item.scope ?? "general";
             const currentDraft = isEditing ? draft : null;
             const displayText =
               isEditing && currentDraft ? currentDraft.text : item.text;
@@ -458,19 +352,25 @@ export function RulesPage() {
               <Card key={item.id}>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      {displayText}
-                      <Badge variant={priorityColors[effectivePriority]}>
-                        {effectivePriority}
-                      </Badge>
-                      <Badge variant={statusColors[item.status] ?? "secondary"}>
-                        {item.status}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {item.ruleType}
-                      </Badge>
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-medium">
+                        {displayText}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant={priorityColors[effectivePriority]}>
+                          {effectivePriority}
+                        </Badge>
+                        <Badge
+                          variant={statusColors[item.status] ?? "secondary"}
+                        >
+                          {item.status}
+                        </Badge>
+                        <span className="text-xs text-stone-500 dark:text-stone-400">
+                          {item.ruleType}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                       {isEditing ? (
                         <>
                           <Button
@@ -521,32 +421,6 @@ export function RulesPage() {
                       </div>
                       <div>
                         <label
-                          htmlFor={`${fieldIdBase}-status`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("fields.status")}
-                        </label>
-                        <Select
-                          value={currentDraft.status}
-                          onValueChange={(value) =>
-                            updateDraft("status", value as RuleItem["status"])
-                          }
-                        >
-                          <SelectTrigger className="mt-1 w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">
-                              {t("status.active")}
-                            </SelectItem>
-                            <SelectItem value="deprecated">
-                              {t("status.deprecated")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label
                           htmlFor={`${fieldIdBase}-priority`}
                           className="text-xs text-muted-foreground"
                         >
@@ -588,37 +462,6 @@ export function RulesPage() {
                           className="mt-1"
                         />
                       </div>
-                      <div>
-                        <label
-                          htmlFor={`${fieldIdBase}-scope`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("fields.scope")}
-                        </label>
-                        <Input
-                          id={`${fieldIdBase}-scope`}
-                          value={currentDraft.scope ?? ""}
-                          onChange={(e) => updateDraft("scope", e.target.value)}
-                          placeholder="general"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor={`${fieldIdBase}-tags`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("fields.tags")}
-                        </label>
-                        <Input
-                          id={`${fieldIdBase}-tags`}
-                          value={currentDraft.tagsText}
-                          onChange={(e) =>
-                            updateDraft("tagsText", e.target.value)
-                          }
-                          className="mt-1"
-                        />
-                      </div>
                       <div className="md:col-span-2">
                         <label
                           htmlFor={`${fieldIdBase}-rationale`}
@@ -635,72 +478,14 @@ export function RulesPage() {
                           }
                         />
                       </div>
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor={`${fieldIdBase}-applies-to`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("fields.appliesTo")}
-                        </label>
-                        <Input
-                          id={`${fieldIdBase}-applies-to`}
-                          value={currentDraft.appliesToText}
-                          onChange={(e) =>
-                            updateDraft("appliesToText", e.target.value)
-                          }
-                          className="mt-1"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor={`${fieldIdBase}-exceptions`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {t("fields.exceptions")}
-                        </label>
-                        <Input
-                          id={`${fieldIdBase}-exceptions`}
-                          value={currentDraft.exceptionsText}
-                          onChange={(e) =>
-                            updateDraft("exceptionsText", e.target.value)
-                          }
-                          className="mt-1"
-                        />
-                      </div>
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.category")}:
-                          </span>{" "}
-                          {categoryValue}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.scope")}:
-                          </span>{" "}
-                          {scopeValue}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.lastSeen")}:
-                          </span>{" "}
-                          {formatDate(item.lastSeenAt, i18n.language)}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.occurrences")}:
-                          </span>{" "}
-                          {item.occurrences ?? 1}
-                        </div>
-                      </div>
                       <div>
                         <span className="text-muted-foreground">
-                          {tc("tags")}:
+                          {t("fields.category")}:
                         </span>{" "}
-                        {renderChips(item.tags)}
+                        {categoryValue}
                       </div>
                       {item.rationale && (
                         <div>
@@ -708,22 +493,6 @@ export function RulesPage() {
                             {t("fields.rationale")}:
                           </span>{" "}
                           {item.rationale}
-                        </div>
-                      )}
-                      {item.appliesTo && item.appliesTo.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.appliesTo").split(" (")[0]}:
-                          </span>{" "}
-                          {renderChips(item.appliesTo)}
-                        </div>
-                      )}
-                      {item.exceptions && item.exceptions.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">
-                            {t("fields.exceptions").split(" (")[0]}:
-                          </span>{" "}
-                          {renderChips(item.exceptions)}
                         </div>
                       )}
                     </>

@@ -5,6 +5,12 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
+  getCurrentUser,
+  getInteractions,
+  hasInteractions,
+  openDatabase,
+} from "../../lib/db.js";
+import {
   isIndexStale,
   readAllDecisionIndexes,
   readAllSessionIndexes,
@@ -372,6 +378,102 @@ app.get("/api/sessions/:id/markdown", async (c) => {
 
 // Note: PUT/DELETE/POST endpoints removed - dashboard is read-only
 // Data modifications should be done via /memoria:* commands
+
+// Current User API
+app.get("/api/current-user", async (c) => {
+  try {
+    const user = getCurrentUser();
+    return c.json({ user });
+  } catch (error) {
+    console.error("Failed to get current user:", error);
+    return c.json({ error: "Failed to get current user" }, 500);
+  }
+});
+
+// Session Interactions API (from SQLite, owner-restricted)
+app.get("/api/sessions/:id/interactions", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const memoriaDir = getMemoriaDir();
+
+  try {
+    // Get current user
+    const currentUser = getCurrentUser();
+
+    // Open SQLite database
+    const db = openDatabase(memoriaDir);
+    if (!db) {
+      return c.json({ interactions: [], count: 0, isOwner: false });
+    }
+
+    // Check if current user owns interactions for this session
+    const isOwner = hasInteractions(db, id, currentUser);
+    if (!isOwner) {
+      db.close();
+      return c.json(
+        { error: "Forbidden: You are not the owner of this session" },
+        403,
+      );
+    }
+
+    // Get interactions
+    const interactions = getInteractions(db, id);
+    db.close();
+
+    // Group by user/assistant pairs for better display
+    const groupedInteractions: Array<{
+      id: string;
+      timestamp: string;
+      user: string;
+      assistant: string;
+      thinking: string | null;
+      isCompactSummary: boolean;
+    }> = [];
+
+    let currentInteraction: {
+      id: string;
+      timestamp: string;
+      user: string;
+      assistant: string;
+      thinking: string | null;
+      isCompactSummary: boolean;
+    } | null = null;
+
+    for (const interaction of interactions) {
+      if (interaction.role === "user") {
+        // Save previous interaction if exists
+        if (currentInteraction) {
+          groupedInteractions.push(currentInteraction);
+        }
+        // Start new interaction
+        currentInteraction = {
+          id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
+          timestamp: interaction.timestamp,
+          user: interaction.content,
+          assistant: "",
+          thinking: null,
+          isCompactSummary: !!interaction.is_compact_summary,
+        };
+      } else if (interaction.role === "assistant" && currentInteraction) {
+        currentInteraction.assistant = interaction.content;
+        currentInteraction.thinking = interaction.thinking || null;
+      }
+    }
+
+    // Push last interaction
+    if (currentInteraction) {
+      groupedInteractions.push(currentInteraction);
+    }
+
+    return c.json({
+      interactions: groupedInteractions,
+      count: groupedInteractions.length,
+      isOwner: true,
+    });
+  } catch (error) {
+    console.error("Failed to get session interactions:", error);
+    return c.json({ error: "Failed to get session interactions" }, 500);
+  }
+});
 
 // Decisions
 app.get("/api/decisions", async (c) => {
@@ -1031,7 +1133,8 @@ app.get("/api/patterns", async (c) => {
       try {
         const content = fs.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
-        const patterns = data.patterns || [];
+        // Support both "items" (new format) and "patterns" (legacy format)
+        const patterns = data.items || data.patterns || [];
         for (const pattern of patterns) {
           allPatterns.push({
             ...pattern,
@@ -1073,7 +1176,8 @@ app.get("/api/patterns/stats", async (c) => {
       try {
         const content = fs.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
-        const patterns = data.patterns || [];
+        // Support both "items" (new format) and "patterns" (legacy format)
+        const patterns = data.items || data.patterns || [];
         const sourceName = path.basename(filePath, ".json");
 
         for (const pattern of patterns) {

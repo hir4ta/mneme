@@ -16,9 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface Pattern {
   id: string;
   type: "good" | "bad" | "error-solution";
+  title?: string;
   description: string;
   errorPattern?: string;
   solution?: string;
+  codeExample?: string;
   context?: string;
   tags?: string[];
   sourceId?: string;
@@ -52,15 +54,19 @@ async function fetchPatternStats(): Promise<PatternStats> {
 const typeColors: Record<string, { bg: string; text: string; border: string }> =
   {
     good: {
-      bg: "bg-green-100",
-      text: "text-green-800",
-      border: "border-green-200",
+      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      text: "text-emerald-700 dark:text-emerald-300",
+      border: "border-emerald-200 dark:border-emerald-800",
     },
-    bad: { bg: "bg-red-100", text: "text-red-800", border: "border-red-200" },
+    bad: {
+      bg: "bg-rose-50 dark:bg-rose-950/30",
+      text: "text-rose-700 dark:text-rose-300",
+      border: "border-rose-200 dark:border-rose-800",
+    },
     "error-solution": {
-      bg: "bg-amber-100",
-      text: "text-amber-800",
-      border: "border-amber-200",
+      bg: "bg-amber-50 dark:bg-amber-950/30",
+      text: "text-amber-700 dark:text-amber-300",
+      border: "border-amber-200 dark:border-amber-800",
     },
   };
 
@@ -79,47 +85,41 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
   };
 
   return (
-    <Card className={`${colors.border} border`}>
+    <Card className={`${colors.bg} ${colors.border} border`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <CardTitle className="text-sm font-medium line-clamp-2">
+              {pattern.title || pattern.description}
+            </CardTitle>
+            <div className="flex items-center gap-2 mt-2 text-xs text-stone-500 dark:text-stone-400">
               <Badge className={`${colors.bg} ${colors.text} border-0`}>
                 {typeLabels[pattern.type] || pattern.type}
               </Badge>
-              {pattern.sourceFile && (
-                <Badge variant="outline" className="text-xs">
-                  {pattern.sourceFile}
-                </Badge>
-              )}
+              <span>{date}</span>
             </div>
-            <CardTitle className="text-sm font-medium line-clamp-2">
-              {pattern.description}
-            </CardTitle>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="text-xs text-muted-foreground mb-2">{date}</div>
-
         {pattern.type === "error-solution" && (
-          <div className="space-y-2">
+          <div className="space-y-3 mt-2">
             {pattern.errorPattern && (
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-rose-600 dark:text-rose-400 mb-1">
                   {t("fields.errorPattern")}
                 </div>
-                <pre className="text-xs bg-red-50 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                <pre className="text-xs bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 p-2 rounded overflow-x-auto whitespace-pre-wrap border border-rose-200 dark:border-rose-800">
                   {pattern.errorPattern}
                 </pre>
               </div>
             )}
             {pattern.solution && (
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">
                   {t("fields.solution")}
                 </div>
-                <pre className="text-xs bg-green-50 p-2 rounded overflow-x-auto whitespace-pre-wrap">
+                <pre className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 p-2 rounded overflow-x-auto whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
                   {pattern.solution}
                 </pre>
               </div>
@@ -131,7 +131,7 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer mt-2"
           >
             {isExpanded
               ? `▼ ${t("fields.hideContext")}`
@@ -141,14 +141,14 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
 
         {isExpanded && pattern.context && (
           <div className="mt-2">
-            <pre className="text-xs bg-muted p-2 rounded overflow-x-auto whitespace-pre-wrap">
+            <pre className="text-xs bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 p-2 rounded overflow-x-auto whitespace-pre-wrap">
               {pattern.context}
             </pre>
           </div>
         )}
 
         {pattern.tags && pattern.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div className="flex flex-wrap gap-1 mt-3">
             {pattern.tags.map((tag) => (
               <Badge key={tag} variant="secondary" className="text-xs">
                 {tag}
@@ -176,7 +176,9 @@ function StatCard({
         <div className="text-2xl font-bold" style={{ color }}>
           {value}
         </div>
-        <div className="text-xs text-muted-foreground">{title}</div>
+        <div className="text-xs text-stone-500 dark:text-stone-400">
+          {title}
+        </div>
       </CardContent>
     </Card>
   );
