@@ -29,10 +29,9 @@ process.emit = (event, ...args) => {
   ) {
     return false;
   }
-  return originalEmit.apply(
-    process,
-    [event, ...args] as unknown as Parameters<typeof process.emit>,
-  );
+  return originalEmit.apply(process, [event, ...args] as unknown as Parameters<
+    typeof process.emit
+  >);
 };
 
 // Import after warning suppression is set up

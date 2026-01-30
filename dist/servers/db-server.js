@@ -29930,7 +29930,14 @@ var StdioServerTransport = class {
 };
 
 // servers/db-server.ts
-import Database from "better-sqlite3";
+var originalEmit = process.emit;
+process.emit = (event, ...args) => {
+  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.apply(process, [event, ...args]);
+};
+var { DatabaseSync } = await import("node:sqlite");
 var MEMORIA_DATA_DIR = process.env.MEMORIA_DATA_DIR || path.join(process.env.HOME || "", ".claude/memoria");
 var GLOBAL_DB_PATH = path.join(MEMORIA_DATA_DIR, "global.db");
 var db = null;
@@ -29940,8 +29947,8 @@ function getDb() {
     return null;
   }
   try {
-    db = new Database(GLOBAL_DB_PATH, { readonly: true });
-    db.pragma("journal_mode = WAL");
+    db = new DatabaseSync(GLOBAL_DB_PATH);
+    db.exec("PRAGMA journal_mode = WAL");
     return db;
   } catch {
     return null;

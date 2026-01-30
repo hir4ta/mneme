@@ -12,8 +12,32 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import Database from "better-sqlite3";
 import { z } from "zod";
+
+// Suppress Node.js SQLite experimental warning
+const originalEmit = process.emit;
+// @ts-expect-error - Suppressing experimental warning
+process.emit = (event, ...args) => {
+  if (
+    event === "warning" &&
+    typeof args[0] === "object" &&
+    args[0] !== null &&
+    "name" in args[0] &&
+    (args[0] as { name: string }).name === "ExperimentalWarning" &&
+    "message" in args[0] &&
+    typeof (args[0] as { message: string }).message === "string" &&
+    (args[0] as { message: string }).message.includes("SQLite")
+  ) {
+    return false;
+  }
+  return originalEmit.apply(process, [event, ...args] as unknown as Parameters<
+    typeof process.emit
+  >);
+};
+
+// Import after warning suppression is set up
+const { DatabaseSync } = await import("node:sqlite");
+type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
 
 // Types
 interface ProjectInfo {
@@ -71,9 +95,9 @@ const MEMORIA_DATA_DIR =
 const GLOBAL_DB_PATH = path.join(MEMORIA_DATA_DIR, "global.db");
 
 // Database connection (lazy initialization)
-let db: Database.Database | null = null;
+let db: DatabaseSyncType | null = null;
 
-function getDb(): Database.Database | null {
+function getDb(): DatabaseSyncType | null {
   if (db) return db;
 
   if (!fs.existsSync(GLOBAL_DB_PATH)) {
@@ -81,8 +105,8 @@ function getDb(): Database.Database | null {
   }
 
   try {
-    db = new Database(GLOBAL_DB_PATH, { readonly: true });
-    db.pragma("journal_mode = WAL");
+    db = new DatabaseSync(GLOBAL_DB_PATH);
+    db.exec("PRAGMA journal_mode = WAL");
     return db;
   } catch {
     return null;
