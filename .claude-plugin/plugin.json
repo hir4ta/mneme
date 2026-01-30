@@ -1,7 +1,7 @@
 {
   "name": "memoria",
   "description": "A plugin that provides long-term memory for Claude Code. It automatically saves context lost during auto-compact, offering features for session restoration, recording technical decisions, and learning developer patterns.",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "author": {
     "name": "hir4ta"
   },

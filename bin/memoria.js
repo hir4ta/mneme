@@ -5,6 +5,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Suppress Node.js SQLite experimental warning (must be before dynamic import)
+const originalEmit = process.emit;
+process.emit = function (name, data, ...args) {
+  if (name === "warning" && data?.name === "ExperimentalWarning" && data?.message?.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.call(process, name, data, ...args);
+};
+
+// Dynamic import to ensure warning suppression is active
+const { DatabaseSync } = await import("node:sqlite");
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -45,6 +57,7 @@ function initMemoria() {
   const rulesDir = path.join(memoriaDir, "rules");
   const patternsDir = path.join(memoriaDir, "patterns");
   const tagsPath = path.join(memoriaDir, "tags.json");
+  const dbPath = path.join(memoriaDir, "local.db");
 
   // Check if already initialized
   if (fs.existsSync(memoriaDir)) {
@@ -82,6 +95,20 @@ function initMemoria() {
   );
   fs.writeFileSync(path.join(rulesDir, "dev-rules.json"), rulesTemplate);
 
+  // Initialize SQLite database
+  const schemaPath = path.join(packageDir, "lib", "schema.sql");
+  try {
+    const db = new DatabaseSync(dbPath);
+    db.exec("PRAGMA journal_mode = WAL");
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, "utf-8");
+      db.exec(schema);
+    }
+    db.close();
+  } catch (error) {
+    console.error(`Warning: Failed to initialize SQLite database: ${error.message}`);
+  }
+
   console.log(`memoria initialized: ${memoriaDir}`);
   console.log(`
 Created:
@@ -91,6 +118,7 @@ Created:
   ${tagsPath}
   ${rulesDir}/review-guidelines.json
   ${rulesDir}/dev-rules.json
+  ${dbPath}
 
 You can now use memoria with Claude Code in this project.
 `);

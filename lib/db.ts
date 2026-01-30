@@ -3,13 +3,32 @@
  *
  * Local-only database for private interactions and backups.
  * This file provides CRUD operations for interactions and pre_compact_backups.
+ *
+ * Uses Node.js built-in sqlite module (node:sqlite) for platform independence.
  */
 
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+
+// Suppress Node.js SQLite experimental warning
+const originalEmit = process.emit;
+// @ts-expect-error - process.emit override for warning suppression
+process.emit = function (name, data, ...args) {
+  if (
+    name === "warning" &&
+    typeof data === "object" &&
+    data?.name === "ExperimentalWarning" &&
+    data?.message?.includes("SQLite")
+  ) {
+    return false;
+  }
+  return originalEmit.call(process, name, data, ...args);
+};
+
+// Import after warning suppression is set up
+const { DatabaseSync } = await import("node:sqlite");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,12 +79,12 @@ export function getDbPath(memoriaDir: string): string {
 /**
  * Initialize database with schema
  */
-export function initDatabase(memoriaDir: string): Database.Database {
+export function initDatabase(memoriaDir: string): DatabaseSync {
   const dbPath = getDbPath(memoriaDir);
-  const db = new Database(dbPath);
+  const db = new DatabaseSync(dbPath);
 
   // Enable WAL mode for better concurrent access
-  db.pragma("journal_mode = WAL");
+  db.exec("PRAGMA journal_mode = WAL");
 
   // Read and execute schema
   const schemaPath = join(__dirname, "schema.sql");
@@ -80,13 +99,13 @@ export function initDatabase(memoriaDir: string): Database.Database {
 /**
  * Open existing database
  */
-export function openDatabase(memoriaDir: string): Database.Database | null {
+export function openDatabase(memoriaDir: string): DatabaseSync | null {
   const dbPath = getDbPath(memoriaDir);
   if (!existsSync(dbPath)) {
     return null;
   }
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   return db;
 }
 
@@ -94,37 +113,41 @@ export function openDatabase(memoriaDir: string): Database.Database | null {
  * Insert interactions into database
  */
 export function insertInteractions(
-  db: Database.Database,
+  db: DatabaseSync,
   interactions: Interaction[],
 ): void {
   const insert = db.prepare(`
     INSERT INTO interactions (session_id, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary)
-    VALUES (@session_id, @owner, @role, @content, @thinking, @tool_calls, @timestamp, @is_compact_summary)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const insertMany = db.transaction((items: Interaction[]) => {
-    for (const item of items) {
-      insert.run({
-        session_id: item.session_id,
-        owner: item.owner,
-        role: item.role,
-        content: item.content,
-        thinking: item.thinking || null,
-        tool_calls: item.tool_calls || null,
-        timestamp: item.timestamp,
-        is_compact_summary: item.is_compact_summary || 0,
-      });
+  // Manual transaction management (node:sqlite doesn't have db.transaction())
+  db.exec("BEGIN TRANSACTION");
+  try {
+    for (const item of interactions) {
+      insert.run(
+        item.session_id,
+        item.owner,
+        item.role,
+        item.content,
+        item.thinking || null,
+        item.tool_calls || null,
+        item.timestamp,
+        item.is_compact_summary || 0,
+      );
     }
-  });
-
-  insertMany(interactions);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 /**
  * Get interactions for a session
  */
 export function getInteractions(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
 ): Interaction[] {
   const stmt = db.prepare(`
@@ -139,7 +162,7 @@ export function getInteractions(
  * Get interactions for a session owned by specific user
  */
 export function getInteractionsByOwner(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
   owner: string,
 ): Interaction[] {
@@ -155,7 +178,7 @@ export function getInteractionsByOwner(
  * Check if user owns any interactions for a session
  */
 export function hasInteractions(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
   owner: string,
 ): boolean {
@@ -171,21 +194,21 @@ export function hasInteractions(
  * Insert pre-compact backup
  */
 export function insertPreCompactBackup(
-  db: Database.Database,
+  db: DatabaseSync,
   backup: PreCompactBackup,
 ): void {
   const stmt = db.prepare(`
     INSERT INTO pre_compact_backups (session_id, owner, interactions)
-    VALUES (@session_id, @owner, @interactions)
+    VALUES (?, ?, ?)
   `);
-  stmt.run(backup);
+  stmt.run(backup.session_id, backup.owner, backup.interactions);
 }
 
 /**
  * Get latest pre-compact backup for a session
  */
 export function getLatestBackup(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
 ): PreCompactBackup | null {
   const stmt = db.prepare(`
@@ -201,7 +224,7 @@ export function getLatestBackup(
  * Get all backups for a session
  */
 export function getAllBackups(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
 ): PreCompactBackup[] {
   const stmt = db.prepare(`
@@ -216,7 +239,7 @@ export function getAllBackups(
  * Search interactions using FTS5
  */
 export function searchInteractions(
-  db: Database.Database,
+  db: DatabaseSync,
   query: string,
   limit = 10,
 ): Array<{ session_id: string; content: string; thinking: string | null }> {
@@ -238,7 +261,7 @@ export function searchInteractions(
  * Delete interactions for a session
  */
 export function deleteInteractions(
-  db: Database.Database,
+  db: DatabaseSync,
   sessionId: string,
 ): void {
   const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
@@ -248,7 +271,7 @@ export function deleteInteractions(
 /**
  * Delete backups for a session
  */
-export function deleteBackups(db: Database.Database, sessionId: string): void {
+export function deleteBackups(db: DatabaseSync, sessionId: string): void {
   const stmt = db.prepare(
     "DELETE FROM pre_compact_backups WHERE session_id = ?",
   );
@@ -258,7 +281,7 @@ export function deleteBackups(db: Database.Database, sessionId: string): void {
 /**
  * Get database statistics
  */
-export function getDbStats(db: Database.Database): {
+export function getDbStats(db: DatabaseSync): {
   interactions: number;
   backups: number;
 } {

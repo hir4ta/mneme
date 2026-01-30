@@ -3,7 +3,14 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+var originalEmit = process.emit;
+process.emit = function(name, data, ...args) {
+  if (name === "warning" && typeof data === "object" && data?.name === "ExperimentalWarning" && data?.message?.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.call(process, name, data, ...args);
+};
+var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
 function getCurrentUser() {
@@ -22,8 +29,8 @@ function getDbPath(memoriaDir) {
 }
 function initDatabase(memoriaDir) {
   const dbPath = getDbPath(memoriaDir);
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   const schemaPath = join(__dirname, "schema.sql");
   if (existsSync(schemaPath)) {
     const schema = readFileSync(schemaPath, "utf-8");
@@ -36,30 +43,34 @@ function openDatabase(memoriaDir) {
   if (!existsSync(dbPath)) {
     return null;
   }
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   return db;
 }
 function insertInteractions(db, interactions) {
   const insert = db.prepare(`
     INSERT INTO interactions (session_id, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary)
-    VALUES (@session_id, @owner, @role, @content, @thinking, @tool_calls, @timestamp, @is_compact_summary)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  const insertMany = db.transaction((items) => {
-    for (const item of items) {
-      insert.run({
-        session_id: item.session_id,
-        owner: item.owner,
-        role: item.role,
-        content: item.content,
-        thinking: item.thinking || null,
-        tool_calls: item.tool_calls || null,
-        timestamp: item.timestamp,
-        is_compact_summary: item.is_compact_summary || 0
-      });
+  db.exec("BEGIN TRANSACTION");
+  try {
+    for (const item of interactions) {
+      insert.run(
+        item.session_id,
+        item.owner,
+        item.role,
+        item.content,
+        item.thinking || null,
+        item.tool_calls || null,
+        item.timestamp,
+        item.is_compact_summary || 0
+      );
     }
-  });
-  insertMany(interactions);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 function getInteractions(db, sessionId) {
   const stmt = db.prepare(`
@@ -88,9 +99,9 @@ function hasInteractions(db, sessionId, owner) {
 function insertPreCompactBackup(db, backup) {
   const stmt = db.prepare(`
     INSERT INTO pre_compact_backups (session_id, owner, interactions)
-    VALUES (@session_id, @owner, @interactions)
+    VALUES (?, ?, ?)
   `);
-  stmt.run(backup);
+  stmt.run(backup.session_id, backup.owner, backup.interactions);
 }
 function getLatestBackup(db, sessionId) {
   const stmt = db.prepare(`

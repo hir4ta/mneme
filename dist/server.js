@@ -2882,7 +2882,14 @@ import { execSync } from "node:child_process";
 import { existsSync as existsSync2, readFileSync } from "node:fs";
 import { dirname, join as join2 } from "node:path";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
+var originalEmit = process.emit;
+process.emit = function(name, data, ...args) {
+  if (name === "warning" && typeof data === "object" && data?.name === "ExperimentalWarning" && data?.message?.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.call(process, name, data, ...args);
+};
+var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
 function getCurrentUser() {
@@ -2904,8 +2911,8 @@ function openDatabase(memoriaDir2) {
   if (!existsSync2(dbPath)) {
     return null;
   }
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   return db;
 }
 function getInteractions(db, sessionId) {
