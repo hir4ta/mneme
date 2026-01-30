@@ -37,16 +37,79 @@ Extract and save all meaningful data from the current session.
 <phases>
 Execute all phases in order. Each phase builds on the previous.
 
-- Phase 0: Interactions - Merge preCompactBackups with current conversation
-- Phase 1: Summary - Extract session metadata
-- Phase 2: Decisions - Save to decisions/
-- Phase 3: Patterns - Save to patterns/
-- Phase 4: Rules - Extract development standards
+- Phase 0: Master Session - Identify master and merge child sessions
+- Phase 1: Interactions - Merge preCompactBackups with current conversation
+- Phase 2: Summary - Extract session metadata (considering ALL interactions)
+- Phase 3: Decisions - Save to decisions/
+- Phase 4: Patterns - Save to patterns/
+- Phase 5: Rules - Extract development standards
 </phases>
 
-### Phase 0: Save Conversation History (interactions)
+### Phase 0: Identify Master Session and Merge Children
 
-Execute this phase first. Interactions are stored in SQLite (`local.db`) for privacy.
+**Purpose:** Support multiple Claude sessions contributing to one logical memoria session.
+
+1. Get current session path from additionalContext (e.g., `.memoria/sessions/2026/01/xyz78901.json`)
+2. Get session ID from the path (e.g., `xyz78901`)
+
+3. **Check for session-link file:**
+   ```bash
+   Read: .memoria/session-links/xyz78901.json
+   ```
+   If exists, extract `masterSessionId`. If not, current session IS the master.
+
+4. **Find master session file:**
+   ```bash
+   Glob: .memoria/sessions/**/{masterSessionId}.json
+   ```
+
+5. **Find all child sessions linked to this master:**
+   ```bash
+   # Read all session-link files
+   Glob: .memoria/session-links/*.json
+
+   # Filter by masterSessionId
+   for each link:
+     if link.masterSessionId == masterSessionId:
+       childSessionIds.push(link file's session ID)
+   ```
+
+6. **Also check legacy `resumedFrom` chains:**
+   ```bash
+   # Find sessions where resumedFrom points to master or any child
+   Glob: .memoria/sessions/**/*.json
+   for each session:
+     if session.resumedFrom == masterSessionId or session.resumedFrom in childSessionIds:
+       childSessionIds.push(session.id)
+   ```
+
+7. **Merge child session data into master:**
+   For each child session JSON:
+   - Merge `workPeriods` (add any missing entries)
+   - Merge `files` (union, deduplicate by path)
+   - Merge `discussions` (append unique items)
+   - Merge `errors` (append unique items)
+   - Merge `metrics.toolUsage` (combine counts)
+   - Update `metrics.userMessages` (will be recalculated from SQLite)
+
+8. **Mark child sessions as merged:**
+   ```bash
+   Edit: .memoria/sessions/{year}/{month}/{childId}.json
+   ```
+   ```json
+   {
+     "status": "merged",
+     "mergedAt": "2026-01-27T12:00:00Z",
+     "masterSessionId": "abc12345"
+   }
+   ```
+
+**Important:** After this phase, all subsequent operations work on the MASTER session.
+
+### Phase 1: Save Conversation History (interactions)
+
+Execute this phase after identifying the master session.
+Interactions are stored in SQLite (`local.db`) for privacy.
 If auto-compact occurred, `pre_compact_backups` table contains earlier conversations.
 
 **Storage Location:**
@@ -61,16 +124,16 @@ Without merge: Only 8 interactions saved (data loss)
 With merge: All 24 interactions saved in SQLite
 ```
 
-1. Get session path from additionalContext (e.g., `.memoria/sessions/2026/01/abc12345.json`)
-2. Get session ID from the path (e.g., `abc12345`)
+1. Use master session ID from Phase 0 (e.g., `abc12345`)
+2. Collect all related session IDs: `[masterSessionId] + childSessionIds`
 
-3. **Check for existing data in SQLite**:
+3. **Check for existing data in SQLite (all related sessions)**:
    ```bash
-   # Check for pre_compact_backups (most complete source)
-   sqlite3 .memoria/local.db "SELECT interactions FROM pre_compact_backups WHERE session_id = 'abc12345' ORDER BY created_at DESC LIMIT 1;"
+   # Check for pre_compact_backups from ALL related sessions
+   sqlite3 .memoria/local.db "SELECT session_id, interactions FROM pre_compact_backups WHERE session_id IN ('abc12345', 'xyz78901') ORDER BY created_at DESC;"
 
-   # Check existing interactions count
-   sqlite3 .memoria/local.db "SELECT COUNT(*) FROM interactions WHERE session_id = 'abc12345';"
+   # Get interactions from ALL related sessions
+   sqlite3 .memoria/local.db "SELECT * FROM interactions WHERE session_id IN ('abc12345', 'xyz78901') ORDER BY timestamp ASC;"
    ```
 
 4. **Determine the most complete source**:
@@ -112,10 +175,10 @@ With merge: All 24 interactions saved in SQLite
 
 **Note:** Interactions are stored in SQLite for privacy. JSON contains only metadata.
 
-### Phase 1: Extract Session Data
+### Phase 2: Extract Session Data
 
-1. Get session path from additionalContext
-2. Read current session file (already updated with interactions in Phase 0)
+1. Use master session from Phase 0
+2. Read master session file (already updated with merged data from Phase 0-1)
 3. **Scan entire conversation** (including long sessions) to extract:
 
 #### Summary
@@ -166,7 +229,7 @@ With merge: All 24 interactions saved in SQLite
 - **handoff**: stoppedReason, notes, nextSteps
 - **references**: URLs and files referenced
 
-### Phase 2: Save to decisions/
+### Phase 3: Save to decisions/
 
 **For each discussion with a clear decision:**
 
@@ -200,7 +263,7 @@ With merge: All 24 interactions saved in SQLite
 - No clear decision was made (just discussion)
 - Similar decision already exists (check by title/topic)
 
-### Phase 3: Save to patterns/
+### Phase 4: Save to patterns/
 
 **For each error that was solved:**
 
@@ -242,7 +305,7 @@ With merge: All 24 interactions saved in SQLite
 - No root cause was identified
 - Error was environment-specific
 
-### Phase 4: Extract Rules
+### Phase 5: Extract Rules
 
 Scan conversation for development standards. These include both explicit user
 instructions and implicit standards from technical discussions.
@@ -362,11 +425,20 @@ Report each phase result:
 ---
 **Session saved.**
 
-**Session ID:** abc12345
+**Master Session ID:** abc12345
 **Path:** .memoria/sessions/2026/01/abc12345.json
 
-**Phase 0 - Interactions:** 15 saved to SQLite (8 from pre_compact_backups + 7 new)
-**Phase 1 - Summary:**
+**Phase 0 - Master Session:**
+  Master: abc12345
+  Children merged: xyz78901, def45678
+  Work periods: 3
+
+**Phase 1 - Interactions:** 42 saved to SQLite
+  - From abc12345: 15 interactions
+  - From xyz78901: 18 interactions
+  - From def45678: 9 interactions
+
+**Phase 2 - Summary:**
 | Field | Value |
 |-------|-------|
 | Title | JWT authentication implementation |
@@ -374,14 +446,14 @@ Report each phase result:
 | Outcome | success |
 | Type | implementation |
 
-**Phase 2 - Decisions (2):**
+**Phase 3 - Decisions (2):**
 - `[jwt-auth-001]` Authentication method selection → decisions/2026/01/
 - `[token-expiry-001]` Token expiry strategy → decisions/2026/01/
 
-**Phase 3 - Patterns (1):**
+**Phase 4 - Patterns (1):**
 - `[error-solution]` secretOrPrivateKey must be asymmetric → patterns/user.json
 
-**Phase 4 - Rules:**
+**Phase 5 - Rules:**
   dev-rules.json:
     + [code-style] Use early return pattern
     ~ [architecture] Avoid circular dependencies (skipped: similar exists)
@@ -392,7 +464,7 @@ Report each phase result:
 
 If no rules are found, report what was scanned:
 ```
-**Phase 4 - Rules:**
+**Phase 5 - Rules:**
   Scanned for: user instructions, technical standards from Codex review, security requirements
   Result: No new rules identified
 ```

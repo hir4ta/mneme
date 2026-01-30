@@ -38,6 +38,7 @@ fi
 cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 memoria_dir="${cwd}/.memoria"
 sessions_dir="${memoria_dir}/sessions"
+session_links_dir="${memoria_dir}/session-links"
 db_path="${memoria_dir}/local.db"
 
 # Find session file
@@ -272,6 +273,34 @@ else
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
     echo "[memoria] Session completed (no transcript): ${session_file}" >&2
+fi
+
+# ============================================
+# Update master session workPeriods.endedAt (if linked)
+# ============================================
+session_link_file="${session_links_dir}/${session_short_id}.json"
+if [ -f "$session_link_file" ]; then
+    master_session_id=$(jq -r '.masterSessionId // empty' "$session_link_file" 2>/dev/null || echo "")
+    if [ -n "$master_session_id" ]; then
+        master_session_path=$(find "$sessions_dir" -name "${master_session_id}.json" -type f 2>/dev/null | head -1)
+        if [ -n "$master_session_path" ] && [ -f "$master_session_path" ]; then
+            end_now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            claude_session_id="${session_id}"
+            # Update the workPeriod entry with matching claudeSessionId
+            jq --arg claudeSessionId "$claude_session_id" \
+               --arg endedAt "$end_now" '
+                .workPeriods = [.workPeriods[]? |
+                    if .claudeSessionId == $claudeSessionId and .endedAt == null
+                    then .endedAt = $endedAt
+                    else .
+                    end
+                ] |
+                .updatedAt = $endedAt
+            ' "$master_session_path" > "${master_session_path}.tmp" \
+                && mv "${master_session_path}.tmp" "$master_session_path"
+            echo "[memoria] Master session workPeriods.endedAt updated: ${master_session_path}" >&2
+        fi
+    fi
 fi
 
 exit 0

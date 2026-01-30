@@ -88,6 +88,42 @@ function getInteractionsByOwner(db, sessionId, owner) {
   `);
   return stmt.all(sessionId, owner);
 }
+function getInteractionsBySessionIds(db, sessionIds) {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders})
+    ORDER BY timestamp ASC, session_id ASC, role ASC
+  `);
+  return stmt.all(...sessionIds);
+}
+function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders}) AND owner = ?
+    ORDER BY timestamp ASC, session_id ASC, role ASC
+  `);
+  return stmt.all(...sessionIds, owner);
+}
+function hasInteractionsForSessionIds(db, sessionIds, owner) {
+  if (sessionIds.length === 0) {
+    return false;
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT COUNT(*) as count FROM interactions
+    WHERE session_id IN (${placeholders}) AND owner = ?
+  `);
+  const result = stmt.get(...sessionIds, owner);
+  return result.count > 0;
+}
 function hasInteractions(db, sessionId, owner) {
   const stmt = db.prepare(`
     SELECT COUNT(*) as count FROM interactions
@@ -157,8 +193,11 @@ export {
   getDbStats,
   getInteractions,
   getInteractionsByOwner,
+  getInteractionsBySessionIds,
+  getInteractionsBySessionIdsAndOwner,
   getLatestBackup,
   hasInteractions,
+  hasInteractionsForSessionIds,
   initDatabase,
   insertInteractions,
   insertPreCompactBackup,

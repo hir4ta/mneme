@@ -204,9 +204,19 @@ export const SessionStatusSchema = z.enum([
   "in_progress",
   "complete",
   "abandoned",
+  "merged", // Session merged into master session
 ]);
 
 export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+
+// Work period schema (for master session tracking)
+export const WorkPeriodSchema = z.object({
+  claudeSessionId: z.string(), // Full Claude Code session UUID
+  startedAt: z.string(), // ISO8601 timestamp
+  endedAt: z.string().nullable().optional(), // null if session is in progress
+});
+
+export type WorkPeriod = z.infer<typeof WorkPeriodSchema>;
 
 // Session schema (JSON file structure)
 export const SessionSchema = z.object({
@@ -223,8 +233,12 @@ export const SessionSchema = z.object({
   interactions: z.array(InteractionSchema),
   files: z.array(FileChangeSchema).optional(),
   metrics: MetricsSchema.optional(),
-  // Session chain tracking
+  // Session chain tracking (legacy, read-only for backwards compatibility)
   resumedFrom: z.string().optional(),
+  // Master session tracking (new)
+  masterSessionId: z.string().optional(), // ID of master session (if this is a child)
+  mergedAt: z.string().optional(), // Timestamp when merged into master
+  workPeriods: z.array(WorkPeriodSchema).optional(), // Work periods (master sessions only)
   // PreCompact backups
   preCompactBackups: z.array(PreCompactBackupSchema).optional(),
   // Status

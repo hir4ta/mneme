@@ -8,7 +8,11 @@ import { fileURLToPath } from "node:url";
 // Suppress Node.js SQLite experimental warning (must be before dynamic import)
 const originalEmit = process.emit;
 process.emit = function (name, data, ...args) {
-  if (name === "warning" && data?.name === "ExperimentalWarning" && data?.message?.includes("SQLite")) {
+  if (
+    name === "warning" &&
+    data?.name === "ExperimentalWarning" &&
+    data?.message?.includes("SQLite")
+  ) {
     return false;
   }
   return originalEmit.call(process, name, data, ...args);
@@ -106,7 +110,9 @@ function initMemoria() {
     }
     db.close();
   } catch (error) {
-    console.error(`Warning: Failed to initialize SQLite database: ${error.message}`);
+    console.error(
+      `Warning: Failed to initialize SQLite database: ${error.message}`,
+    );
   }
 
   console.log(`memoria initialized: ${memoriaDir}`);

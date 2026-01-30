@@ -6,8 +6,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
   getCurrentUser,
-  getInteractions,
-  hasInteractions,
+  getInteractionsBySessionIdsAndOwner,
+  hasInteractionsForSessionIds,
   openDatabase,
 } from "../../lib/db.js";
 import {
@@ -391,9 +391,12 @@ app.get("/api/current-user", async (c) => {
 });
 
 // Session Interactions API (from SQLite, owner-restricted)
+// Supports master session: collects interactions from all linked sessions
 app.get("/api/sessions/:id/interactions", async (c) => {
   const id = sanitizeId(c.req.param("id"));
   const memoriaDir = getMemoriaDir();
+  const sessionLinksDir = path.join(memoriaDir, "session-links");
+  const sessionsDir = path.join(memoriaDir, "sessions");
 
   try {
     // Get current user
@@ -405,8 +408,68 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       return c.json({ interactions: [], count: 0, isOwner: false });
     }
 
-    // Check if current user owns interactions for this session
-    const isOwner = hasInteractions(db, id, currentUser);
+    // Determine the master session ID
+    // If this is a child session, find the master first
+    let masterId = id;
+    const myLinkFile = path.join(sessionLinksDir, `${id}.json`);
+    if (fs.existsSync(myLinkFile)) {
+      try {
+        const myLinkData = JSON.parse(fs.readFileSync(myLinkFile, "utf-8"));
+        if (myLinkData.masterSessionId) {
+          masterId = myLinkData.masterSessionId;
+        }
+      } catch {
+        // Use original id as master
+      }
+    }
+
+    // Collect all session IDs to query (master + children)
+    const sessionIds: string[] = [masterId];
+    if (masterId !== id) {
+      sessionIds.push(id);
+    }
+
+    // Check if this session has linked children (session-links files)
+    if (fs.existsSync(sessionLinksDir)) {
+      const linkFiles = fs.readdirSync(sessionLinksDir);
+      for (const linkFile of linkFiles) {
+        if (!linkFile.endsWith(".json")) continue;
+        const linkPath = path.join(sessionLinksDir, linkFile);
+        try {
+          const linkData = JSON.parse(fs.readFileSync(linkPath, "utf-8"));
+          if (linkData.masterSessionId === masterId) {
+            // This link points to our master - add the child session
+            const childId = linkFile.replace(".json", "");
+            if (!sessionIds.includes(childId)) {
+              sessionIds.push(childId);
+            }
+          }
+        } catch {
+          // Skip invalid link files
+        }
+      }
+    }
+
+    // Also check for legacy resumedFrom chains
+    const sessionFiles = listDatedJsonFiles(sessionsDir);
+    for (const sessionFile of sessionFiles) {
+      try {
+        const sessionData = JSON.parse(fs.readFileSync(sessionFile, "utf-8"));
+        if (
+          sessionData.resumedFrom === masterId &&
+          sessionData.id !== masterId
+        ) {
+          if (!sessionIds.includes(sessionData.id)) {
+            sessionIds.push(sessionData.id);
+          }
+        }
+      } catch {
+        // Skip invalid session files
+      }
+    }
+
+    // Check if current user owns interactions for any of these sessions
+    const isOwner = hasInteractionsForSessionIds(db, sessionIds, currentUser);
     if (!isOwner) {
       db.close();
       return c.json(
@@ -415,8 +478,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       );
     }
 
-    // Get interactions
-    const interactions = getInteractions(db, id);
+    // Get interactions from all related sessions (filtered by owner for security)
+    const interactions = getInteractionsBySessionIdsAndOwner(
+      db,
+      sessionIds,
+      currentUser,
+    );
     db.close();
 
     // Group by user/assistant pairs for better display

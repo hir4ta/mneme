@@ -2915,20 +2915,28 @@ function openDatabase(memoriaDir2) {
   db.exec("PRAGMA journal_mode = WAL");
   return db;
 }
-function getInteractions(db, sessionId) {
+function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT * FROM interactions
-    WHERE session_id = ?
-    ORDER BY timestamp ASC
+    WHERE session_id IN (${placeholders}) AND owner = ?
+    ORDER BY timestamp ASC, session_id ASC, role ASC
   `);
-  return stmt.all(sessionId);
+  return stmt.all(...sessionIds, owner);
 }
-function hasInteractions(db, sessionId, owner) {
+function hasInteractionsForSessionIds(db, sessionIds, owner) {
+  if (sessionIds.length === 0) {
+    return false;
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT COUNT(*) as count FROM interactions
-    WHERE session_id = ? AND owner = ?
+    WHERE session_id IN (${placeholders}) AND owner = ?
   `);
-  const result = stmt.get(sessionId, owner);
+  const result = stmt.get(...sessionIds, owner);
   return result.count > 0;
 }
 
@@ -3553,13 +3561,59 @@ app.get("/api/current-user", async (c) => {
 app.get("/api/sessions/:id/interactions", async (c) => {
   const id = sanitizeId(c.req.param("id"));
   const memoriaDir2 = getMemoriaDir();
+  const sessionLinksDir = path3.join(memoriaDir2, "session-links");
+  const sessionsDir = path3.join(memoriaDir2, "sessions");
   try {
     const currentUser = getCurrentUser();
     const db = openDatabase(memoriaDir2);
     if (!db) {
       return c.json({ interactions: [], count: 0, isOwner: false });
     }
-    const isOwner = hasInteractions(db, id, currentUser);
+    let masterId = id;
+    const myLinkFile = path3.join(sessionLinksDir, `${id}.json`);
+    if (fs4.existsSync(myLinkFile)) {
+      try {
+        const myLinkData = JSON.parse(fs4.readFileSync(myLinkFile, "utf-8"));
+        if (myLinkData.masterSessionId) {
+          masterId = myLinkData.masterSessionId;
+        }
+      } catch {
+      }
+    }
+    const sessionIds = [masterId];
+    if (masterId !== id) {
+      sessionIds.push(id);
+    }
+    if (fs4.existsSync(sessionLinksDir)) {
+      const linkFiles = fs4.readdirSync(sessionLinksDir);
+      for (const linkFile of linkFiles) {
+        if (!linkFile.endsWith(".json")) continue;
+        const linkPath = path3.join(sessionLinksDir, linkFile);
+        try {
+          const linkData = JSON.parse(fs4.readFileSync(linkPath, "utf-8"));
+          if (linkData.masterSessionId === masterId) {
+            const childId = linkFile.replace(".json", "");
+            if (!sessionIds.includes(childId)) {
+              sessionIds.push(childId);
+            }
+          }
+        } catch {
+        }
+      }
+    }
+    const sessionFiles = listDatedJsonFiles(sessionsDir);
+    for (const sessionFile of sessionFiles) {
+      try {
+        const sessionData = JSON.parse(fs4.readFileSync(sessionFile, "utf-8"));
+        if (sessionData.resumedFrom === masterId && sessionData.id !== masterId) {
+          if (!sessionIds.includes(sessionData.id)) {
+            sessionIds.push(sessionData.id);
+          }
+        }
+      } catch {
+      }
+    }
+    const isOwner = hasInteractionsForSessionIds(db, sessionIds, currentUser);
     if (!isOwner) {
       db.close();
       return c.json(
@@ -3567,7 +3621,11 @@ app.get("/api/sessions/:id/interactions", async (c) => {
         403
       );
     }
-    const interactions = getInteractions(db, id);
+    const interactions = getInteractionsBySessionIdsAndOwner(
+      db,
+      sessionIds,
+      currentUser
+    );
     db.close();
     const groupedInteractions = [];
     let currentInteraction = null;

@@ -55,8 +55,10 @@ Multiple filters can be combined:
 3. Sort by `createdAt` descending (most recent first)
 4. Display filtered session list
 5. If session ID specified, read the JSON file and get details
-6. **Update current session JSON with `resumedFrom` field**
-7. Load session context to resume work
+6. **Create session-link file** (new master session support)
+7. **Update master session JSON with `workPeriods` entry**
+8. **Update current session JSON with `resumedFrom` field** (legacy, for backwards compatibility)
+9. Load session context to resume work
 
 ### File Operations
 
@@ -70,7 +72,16 @@ Read: .memoria/sessions/{year}/{month}/{filename}.json
 # Get interactions from SQLite (private, local only)
 sqlite3 .memoria/local.db "SELECT * FROM interactions WHERE session_id = '{id}' ORDER BY timestamp;"
 
-# Update CURRENT session with resumedFrom
+# Create session-link file (NEW - master session support)
+# This links current Claude session to the master memoria session
+Write: .memoria/session-links/{current_session_short_id}.json
+  → {"masterSessionId": "{resumed_session_id}", "claudeSessionId": "{current_full_session_id}", "linkedAt": "{now}"}
+
+# Update MASTER session with workPeriods entry (NEW)
+Edit: .memoria/sessions/{master_year}/{master_month}/{master_id}.json
+  → Add entry to workPeriods array: {"claudeSessionId": "{current_full_session_id}", "startedAt": "{now}", "endedAt": null}
+
+# Update CURRENT session with resumedFrom (legacy, for backwards compatibility)
 Edit: .memoria/sessions/{current_year}/{current_month}/{current_id}.json
   → Add "resumedFrom": "{resumed_session_id}"
 
@@ -198,19 +209,65 @@ If you're resuming a session created by another team member, interactions won't 
 - SQLite contains interactions (local, private)
 - Always update the CURRENT session's JSON with `resumedFrom` to track session chains.
 
-## Session Chain Tracking
+## Session Chain Tracking (Master Session Support)
 
-When resuming session `abc123` in a new session `xyz789`:
+When resuming session `abc123` (master) in a new Claude session `xyz789`:
 
-1. Read current session path from additionalContext
-2. Update current session JSON:
-   ```json
-   {
-     "id": "xyz789",
-     "resumedFrom": "abc123",
-     ...
-   }
-   ```
-3. This creates a chain: `xyz789 ← abc123`
+### Step 1: Create session-link file
 
-The chain allows tracking related sessions over time.
+```bash
+# Create .memoria/session-links/ directory if not exists
+mkdir -p .memoria/session-links/
+
+# Write session-link file
+Write: .memoria/session-links/xyz78901.json
+```
+
+```json
+{
+  "masterSessionId": "abc12345",
+  "claudeSessionId": "xyz78901-38e9-464d-9b7c-a9cdca203b5e",
+  "linkedAt": "2026-01-27T09:10:00Z"
+}
+```
+
+### Step 2: Update master session workPeriods
+
+```bash
+Edit: .memoria/sessions/{year}/{month}/abc12345.json
+```
+
+Add to `workPeriods` array:
+```json
+{
+  "workPeriods": [
+    {"claudeSessionId": "abc12345-...", "startedAt": "...", "endedAt": "..."},
+    {"claudeSessionId": "xyz78901-...", "startedAt": "2026-01-27T09:10:00Z", "endedAt": null}
+  ]
+}
+```
+
+### Step 3: Update current session (legacy, backwards compatibility)
+
+```bash
+Edit: .memoria/sessions/{year}/{month}/xyz78901.json
+```
+
+```json
+{
+  "id": "xyz78901",
+  "resumedFrom": "abc12345",
+  ...
+}
+```
+
+### Result
+
+- **session-link file**: Links Claude session → memoria master session
+- **workPeriods**: Tracks all work periods in the master session
+- **resumedFrom**: Legacy chain tracking (backwards compatible)
+
+This design allows:
+1. Multiple Claude sessions to contribute to one logical memoria session
+2. `/memoria:save` to merge all data into the master session
+3. Dashboard to show unified conversation history

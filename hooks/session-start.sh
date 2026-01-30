@@ -42,6 +42,7 @@ memoria_dir="${cwd}/.memoria"
 sessions_dir="${memoria_dir}/sessions"
 rules_dir="${memoria_dir}/rules"
 patterns_dir="${memoria_dir}/patterns"
+session_links_dir="${memoria_dir}/session-links"
 
 # Check if memoria is initialized
 if [ ! -d "$memoria_dir" ]; then
@@ -89,6 +90,22 @@ if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
         # https://github.com/user/repo.git → user/repo
         # Extract user/repo from SSH or HTTPS URL (BSD sed compatible)
         repository=$(echo "$git_remote_url" | sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|' | sed 's/\.git$//')
+    fi
+fi
+
+# ============================================
+# Check session-links for master session
+# ============================================
+master_session_id=""
+master_session_path=""
+session_link_file="${session_links_dir}/${file_id}.json"
+
+if [ -f "$session_link_file" ]; then
+    master_session_id=$(jq -r '.masterSessionId // empty' "$session_link_file" 2>/dev/null || echo "")
+    if [ -n "$master_session_id" ]; then
+        # Find master session file
+        master_session_path=$(find "$sessions_dir" -name "${master_session_id}.json" -type f 2>/dev/null | head -1)
+        echo "[memoria] Session linked to master: ${master_session_id}" >&2
     fi
 fi
 
@@ -192,6 +209,34 @@ else
 
     echo "$session_json" > "$session_path"
     echo "[memoria] Session initialized: ${session_path}" >&2
+fi
+
+# ============================================
+# Update master session workPeriods (if linked)
+# ============================================
+if [ -n "$master_session_id" ] && [ -n "$master_session_path" ] && [ -f "$master_session_path" ]; then
+    # Use full session_id for consistency with session-end.sh
+    claude_session_id="${session_id:-$session_short_id}"
+
+    # Check if workPeriod already exists for this claudeSessionId (prevent duplicates on clear/compact)
+    existing_period=$(jq --arg cid "$claude_session_id" '.workPeriods // [] | map(select(.claudeSessionId == $cid and .endedAt == null)) | length' "$master_session_path" 2>/dev/null || echo "0")
+
+    if [ "$existing_period" = "0" ]; then
+        # Add new workPeriod entry to master session
+        jq --arg claudeSessionId "$claude_session_id" \
+           --arg startedAt "$now" '
+            .workPeriods = ((.workPeriods // []) + [{
+                claudeSessionId: $claudeSessionId,
+                startedAt: $startedAt,
+                endedAt: null
+            }]) |
+            .updatedAt = $startedAt
+        ' "$master_session_path" > "${master_session_path}.tmp" \
+            && mv "${master_session_path}.tmp" "$master_session_path"
+        echo "[memoria] Master session workPeriods updated: ${master_session_path}" >&2
+    else
+        echo "[memoria] Master session workPeriod already exists for this Claude session" >&2
+    fi
 fi
 
 # Get relative path for additionalContext

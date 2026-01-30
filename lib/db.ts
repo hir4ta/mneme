@@ -175,6 +175,72 @@ export function getInteractionsByOwner(
 }
 
 /**
+ * Get interactions for multiple sessions (for master session support)
+ * Returns interactions from all specified session IDs, ordered by timestamp.
+ * Note: Use getInteractionsBySessionIdsAndOwner for security when exposing to API.
+ */
+export function getInteractionsBySessionIds(
+  db: DatabaseSync,
+  sessionIds: string[],
+): Interaction[] {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+
+  // Build parameterized query with placeholders
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders})
+    ORDER BY timestamp ASC, session_id ASC, role ASC
+  `);
+  return stmt.all(...sessionIds) as Interaction[];
+}
+
+/**
+ * Get interactions for multiple sessions owned by specific user
+ * This should be used for API endpoints to ensure security.
+ */
+export function getInteractionsBySessionIdsAndOwner(
+  db: DatabaseSync,
+  sessionIds: string[],
+  owner: string,
+): Interaction[] {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders}) AND owner = ?
+    ORDER BY timestamp ASC, session_id ASC, role ASC
+  `);
+  return stmt.all(...sessionIds, owner) as Interaction[];
+}
+
+/**
+ * Check if user owns any interactions for multiple sessions
+ */
+export function hasInteractionsForSessionIds(
+  db: DatabaseSync,
+  sessionIds: string[],
+  owner: string,
+): boolean {
+  if (sessionIds.length === 0) {
+    return false;
+  }
+
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT COUNT(*) as count FROM interactions
+    WHERE session_id IN (${placeholders}) AND owner = ?
+  `);
+  const result = stmt.get(...sessionIds, owner) as { count: number };
+  return result.count > 0;
+}
+
+/**
  * Check if user owns any interactions for a session
  */
 export function hasInteractions(
@@ -260,10 +326,7 @@ export function searchInteractions(
 /**
  * Delete interactions for a session
  */
-export function deleteInteractions(
-  db: DatabaseSync,
-  sessionId: string,
-): void {
+export function deleteInteractions(db: DatabaseSync, sessionId: string): void {
   const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
   stmt.run(sessionId);
 }
