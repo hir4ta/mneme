@@ -381,7 +381,6 @@ export function SessionDetailPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [interactions, setInteractions] = useState<InteractionFromSQLite[]>([]);
-  const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -397,21 +396,17 @@ export function SessionDetailPage() {
       setSession(sessionData);
       setTags(tagsData.tags || []);
 
-      // Fetch interactions from SQLite (owner-restricted)
+      // Fetch interactions from SQLite
       try {
         const interactionsData = await getSessionInteractions(id);
         if (interactionsData) {
           setInteractions(interactionsData.interactions);
-          setIsOwner(interactionsData.isOwner);
         } else {
-          // Not owner - no access to interactions
           setInteractions([]);
-          setIsOwner(false);
         }
       } catch {
-        // Failed to fetch interactions - treat as not owner
+        // Failed to fetch interactions
         setInteractions([]);
-        setIsOwner(false);
       }
 
       setError(null);
@@ -587,48 +582,46 @@ export function SessionDetailPage() {
                 </div>
               </div>
 
-              {/* Delete Session - only for owner */}
-              {isOwner && (
-                <div className="pt-2 border-t">
-                  {!deleteConfirm ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteConfirm(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      {t("detail.deleteSession")}
-                    </Button>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs text-destructive">
-                        {t("detail.deleteConfirmMessage")}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="flex-1"
-                          onClick={handleDelete}
-                          disabled={deleting}
-                        >
-                          {deleting ? tc("deleting") : tc("delete")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setDeleteConfirm(false)}
-                          disabled={deleting}
-                        >
-                          {tc("cancel")}
-                        </Button>
-                      </div>
+              {/* Delete Session */}
+              <div className="pt-2 border-t">
+                {!deleteConfirm ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteConfirm(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t("detail.deleteSession")}
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-destructive">
+                      {t("detail.deleteConfirmMessage")}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                      >
+                        {deleting ? tc("deleting") : tc("delete")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setDeleteConfirm(false)}
+                        disabled={deleting}
+                      >
+                        {tc("cancel")}
+                      </Button>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -644,11 +637,9 @@ export function SessionDetailPage() {
                 <TabsTrigger value="context">
                   {t("detail.sessionContext")}
                 </TabsTrigger>
-                {isOwner && (
-                  <TabsTrigger value="interactions">
-                    {t("detail.interactions")} ({interactionCount})
-                  </TabsTrigger>
-                )}
+                <TabsTrigger value="interactions">
+                  {t("detail.interactions")} ({interactionCount})
+                </TabsTrigger>
               </TabsList>
               <Link
                 to="/"
@@ -670,39 +661,37 @@ export function SessionDetailPage() {
               </Card>
             </TabsContent>
 
-            {/* Interactions Tab - only shown if user is owner */}
-            {isOwner && (
-              <TabsContent
-                value="interactions"
-                className="flex-1 min-h-0 data-[state=inactive]:hidden"
-              >
-                <Card className="h-full flex flex-col py-0 gap-0">
-                  <CardContent className="py-4 flex-1 overflow-y-auto">
-                    {interactionCount > 0 ? (
-                      <div className="space-y-6">
-                        {interactions.map((interaction) =>
-                          interaction.isCompactSummary ? (
-                            <CompactSummaryCard
-                              key={interaction.id}
-                              interaction={interaction}
-                            />
-                          ) : (
-                            <InteractionCard
-                              key={interaction.id}
-                              interaction={interaction}
-                            />
-                          ),
-                        )}
-                      </div>
-                    ) : (
-                      <div className="py-8 text-center text-muted-foreground">
-                        {t("detail.noInteractions")}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+            {/* Interactions Tab */}
+            <TabsContent
+              value="interactions"
+              className="flex-1 min-h-0 data-[state=inactive]:hidden"
+            >
+              <Card className="h-full flex flex-col py-0 gap-0">
+                <CardContent className="py-4 flex-1 overflow-y-auto">
+                  {interactionCount > 0 ? (
+                    <div className="space-y-6">
+                      {interactions.map((interaction) =>
+                        interaction.isCompactSummary ? (
+                          <CompactSummaryCard
+                            key={interaction.id}
+                            interaction={interaction}
+                          />
+                        ) : (
+                          <InteractionCard
+                            key={interaction.id}
+                            interaction={interaction}
+                          />
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-muted-foreground">
+                      {t("detail.noInteractions")}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </div>

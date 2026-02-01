@@ -181,7 +181,6 @@ export interface InteractionFromSQLite {
 export interface SessionInteractionsResponse {
   interactions: InteractionFromSQLite[];
   count: number;
-  isOwner: boolean;
 }
 
 export async function getSessionInteractions(
