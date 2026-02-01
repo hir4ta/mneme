@@ -3611,7 +3611,7 @@ app.delete("/api/sessions/:id", async (c) => {
     if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
-    safeParseJsonFile(filePath);
+    const sessionData = safeParseJsonFile(filePath);
     const db = openLocalDatabase(getProjectRoot());
     let interactionCount = 0;
     if (db) {
@@ -3632,6 +3632,12 @@ app.delete("/api/sessions/:id", async (c) => {
       const linkPath = path3.join(sessionLinksDir, `${id}.json`);
       if (fs4.existsSync(linkPath)) {
         fs4.unlinkSync(linkPath);
+      }
+      if (sessionData?.createdAt) {
+        const date = new Date(sessionData.createdAt);
+        const year = date.getFullYear().toString();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        rebuildSessionIndexForMonth(mnemeDir2, year, month);
       }
     }
     return c.json({

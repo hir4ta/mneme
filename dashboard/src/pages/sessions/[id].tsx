@@ -527,7 +527,7 @@ export function SessionDetailPage() {
     setDeleting(true);
     try {
       await deleteSession(id);
-      invalidateSessions();
+      invalidateSessions(id);
       navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete session");

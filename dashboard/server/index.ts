@@ -20,6 +20,7 @@ import {
   readRecentSessionIndexes,
   rebuildAllDecisionIndexes,
   rebuildAllSessionIndexes,
+  rebuildSessionIndexForMonth,
 } from "../../lib/index/manager.js";
 
 // =============================================================================
@@ -426,8 +427,11 @@ app.delete("/api/sessions/:id", async (c) => {
       return c.json({ error: "Session not found" }, 404);
     }
 
-    // Read session (for potential future use)
-    safeParseJsonFile<{ context?: { projectDir?: string } }>(filePath);
+    // Read session to get createdAt for index update
+    const sessionData = safeParseJsonFile<{
+      context?: { projectDir?: string };
+      createdAt?: string;
+    }>(filePath);
 
     // Count interactions in local DB
     const db = openLocalDatabase(getProjectRoot());
@@ -457,6 +461,14 @@ app.delete("/api/sessions/:id", async (c) => {
       const linkPath = path.join(sessionLinksDir, `${id}.json`);
       if (fs.existsSync(linkPath)) {
         fs.unlinkSync(linkPath);
+      }
+
+      // Rebuild index for the month of the deleted session
+      if (sessionData?.createdAt) {
+        const date = new Date(sessionData.createdAt);
+        const year = date.getFullYear().toString();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        rebuildSessionIndexForMonth(mnemeDir, year, month);
       }
     }
 
