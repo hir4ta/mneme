@@ -328,11 +328,11 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
     merged_count=$(echo "$merged_json" | jq 'length')
     backup_count=$(echo "$backup_json" | jq 'if type == "array" then length else 0 end')
 
-    # Clear existing interactions for this session (will be replaced) - delete both session IDs to avoid duplicates
-    sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
-
     # Insert merged interactions into SQLite (using memoria_session_id for consistency)
+    # Only delete and replace if we have new data - prevents data loss when extraction fails
     if [ "$merged_count" -gt 0 ]; then
+        # Clear existing interactions for this session (will be replaced)
+        sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id IN ('${memoria_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
         echo "$merged_json" | jq -c '.[]' | while read -r interaction; do
             timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
             user_content=$(echo "$interaction" | jq -r '.user // ""')
