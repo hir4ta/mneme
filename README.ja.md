@@ -1,18 +1,22 @@
 # mneme
 
-> **⚠️ 破壊的変更 (v0.17.0)**: `memoria` から `mneme` に名称変更しました。
-> `@hir4ta/memoria` からアップグレードする場合は再インストールしてください：
-> ```bash
-> claude mcp remove mneme-search mneme-db
-> claude plugin remove @hir4ta/memoria
-> claude plugin add @hir4ta/mneme
-> ```
-> データディレクトリも変更: `.memoria/` → `.mneme/`
-> 手動でリネーム: `mv .memoria .mneme`
+[![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
+[![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
 
 Claude Codeの長期記憶を実現するプラグイン
 
 セッションの自動保存、インテリジェントな記憶検索、Webダッシュボードでの管理を提供します。
+
+> [!IMPORTANT]
+> **破壊的変更 (v0.17.0)**: `memoria` から `mneme` に名称変更しました。
+>
+> `@hir4ta/memoria` からアップグレードする場合は、Claude Code内で再インストール：
+> ```
+> /plugin marketplace add hir4ta/mneme-marketplace
+> /plugin install mneme@mneme-marketplace
+> ```
+> データディレクトリも変更: `.memoria/` → `.mneme/`
+> 手動でリネーム: `mv .memoria .mneme`
 
 ## 機能
 

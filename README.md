@@ -1,18 +1,22 @@
 # mneme
 
-> **⚠️ Breaking Change (v0.17.0)**: Renamed from `memoria` to `mneme`.
-> If upgrading from `@hir4ta/memoria`, please reinstall:
-> ```bash
-> claude mcp remove mneme-search mneme-db
-> claude plugin remove @hir4ta/memoria
-> claude plugin add @hir4ta/mneme
-> ```
-> Data directory changed: `.memoria/` → `.mneme/`
-> Rename manually: `mv .memoria .mneme`
+[![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
+[![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
 
 Long-term memory plugin for Claude Code
 
 Provides automatic session saving, intelligent memory search, and web dashboard management.
+
+> [!IMPORTANT]
+> **Breaking Change (v0.17.0)**: Renamed from `memoria` to `mneme`.
+>
+> If upgrading from `@hir4ta/memoria`, please reinstall in Claude Code:
+> ```
+> /plugin marketplace add hir4ta/mneme-marketplace
+> /plugin install mneme@mneme-marketplace
+> ```
+> Data directory changed: `.memoria/` → `.mneme/`
+> Rename manually: `mv .memoria .mneme`
 
 ## Features
 
