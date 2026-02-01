@@ -1,4 +1,4 @@
--- memoria SQLite Schema (v2)
+-- memoria SQLite Schema (v3)
 -- Project-local database for private interactions
 -- Location: .memoria/local.db
 
@@ -14,9 +14,11 @@ CREATE TABLE IF NOT EXISTS interactions (
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
     content TEXT NOT NULL,
     thinking TEXT,
-    tool_calls TEXT,
+    tool_calls TEXT,                         -- JSON: ツール詳細、planMode情報
     timestamp TEXT NOT NULL,
     is_compact_summary INTEGER DEFAULT 0,
+    agent_id TEXT,                           -- サブエージェントID（NULLならメイン）
+    agent_type TEXT,                         -- サブエージェントタイプ（Explore, Plan, Bash等）
     created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -25,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
 CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp);
 CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
 CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
+CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);
 
 -- pre_compact_backups: Auto-Compact前のバックアップ
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
@@ -81,5 +84,5 @@ CREATE TABLE IF NOT EXISTS schema_version (
     applied_at TEXT DEFAULT (datetime('now'))
 );
 
--- スキーマバージョン 2（グローバルDB対応）
-INSERT OR IGNORE INTO schema_version (version) VALUES (2);
+-- スキーマバージョン 3（サブエージェント・ツール詳細対応）
+INSERT OR IGNORE INTO schema_version (version) VALUES (3);

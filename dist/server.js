@@ -3808,13 +3808,39 @@ app.get("/api/sessions/:id/interactions", async (c) => {
         if (currentInteraction) {
           groupedInteractions.push(currentInteraction);
         }
+        let hasPlanMode;
+        let planTools;
+        let toolsUsed;
+        let toolDetails;
+        if (interaction.tool_calls) {
+          try {
+            const metadata = JSON.parse(interaction.tool_calls);
+            if (metadata.hasPlanMode) {
+              hasPlanMode = true;
+              planTools = metadata.planTools || [];
+            }
+            if (metadata.toolsUsed && Array.isArray(metadata.toolsUsed) && metadata.toolsUsed.length > 0) {
+              toolsUsed = metadata.toolsUsed;
+            }
+            if (metadata.toolDetails && Array.isArray(metadata.toolDetails) && metadata.toolDetails.length > 0) {
+              toolDetails = metadata.toolDetails;
+            }
+          } catch {
+          }
+        }
         currentInteraction = {
           id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
           timestamp: interaction.timestamp,
           user: interaction.content,
           assistant: "",
           thinking: null,
-          isCompactSummary: !!interaction.is_compact_summary
+          isCompactSummary: !!interaction.is_compact_summary,
+          ...hasPlanMode !== void 0 && { hasPlanMode },
+          ...planTools !== void 0 && planTools.length > 0 && { planTools },
+          ...toolsUsed !== void 0 && toolsUsed.length > 0 && { toolsUsed },
+          ...toolDetails !== void 0 && toolDetails.length > 0 && { toolDetails },
+          ...interaction.agent_id && { agentId: interaction.agent_id },
+          ...interaction.agent_type && { agentType: interaction.agent_type }
         };
       } else if (interaction.role === "assistant" && currentInteraction) {
         currentInteraction.assistant = interaction.content;
@@ -4208,14 +4234,13 @@ app.get("/api/stats/overview", async (c) => {
   try {
     const sessionsIndex = readAllSessionIndexes(memoriaDir2);
     const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
+    const validSessions = sessionsIndex.items.filter(
+      (session) => session.interactionCount > 0 || session.hasSummary === true
+    );
     const sessionTypeCount = {};
-    for (const session of sessionsIndex.items) {
+    for (const session of validSessions) {
       const type = session.sessionType || "unknown";
       sessionTypeCount[type] = (sessionTypeCount[type] || 0) + 1;
-    }
-    let totalInteractions = 0;
-    for (const session of sessionsIndex.items) {
-      totalInteractions += session.interactionCount || 0;
     }
     let totalPatterns = 0;
     const patternsByType = {};
@@ -4259,14 +4284,11 @@ app.get("/api/stats/overview", async (c) => {
     }
     return c.json({
       sessions: {
-        total: sessionsIndex.items.length,
+        total: validSessions.length,
         byType: sessionTypeCount
       },
       decisions: {
         total: decisionsIndex.items.length
-      },
-      interactions: {
-        total: totalInteractions
       },
       patterns: {
         total: totalPatterns,

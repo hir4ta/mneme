@@ -37,7 +37,10 @@
     "showThinking": "Show thinking",
     "hideThinking": "Hide thinking",
     "contextCompacted": "Context Compacted",
-    "summaryFromPreviousContext": "Summary from previous context"
+    "summaryFromPreviousContext": "Summary from previous context",
+    "planMode": "Plan Mode",
+    "showToolDetails": "Show tool calls",
+    "hideToolDetails": "Hide tool calls"
   },
   "types": {
     "decision": "Decision",

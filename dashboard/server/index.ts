@@ -684,6 +684,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
     const interactions = getInteractionsBySessionIds(db, sessionIds);
     db.close();
 
+    // Tool detail type
+    type ToolDetail = {
+      name: string;
+      detail: string | { type: string; prompt: string } | null;
+    };
+
     // Group by user/assistant pairs for better display
     const groupedInteractions: Array<{
       id: string;
@@ -692,6 +698,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       assistant: string;
       thinking: string | null;
       isCompactSummary: boolean;
+      hasPlanMode?: boolean;
+      planTools?: Array<{ name: string; count: number }>;
+      toolsUsed?: string[];
+      toolDetails?: ToolDetail[];
+      agentId?: string | null;
+      agentType?: string | null;
     }> = [];
 
     let currentInteraction: {
@@ -701,6 +713,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       assistant: string;
       thinking: string | null;
       isCompactSummary: boolean;
+      hasPlanMode?: boolean;
+      planTools?: Array<{ name: string; count: number }>;
+      toolsUsed?: string[];
+      toolDetails?: ToolDetail[];
+      agentId?: string | null;
+      agentType?: string | null;
     } | null = null;
 
     for (const interaction of interactions) {
@@ -709,6 +727,39 @@ app.get("/api/sessions/:id/interactions", async (c) => {
         if (currentInteraction) {
           groupedInteractions.push(currentInteraction);
         }
+
+        // Parse metadata from tool_calls column
+        let hasPlanMode: boolean | undefined;
+        let planTools: Array<{ name: string; count: number }> | undefined;
+        let toolsUsed: string[] | undefined;
+        let toolDetails: ToolDetail[] | undefined;
+
+        if (interaction.tool_calls) {
+          try {
+            const metadata = JSON.parse(interaction.tool_calls);
+            if (metadata.hasPlanMode) {
+              hasPlanMode = true;
+              planTools = metadata.planTools || [];
+            }
+            if (
+              metadata.toolsUsed &&
+              Array.isArray(metadata.toolsUsed) &&
+              metadata.toolsUsed.length > 0
+            ) {
+              toolsUsed = metadata.toolsUsed;
+            }
+            if (
+              metadata.toolDetails &&
+              Array.isArray(metadata.toolDetails) &&
+              metadata.toolDetails.length > 0
+            ) {
+              toolDetails = metadata.toolDetails;
+            }
+          } catch {
+            // Invalid JSON, skip metadata
+          }
+        }
+
         // Start new interaction
         currentInteraction = {
           id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
@@ -717,6 +768,13 @@ app.get("/api/sessions/:id/interactions", async (c) => {
           assistant: "",
           thinking: null,
           isCompactSummary: !!interaction.is_compact_summary,
+          ...(hasPlanMode !== undefined && { hasPlanMode }),
+          ...(planTools !== undefined && planTools.length > 0 && { planTools }),
+          ...(toolsUsed !== undefined && toolsUsed.length > 0 && { toolsUsed }),
+          ...(toolDetails !== undefined &&
+            toolDetails.length > 0 && { toolDetails }),
+          ...(interaction.agent_id && { agentId: interaction.agent_id }),
+          ...(interaction.agent_type && { agentType: interaction.agent_type }),
         };
       } else if (interaction.role === "assistant" && currentInteraction) {
         currentInteraction.assistant = interaction.content;
@@ -1232,17 +1290,16 @@ app.get("/api/stats/overview", async (c) => {
     const sessionsIndex = readAllSessionIndexes(memoriaDir);
     const decisionsIndex = readAllDecisionIndexes(memoriaDir);
 
-    // Count by session type
+    // Filter out empty sessions (no interactions and not saved)
+    const validSessions = sessionsIndex.items.filter(
+      (session) => session.interactionCount > 0 || session.hasSummary === true,
+    );
+
+    // Count by session type (using filtered sessions)
     const sessionTypeCount: Record<string, number> = {};
-    for (const session of sessionsIndex.items) {
+    for (const session of validSessions) {
       const type = session.sessionType || "unknown";
       sessionTypeCount[type] = (sessionTypeCount[type] || 0) + 1;
-    }
-
-    // Total interactions
-    let totalInteractions = 0;
-    for (const session of sessionsIndex.items) {
-      totalInteractions += session.interactionCount || 0;
     }
 
     // Count patterns
@@ -1293,14 +1350,11 @@ app.get("/api/stats/overview", async (c) => {
 
     return c.json({
       sessions: {
-        total: sessionsIndex.items.length,
+        total: validSessions.length,
         byType: sessionTypeCount,
       },
       decisions: {
         total: decisionsIndex.items.length,
-      },
-      interactions: {
-        total: totalInteractions,
       },
       patterns: {
         total: totalPatterns,

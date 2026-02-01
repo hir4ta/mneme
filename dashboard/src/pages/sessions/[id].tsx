@@ -1,4 +1,4 @@
-import { Link2, Trash2 } from "lucide-react";
+import { Bot, Brain, Link2, Search, Trash2, Wrench, Zap } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
@@ -91,7 +91,7 @@ function CompactSummaryCard({
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-xs text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 px-3 py-1.5 rounded-full flex items-center gap-2 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer"
         >
-          <span>⚡</span>
+          <Zap className="w-3 h-3" />
           <span className="font-medium">
             {t("interaction.contextCompacted")}
           </span>
@@ -129,21 +129,33 @@ function InteractionCard({
   const { t } = useTranslation("sessions");
   const [isExpanded, setIsExpanded] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
+  const [showToolDetails, setShowToolDetails] = useState(false);
 
   const timestamp = formatTimestamp(interaction.timestamp);
   const hasThinking =
     interaction.thinking && interaction.thinking.trim() !== "";
+  const hasToolDetails =
+    interaction.toolDetails && interaction.toolDetails.length > 0;
+  const isSubagent = !!interaction.agentId;
 
   // Check if user message is a command
   const parsedCommand = parseCommandMessage(interaction.user);
 
   return (
     <div className="space-y-3">
-      {/* Timestamp header */}
-      <div className="flex justify-center">
+      {/* Timestamp header with optional subagent badge */}
+      <div className="flex justify-center items-center gap-2">
         <span className="text-xs text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full">
           {timestamp}
         </span>
+        {isSubagent && (
+          <span className="text-xs text-cyan-700 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Bot className="w-3 h-3" />
+            <span className="font-medium">
+              {interaction.agentType || "Agent"}
+            </span>
+          </span>
+        )}
       </div>
 
       {/* User message - right aligned - modern dark slate */}
@@ -170,6 +182,43 @@ function InteractionCard({
           </div>
         )}
       </div>
+
+      {/* Plan mode indicator */}
+      {interaction.hasPlanMode && (
+        <div className="flex justify-center">
+          <div className="text-xs text-violet-700 dark:text-violet-400 bg-violet-100 dark:bg-violet-950/40 border border-violet-300 dark:border-violet-800 px-3 py-1.5 rounded-full flex items-center gap-2">
+            <Search className="w-3 h-3" />
+            <span className="font-medium">{t("interaction.planMode")}</span>
+            {interaction.planTools && interaction.planTools.length > 0 && (
+              <>
+                <span className="text-violet-500">·</span>
+                <span className="text-violet-600 dark:text-violet-500">
+                  {interaction.planTools
+                    .slice(0, 3)
+                    .map((t) => `${t.name}×${t.count}`)
+                    .join(", ")}
+                  {interaction.planTools.length > 3 && "..."}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tools used indicator (when not plan mode) */}
+      {!interaction.hasPlanMode &&
+        interaction.toolsUsed &&
+        interaction.toolsUsed.length > 0 && (
+          <div className="flex justify-center">
+            <div className="text-xs text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Wrench className="w-3 h-3" />
+              <span>{interaction.toolsUsed.slice(0, 4).join(", ")}</span>
+              {interaction.toolsUsed.length > 4 && (
+                <span>+{interaction.toolsUsed.length - 4}</span>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Assistant response - left aligned - Claude cream/beige */}
       {interaction.assistant && (
@@ -208,7 +257,7 @@ function InteractionCard({
               onClick={() => setShowThinking(!showThinking)}
               className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 mb-1"
             >
-              <span className="text-amber-500">💭</span>
+              <Brain className="w-3 h-3 text-amber-500" />
               {showThinking
                 ? t("interaction.hideThinking")
                 : t("interaction.showThinking")}
@@ -220,6 +269,53 @@ function InteractionCard({
                   content={interaction.thinking || ""}
                   className="text-xs text-amber-800 dark:text-amber-200 prose-headings:text-amber-800 dark:prose-headings:text-amber-200 prose-code:text-amber-700 dark:prose-code:text-amber-300"
                 />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tool Details (expandable) */}
+      {hasToolDetails && (
+        <div className="flex justify-start">
+          <div className="max-w-[85%]">
+            <button
+              type="button"
+              onClick={() => setShowToolDetails(!showToolDetails)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 mb-1"
+            >
+              <Zap className="w-3 h-3 text-blue-500" />
+              {showToolDetails
+                ? t("interaction.hideToolDetails")
+                : t("interaction.showToolDetails")}
+              <span className="text-stone-400">
+                ({interaction.toolDetails?.length})
+              </span>
+            </button>
+
+            {showToolDetails && (
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-2">
+                <div className="space-y-1 font-mono text-xs">
+                  {interaction.toolDetails?.map((tool, idx) => (
+                    <div
+                      key={`${tool.name}-${idx}`}
+                      className="flex items-start gap-2 text-blue-800 dark:text-blue-200"
+                    >
+                      <span className="text-blue-600 dark:text-blue-400 font-semibold shrink-0">
+                        {tool.name}
+                      </span>
+                      <span className="text-blue-700 dark:text-blue-300 break-all">
+                        {typeof tool.detail === "string"
+                          ? tool.detail.length > 80
+                            ? `${tool.detail.substring(0, 80)}...`
+                            : tool.detail
+                          : tool.detail
+                            ? JSON.stringify(tool.detail)
+                            : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

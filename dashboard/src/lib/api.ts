@@ -168,6 +168,12 @@ export async function getCurrentUser(): Promise<{ user: string }> {
   return res.json();
 }
 
+// Tool detail for tracking what Claude executed
+export interface ToolDetail {
+  name: string;
+  detail: string | { type: string; prompt: string } | null;
+}
+
 // Session Interactions (from SQLite, owner-restricted)
 export interface InteractionFromSQLite {
   id: string;
@@ -176,6 +182,12 @@ export interface InteractionFromSQLite {
   assistant: string;
   thinking: string | null;
   isCompactSummary: boolean;
+  hasPlanMode?: boolean;
+  planTools?: { name: string; count: number }[];
+  toolsUsed?: string[];
+  toolDetails?: ToolDetail[];
+  agentId?: string | null;
+  agentType?: string | null;
 }
 
 export interface SessionInteractionsResponse {

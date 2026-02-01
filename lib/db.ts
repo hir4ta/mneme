@@ -54,6 +54,8 @@ export interface Interaction {
   tool_calls?: string | null;
   timestamp: string;
   is_compact_summary?: number;
+  agent_id?: string | null;
+  agent_type?: string | null;
   created_at?: string;
 }
 

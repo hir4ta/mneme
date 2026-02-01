@@ -125,12 +125,15 @@ CREATE TABLE IF NOT EXISTS interactions (
     tool_calls TEXT,
     timestamp TEXT NOT NULL,
     is_compact_summary INTEGER DEFAULT 0,
+    agent_id TEXT,
+    agent_type TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
 CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
 CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
+CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);
 
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -148,6 +151,15 @@ CREATE TABLE IF NOT EXISTS migrations (
     migrated_at TEXT DEFAULT (datetime('now'))
 );
 SQLEOF
+        fi
+    else
+        # Migrate existing database: add agent_id and agent_type columns if not exist
+        has_agent_id=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM pragma_table_info('interactions') WHERE name='agent_id';" 2>/dev/null || echo "0")
+        if [ "$has_agent_id" = "0" ]; then
+            sqlite3 "$db_path" "ALTER TABLE interactions ADD COLUMN agent_id TEXT;" 2>/dev/null || true
+            sqlite3 "$db_path" "ALTER TABLE interactions ADD COLUMN agent_type TEXT;" 2>/dev/null || true
+            sqlite3 "$db_path" "CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);" 2>/dev/null || true
+            echo "[memoria] Database migrated: added agent_id, agent_type columns" >&2
         fi
     fi
     # Configure pragmas
@@ -188,6 +200,25 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             } | select(.thinking != "" or .text != "")
         ] as $all_assistant |
 
+        # Detect plan mode: find EnterPlanMode and ExitPlanMode tool calls
+        [.[] | select(.type == "assistant") | . as $msg |
+            ($msg.message.content // []) | .[] |
+            select(.type == "tool_use" and (.name == "EnterPlanMode" or .name == "ExitPlanMode")) |
+            {timestamp: $msg.timestamp, tool: .name}
+        ] as $plan_events |
+
+        # Tool usage during plan mode (between EnterPlanMode and ExitPlanMode)
+        (if ($plan_events | length) >= 2 then
+            ($plan_events | map(select(.tool == "EnterPlanMode")) | .[0].timestamp // null) as $plan_start |
+            ($plan_events | map(select(.tool == "ExitPlanMode")) | .[0].timestamp // null) as $plan_end |
+            if $plan_start and $plan_end then
+                [.[] | select(.type == "assistant" and .timestamp > $plan_start and .timestamp < $plan_end) |
+                    .message.content[]? | select(.type == "tool_use") |
+                    {name: .name, input_keys: (.input | keys)}
+                ] | group_by(.name) | map({name: .[0].name, count: length}) | sort_by(-.count)
+            else [] end
+        else [] end) as $plan_tools |
+
         # Tool usage summary
         [.[] | select(.type == "assistant") | .message.content[]? | select(.type == "tool_use") | .name] |
         group_by(.) | map({name: .[0], count: length}) | sort_by(-.count) as $tool_usage |
@@ -199,6 +230,34 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             (if $i + 1 < ($user_messages | length) then $user_messages[$i + 1].timestamp else "9999-12-31T23:59:59Z" end) as $next_user_ts |
             # Collect all assistant responses between this user message and next
             [$all_assistant[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] as $turn_responses |
+
+            # Check if this turn includes plan mode
+            ([$plan_events[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] | length > 0) as $has_plan |
+
+            # Collect tool details used in this turn
+            ([.[] | select(.type == "assistant" and .timestamp > $user.timestamp and .timestamp < $next_user_ts) |
+                .message.content[]? | select(.type == "tool_use") |
+                {
+                    name: .name,
+                    detail: (
+                        if .name == "Bash" then (.input.command // null)
+                        elif .name == "Read" then (.input.file_path // null)
+                        elif .name == "Edit" then (.input.file_path // null)
+                        elif .name == "Write" then (.input.file_path // null)
+                        elif .name == "Glob" then (.input.pattern // null)
+                        elif .name == "Grep" then (.input.pattern // null)
+                        elif .name == "Task" then {type: (.input.subagent_type // null), prompt: ((.input.prompt // "")[:50])}
+                        elif .name == "WebSearch" then (.input.query // null)
+                        elif .name == "WebFetch" then (.input.url // null)
+                        else null
+                        end
+                    )
+                }
+            ]) as $tool_details |
+
+            # Collect tool names used in this turn (for backwards compatibility)
+            ($tool_details | map(.name) | unique) as $tools_used |
+
             if ($turn_responses | length) > 0 then (
                 {
                     id: ("int-" + (($i + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end)),
@@ -206,7 +265,11 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
                     user: $user.content,
                     thinking: ([$turn_responses[].thinking | select(. != "")] | join("\n")),
                     assistant: ([$turn_responses[].text | select(. != "")] | join("\n"))
-                } + (if $user.isCompactSummary then {isCompactSummary: true} else {} end)
+                }
+                + (if $user.isCompactSummary then {isCompactSummary: true} else {} end)
+                + (if $has_plan then {hasPlanMode: true, planTools: $plan_tools} else {} end)
+                + (if ($tools_used | length) > 0 then {toolsUsed: $tools_used} else {} end)
+                + (if ($tool_details | length) > 0 then {toolDetails: $tool_details} else {} end)
             ) else empty end
         ] as $interactions |
 
@@ -277,13 +340,17 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
             assistant_content=$(echo "$interaction" | jq -r '.assistant // ""')
             is_compact=$(echo "$interaction" | jq -r 'if .isCompactSummary then 1 else 0 end')
 
+            # Create metadata JSON for tool_calls column (includes planMode info and tool details)
+            metadata_json=$(echo "$interaction" | jq -c '{hasPlanMode: (.hasPlanMode // false), planTools: (.planTools // []), toolsUsed: (.toolsUsed // []), toolDetails: (.toolDetails // [])}')
+            metadata_escaped="${metadata_json//\'/\'\'}"
+
             # Escape single quotes for SQL
             user_content_escaped="${user_content//\'/\'\'}"
             thinking_escaped="${thinking//\'/\'\'}"
             assistant_escaped="${assistant_content//\'/\'\'}"
 
-            # Insert user message with project/repository info
-            sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${timestamp}', ${is_compact});" 2>/dev/null || true
+            # Insert user message with project/repository info and metadata
+            sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${metadata_escaped}', '${timestamp}', ${is_compact});" 2>/dev/null || true
 
             # Insert assistant response with project/repository info
             if [ -n "$assistant_content" ]; then
@@ -329,6 +396,144 @@ else
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
     echo "[memoria] Session completed (no transcript): ${session_file}" >&2
+fi
+
+# ============================================
+# Process subagent transcripts
+# ============================================
+if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    transcript_dir=$(dirname "$transcript_path")
+    subagents_dir="${transcript_dir}/subagents"
+
+    if [ -d "$subagents_dir" ]; then
+        subagent_count=0
+        for subagent_file in "$subagents_dir"/agent-*.jsonl; do
+            [ -f "$subagent_file" ] || continue
+
+            # Extract agent ID from filename (agent-a61bd5d.jsonl -> a61bd5d)
+            agent_filename=$(basename "$subagent_file")
+            agent_id="${agent_filename#agent-}"
+            agent_id="${agent_id%.jsonl}"
+
+            # Extract agent type from the first user message (Task prompt)
+            agent_type=$(jq -r '[.[] | select(.type == "user" and (.message.content | type) == "string")] | .[0].message.content // ""' "$subagent_file" 2>/dev/null | head -c 50)
+
+            # Determine agent type from the parent's Task tool call if possible
+            detected_type=$(jq -r --arg aid "$agent_id" '
+                [.[] | select(.type == "assistant") | .message.content[]? |
+                    select(.type == "tool_use" and .name == "Task") |
+                    select(.id | contains($aid) or (.input.description // "") | contains($aid)) |
+                    .input.subagent_type // "unknown"
+                ] | .[0] // "unknown"
+            ' "$transcript_path" 2>/dev/null || echo "unknown")
+
+            if [ "$detected_type" = "unknown" ] || [ "$detected_type" = "null" ]; then
+                # Try to detect from subagent filename patterns
+                case "$agent_filename" in
+                    *explore*|*Explore*) detected_type="Explore" ;;
+                    *plan*|*Plan*) detected_type="Plan" ;;
+                    *bash*|*Bash*) detected_type="Bash" ;;
+                    *compact*) detected_type="compact" ;;
+                    *) detected_type="general" ;;
+                esac
+            fi
+
+            # Extract interactions from subagent transcript
+            subagent_json=$(cat "$subagent_file" | jq -s '
+                # User messages (first one is the task prompt)
+                [.[] | select(
+                    .type == "user" and
+                    .message.role == "user" and
+                    (.message.content | type) == "string"
+                ) | {
+                    timestamp: .timestamp,
+                    content: .message.content
+                }] as $user_messages |
+
+                # All assistant messages with thinking or text
+                [.[] | select(.type == "assistant") | . as $msg |
+                    ($msg.message.content // []) |
+                    {
+                        timestamp: $msg.timestamp,
+                        thinking: ([.[] | select(.type == "thinking") | .thinking] | join("\n")),
+                        text: ([.[] | select(.type == "text") | .text] | join("\n"))
+                    } | select(.thinking != "" or .text != "")
+                ] as $all_assistant |
+
+                # Build interactions
+                [range(0; $user_messages | length) | . as $i |
+                    $user_messages[$i] as $user |
+                    (if $i + 1 < ($user_messages | length) then $user_messages[$i + 1].timestamp else "9999-12-31T23:59:59Z" end) as $next_user_ts |
+                    [$all_assistant[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] as $turn_responses |
+
+                    # Collect tool details
+                    ([.[] | select(.type == "assistant" and .timestamp > $user.timestamp and .timestamp < $next_user_ts) |
+                        .message.content[]? | select(.type == "tool_use") |
+                        {
+                            name: .name,
+                            detail: (
+                                if .name == "Bash" then (.input.command // null)
+                                elif .name == "Read" then (.input.file_path // null)
+                                elif .name == "Edit" then (.input.file_path // null)
+                                elif .name == "Write" then (.input.file_path // null)
+                                elif .name == "Glob" then (.input.pattern // null)
+                                elif .name == "Grep" then (.input.pattern // null)
+                                else null
+                                end
+                            )
+                        }
+                    ]) as $tool_details |
+
+                    if ($turn_responses | length) > 0 then (
+                        {
+                            id: ("sub-" + (($i + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end)),
+                            timestamp: $user.timestamp,
+                            user: $user.content,
+                            thinking: ([$turn_responses[].thinking | select(. != "")] | join("\n")),
+                            assistant: ([$turn_responses[].text | select(. != "")] | join("\n")),
+                            toolsUsed: ($tool_details | map(.name) | unique),
+                            toolDetails: $tool_details
+                        }
+                    ) else empty end
+                ]
+            ' 2>/dev/null || echo '[]')
+
+            # Insert subagent interactions into SQLite
+            subagent_interaction_count=$(echo "$subagent_json" | jq 'length')
+            if [ "$subagent_interaction_count" -gt 0 ]; then
+                echo "$subagent_json" | jq -c '.[]' | while read -r interaction; do
+                    timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
+                    user_content=$(echo "$interaction" | jq -r '.user // ""')
+                    thinking=$(echo "$interaction" | jq -r '.thinking // ""')
+                    assistant_content=$(echo "$interaction" | jq -r '.assistant // ""')
+
+                    # Create metadata JSON
+                    metadata_json=$(echo "$interaction" | jq -c '{toolsUsed: (.toolsUsed // []), toolDetails: (.toolDetails // [])}')
+                    metadata_escaped="${metadata_json//\'/\'\'}"
+
+                    # Escape single quotes
+                    user_content_escaped="${user_content//\'/\'\'}"
+                    thinking_escaped="${thinking//\'/\'\'}"
+                    assistant_escaped="${assistant_content//\'/\'\'}"
+                    agent_id_escaped="${agent_id//\'/\'\'}"
+                    detected_type_escaped="${detected_type//\'/\'\'}"
+
+                    # Insert user message with agent info
+                    sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary, agent_id, agent_type) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${metadata_escaped}', '${timestamp}', 0, '${agent_id_escaped}', '${detected_type_escaped}');" 2>/dev/null || true
+
+                    # Insert assistant response with agent info
+                    if [ -n "$assistant_content" ]; then
+                        sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary, agent_id, agent_type) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0, '${agent_id_escaped}', '${detected_type_escaped}');" 2>/dev/null || true
+                    fi
+                done
+                subagent_count=$((subagent_count + 1))
+            fi
+        done
+
+        if [ "$subagent_count" -gt 0 ]; then
+            echo "[memoria] Processed ${subagent_count} subagent(s) for session: ${memoria_session_id}" >&2
+        fi
+    fi
 fi
 
 # ============================================

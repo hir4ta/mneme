@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface OverviewStats {
   sessions: { total: number; byType: Record<string, number> };
   decisions: { total: number };
-  interactions: { total: number };
   patterns: { total: number; byType: Record<string, number> };
   rules: { total: number; byType: Record<string, number> };
 }
@@ -174,10 +173,9 @@ export function StatsPage() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {overviewLoading ? (
           <>
-            <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -200,10 +198,6 @@ export function StatsPage() {
             <StatCard
               title={t("totalRules")}
               value={overview?.rules?.total || 0}
-            />
-            <StatCard
-              title={t("totalInteractions")}
-              value={overview?.interactions.total || 0}
             />
           </>
         )}

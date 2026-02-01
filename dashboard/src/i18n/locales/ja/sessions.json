@@ -35,7 +35,10 @@
     "showThinking": "思考を表示",
     "hideThinking": "思考を非表示",
     "contextCompacted": "コンテキスト圧縮",
-    "summaryFromPreviousContext": "前のコンテキストからの要約"
+    "summaryFromPreviousContext": "前のコンテキストからの要約",
+    "planMode": "計画モード",
+    "showToolDetails": "ツール実行を表示",
+    "hideToolDetails": "ツール実行を非表示"
   },
   "types": {
     "decision": "意思決定",
