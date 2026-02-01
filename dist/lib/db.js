@@ -140,7 +140,7 @@ function getInteractionsBySessionIds(db, sessionIds) {
   const stmt = db.prepare(`
     SELECT * FROM interactions
     WHERE session_id IN (${placeholders})
-    ORDER BY timestamp ASC, session_id ASC, role ASC
+    ORDER BY timestamp ASC, id ASC
   `);
   return stmt.all(...sessionIds);
 }
@@ -152,7 +152,7 @@ function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
   const stmt = db.prepare(`
     SELECT * FROM interactions
     WHERE session_id IN (${placeholders}) AND owner = ?
-    ORDER BY timestamp ASC, session_id ASC, role ASC
+    ORDER BY timestamp ASC, id ASC
   `);
   return stmt.all(...sessionIds, owner);
 }
