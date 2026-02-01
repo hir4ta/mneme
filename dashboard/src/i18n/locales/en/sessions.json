@@ -6,7 +6,7 @@
   "searchPlaceholder": "Search sessions...",
   "untitled": "Untitled session",
   "noSessionsFound": "No sessions found.",
-  "noSessionsDescription": "Sessions will appear here after using Claude Code with the memoria plugin.",
+  "noSessionsDescription": "Sessions will appear here after using Claude Code with the mneme plugin.",
   "noMatchingFilters": "No sessions match your filters.",
   "interactionCount": "{{count}} interaction",
   "interactionCount_other": "{{count}} interactions",

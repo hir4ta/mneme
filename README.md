@@ -1,4 +1,14 @@
-# memoria
+# mneme
+
+> **⚠️ Breaking Change (v0.17.0)**: Renamed from `memoria` to `mneme`.
+> If upgrading from `@hir4ta/memoria`, please reinstall:
+> ```bash
+> claude mcp remove mneme-search mneme-db
+> claude plugin remove @hir4ta/memoria
+> claude plugin add @hir4ta/mneme
+> ```
+> Data directory changed: `.memoria/` → `.mneme/`
+> Rename manually: `mv .memoria .mneme`
 
 Long-term memory plugin for Claude Code
 
@@ -10,13 +20,13 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 - **Auto-save interactions**: Conversations auto-saved at session end (jq-based, reliable)
 - **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
 - **Backup on PreCompact**: Interactions backed up before Auto-Compact (context 95% full)
-- **Full data extraction**: Save summary, decisions, patterns, and rules with `/memoria:save`
-- **Memory-informed planning**: Design and plan with past knowledge via `/memoria:plan`
-- **Session Resume**: Resume past sessions with `/memoria:resume` (with chain tracking)
+- **Full data extraction**: Save summary, decisions, patterns, and rules with `/mneme:save`
+- **Memory-informed planning**: Design and plan with past knowledge via `/mneme:plan`
+- **Session Resume**: Resume past sessions with `/mneme:resume` (with chain tracking)
 - **Session Suggestion**: Recent 3 sessions shown at session start
 - **Rule-based Review**: Code review based on `dev-rules.json` / `review-guidelines.json`
-- **GitHub PR Review**: Review GitHub PRs with `/memoria:review <PR URL>`
-- **Knowledge Harvesting**: Extract rules and patterns from PR comments with `/memoria:harvest`
+- **GitHub PR Review**: Review GitHub PRs with `/mneme:review <PR URL>`
+- **Knowledge Harvesting**: Extract rules and patterns from PR comments with `/mneme:harvest`
 - **Weekly Reports**: Auto-generate Markdown reports aggregating review results
 - **Web Dashboard**: View sessions, decisions, patterns, and rules
 
@@ -29,7 +39,7 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 - **Repeated Mistakes**: Same errors solved multiple times without learning
 - **Hard to Reuse Knowledge**: Past interactions and decisions are hard to search
 
-### What memoria Enables
+### What mneme Enables
 
 - **Auto-save + Resume** enables context continuity across sessions
 - **Auto memory search** brings relevant past knowledge to every conversation
@@ -39,7 +49,7 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 
 ### Team Benefits
 
-- `.memoria/` JSON files are **Git-manageable**, enabling team sharing of decisions and session history
+- `.mneme/` JSON files are **Git-manageable**, enabling team sharing of decisions and session history
 - Quickly understand background and context during onboarding or reviews
 
 ## Installation
@@ -70,18 +80,18 @@ winget install jqlang.jq
 Run the following in Claude Code:
 
 ```bash
-/plugin marketplace add hir4ta/memoria-marketplace
-/plugin install memoria@memoria-marketplace
+/plugin marketplace add hir4ta/mneme-marketplace
+/plugin install mneme@mneme-marketplace
 ```
 
-Then initialize memoria in your project:
+Then initialize mneme in your project:
 
 ```bash
 # In Claude Code
-/init-memoria
+/init-mneme
 
 # Or from terminal
-npx @hir4ta/memoria --init
+npx @hir4ta/mneme --init
 ```
 
 Restart Claude Code to complete installation.
@@ -91,7 +101,7 @@ Restart Claude Code to complete installation.
 Run the following in Claude Code:
 
 ```bash
-/plugin marketplace update memoria-marketplace
+/plugin marketplace update mneme-marketplace
 ```
 
 Restart Claude Code.
@@ -100,7 +110,7 @@ Restart Claude Code.
 
 1. Run `/plugin`
 2. Select Marketplaces tab
-3. Select `memoria-marketplace`
+3. Select `mneme-marketplace`
 4. Enable "Enable auto-update"
 
 This will auto-update on Claude Code startup.
@@ -115,7 +125,7 @@ This will auto-update on Claude Code startup.
 
 ### Auto Memory Search
 
-**On every prompt**, memoria automatically:
+**On every prompt**, mneme automatically:
 1. Extracts keywords from your message
 2. Searches sessions/decisions/patterns
 3. Injects relevant context to Claude
@@ -132,22 +142,22 @@ At session start, recent 3 sessions are shown:
   2. [def456] Dashboard UI improvements (2026-01-26, main)
   3. [ghi789] Bug fixes (2026-01-25, main)
 
-Continue from a previous session? Use `/memoria:resume <id>`
+Continue from a previous session? Use `/mneme:resume <id>`
 ```
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `/init-memoria` | Initialize memoria in current project |
-| `/memoria:save` | Extract all data: summary, decisions, patterns, rules |
-| `/memoria:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
-| `/memoria:resume [id]` | Resume session (show list if ID omitted) |
-| `/memoria:search "query"` | Search sessions, decisions, and patterns |
-| `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review |
-| `/memoria:review <PR URL>` | Review GitHub PR |
-| `/memoria:harvest <PR URL>` | Extract knowledge from PR review comments |
-| `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
+| `/init-mneme` | Initialize mneme in current project |
+| `/mneme:save` | Extract all data: summary, decisions, patterns, rules |
+| `/mneme:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
+| `/mneme:resume [id]` | Resume session (show list if ID omitted) |
+| `/mneme:search "query"` | Search sessions, decisions, and patterns |
+| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review |
+| `/mneme:review <PR URL>` | Review GitHub PR |
+| `/mneme:harvest <PR URL>` | Extract knowledge from PR review comments |
+| `/mneme:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
 
 ### Recommended Workflow
 
@@ -165,7 +175,7 @@ plan → implement → save → review
 Run in your project directory:
 
 ```bash
-npx @hir4ta/memoria --dashboard
+npx @hir4ta/mneme --dashboard
 ```
 
 Open <http://localhost:7777> in your browser.
@@ -173,7 +183,7 @@ Open <http://localhost:7777> in your browser.
 Change port:
 
 ```bash
-npx @hir4ta/memoria --dashboard --port 8080
+npx @hir4ta/mneme --dashboard --port 8080
 ```
 
 #### Screens
@@ -191,21 +201,21 @@ The dashboard supports English and Japanese. Click the language toggle (EN/JA) i
 
 ### MCP Tools
 
-memoria provides MCP servers with search and database tools callable directly from Claude Code:
+mneme provides MCP servers with search and database tools callable directly from Claude Code:
 
 | Server | Tool | Description |
 |--------|------|-------------|
-| memoria-search | `memoria_search` | Unified search (FTS5, tag alias resolution) |
-| memoria-search | `memoria_get_session` | Get session details |
-| memoria-search | `memoria_get_decision` | Get decision details |
-| memoria-db | `memoria_list_projects` | List all projects |
-| memoria-db | `memoria_cross_project_search` | Cross-project search |
+| mneme-search | `mneme_search` | Unified search (FTS5, tag alias resolution) |
+| mneme-search | `mneme_get_session` | Get session details |
+| mneme-search | `mneme_get_decision` | Get decision details |
+| mneme-db | `mneme_list_projects` | List all projects |
+| mneme-db | `mneme_cross_project_search` | Cross-project search |
 
 ### Subagents
 
 | Agent | Description |
 |-------|-------------|
-| `memoria-reviewer` | Rule-based code review (isolated context) |
+| `mneme-reviewer` | Rule-based code review (isolated context) |
 
 ## How It Works
 
@@ -229,22 +239,22 @@ flowchart TB
     end
 
     subgraph manual [Manual Actions]
-        L["memoria:save"] --> M[Extract decisions + patterns + rules]
-        N["memoria:plan"] --> O[Memory-informed design + tasks]
+        L["mneme:save"] --> M[Extract decisions + patterns + rules]
+        N["mneme:plan"] --> O[Memory-informed design + tasks]
     end
 
     subgraph resume [Session Resume]
-        P["memoria:resume"] --> Q[Select from list]
+        P["mneme:resume"] --> Q[Select from list]
         Q --> R[Restore past context + set resumedFrom]
     end
 
     subgraph review [Review]
-        S["memoria:review"] --> T[Rule-based findings]
+        S["mneme:review"] --> T[Rule-based findings]
         T --> U[Save review results]
     end
 
     subgraph dashboard [Dashboard]
-        V["npx @hir4ta/memoria -d"] --> W[Open in browser]
+        V["npx @hir4ta/mneme -d"] --> W[Open in browser]
         W --> X[View all data]
     end
 
@@ -256,12 +266,12 @@ flowchart TB
 
 ## Data Storage
 
-memoria uses a **hybrid storage** approach for privacy and collaboration:
+mneme uses a **hybrid storage** approach for privacy and collaboration:
 
 | Storage | Location | Purpose | Sharing |
 |---------|----------|---------|---------|
-| **JSON** | `.memoria/` | Summaries, decisions, patterns, rules | Git-managed (team shared) |
-| **SQLite** | `.memoria/local.db` | Interactions, backups | Local only (gitignored) |
+| **JSON** | `.mneme/` | Summaries, decisions, patterns, rules | Git-managed (team shared) |
+| **SQLite** | `.mneme/local.db` | Interactions, backups | Local only (gitignored) |
 
 **Why hybrid?**
 - **Privacy**: Conversation history (interactions) stays local (gitignored)
@@ -270,9 +280,9 @@ memoria uses a **hybrid storage** approach for privacy and collaboration:
 
 ### Directory Structure
 
-**Project-local (`.memoria/`)**:
+**Project-local (`.mneme/`)**:
 ```text
-.memoria/
+.mneme/
 ├── local.db          # SQLite with interactions (gitignored)
 ├── tags.json         # Tag master file (93 tags, prevents notation variations)
 ├── sessions/         # Session metadata (YYYY/MM) - Git-managed
@@ -288,7 +298,7 @@ memoria uses a **hybrid storage** approach for privacy and collaboration:
 └── reports/          # Weekly reports (YYYY-MM) - Git-managed
 ```
 
-The `local.db` file is automatically added to `.memoria/.gitignore` to keep conversations private.
+The `local.db` file is automatically added to `.mneme/.gitignore` to keep conversations private.
 
 ### Session JSON Schema
 
@@ -377,7 +387,7 @@ The `sessionType` field classifies the session type.
 
 ### Tags
 
-Tags are selected from `.memoria/tags.json` to prevent notation variations (e.g., "フロント" → "frontend"). The master file contains 93 tags across 11 categories:
+Tags are selected from `.mneme/tags.json` to prevent notation variations (e.g., "フロント" → "frontend"). The master file contains 93 tags across 11 categories:
 
 - **domain**: frontend, backend, api, db, infra, mobile, cli
 - **phase**: feature, bugfix, refactor, test, docs
@@ -392,8 +402,8 @@ This project follows [Semantic Versioning](https://semver.org/).
 **⚠️ While in 0.x (pre-1.0), breaking changes may occur between minor versions.**
 
 If you encounter issues after an update:
-1. Check the [releases](https://github.com/hir4ta/memoria/releases) for migration notes
-2. Re-initialize with `npx @hir4ta/memoria --init` if needed
+1. Check the [releases](https://github.com/hir4ta/mneme/releases) for migration notes
+2. Re-initialize with `npx @hir4ta/mneme --init` if needed
 
 ## License
 

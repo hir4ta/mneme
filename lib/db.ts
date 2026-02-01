@@ -1,8 +1,8 @@
 /**
- * memoria SQLite Database Utilities
+ * mneme SQLite Database Utilities
  *
  * Project-local database for interactions.
- * Location: {projectPath}/.memoria/local.db
+ * Location: {projectPath}/.mneme/local.db
  *
  * Uses Node.js built-in sqlite module (node:sqlite) for platform independence.
  */
@@ -91,10 +91,10 @@ export function getCurrentUser(): string {
 
 /**
  * Get local database path for a project
- * Location: {projectPath}/.memoria/local.db
+ * Location: {projectPath}/.mneme/local.db
  */
 export function getLocalDbPath(projectPath: string): string {
-  return join(projectPath, ".memoria", "local.db");
+  return join(projectPath, ".mneme", "local.db");
 }
 
 /**
@@ -110,9 +110,9 @@ function configurePragmas(db: DatabaseSyncType): void {
  * Initialize local database for a project with schema
  */
 export function initLocalDatabase(projectPath: string): DatabaseSyncType {
-  const memoriaDir = join(projectPath, ".memoria");
-  if (!existsSync(memoriaDir)) {
-    mkdirSync(memoriaDir, { recursive: true });
+  const mnemeDir = join(projectPath, ".mneme");
+  if (!existsSync(mnemeDir)) {
+    mkdirSync(mnemeDir, { recursive: true });
   }
 
   const dbPath = getLocalDbPath(projectPath);

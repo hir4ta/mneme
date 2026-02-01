@@ -8,7 +8,7 @@ describe("utils", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "memoria-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mneme-test-"));
   });
 
   afterEach(() => {

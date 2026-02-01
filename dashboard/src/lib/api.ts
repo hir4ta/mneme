@@ -141,12 +141,12 @@ export async function getDecision(id: string): Promise<Decision> {
 }
 
 // Note: createDecision, updateDecision, deleteDecision removed - dashboard is read-only
-// Decisions are created via /memoria:save command
+// Decisions are created via /mneme:save command
 
 // Project info
 export async function getProjectInfo(): Promise<{
   projectRoot: string;
-  memoriaDir: string;
+  mnemeDir: string;
   exists: boolean;
 }> {
   const res = await fetch(`${API_BASE}/info`);

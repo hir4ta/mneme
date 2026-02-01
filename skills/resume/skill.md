@@ -7,19 +7,19 @@ description: |
 argument-hint: "[session-id]"
 ---
 
-# /memoria:resume
+# /mneme:resume
 
 Resume a previous session.
 
 ## Usage
 
 ```
-/memoria:resume              # Show recent sessions
-/memoria:resume <id>         # Resume specific session
-/memoria:resume --type=implementation  # Filter by session type
-/memoria:resume --tag=auth   # Filter by tag
-/memoria:resume --days=7     # Filter by last N days
-/memoria:resume --branch=feature/auth  # Filter by branch
+/mneme:resume              # Show recent sessions
+/mneme:resume <id>         # Resume specific session
+/mneme:resume --type=implementation  # Filter by session type
+/mneme:resume --tag=auth   # Filter by tag
+/mneme:resume --days=7     # Filter by last N days
+/mneme:resume --branch=feature/auth  # Filter by branch
 ```
 
 ### Filter Options
@@ -33,7 +33,7 @@ Resume a previous session.
 
 Multiple filters can be combined:
 ```
-/memoria:resume --type=implementation --days=14
+/mneme:resume --type=implementation --days=14
 ```
 
 ### Session Types
@@ -50,7 +50,7 @@ Multiple filters can be combined:
 
 ## Execution Steps
 
-1. Read all JSON files under `.memoria/sessions/` (including year/month folders)
+1. Read all JSON files under `.mneme/sessions/` (including year/month folders)
 2. Apply filters if specified:
    - `--type`: Match `summary.sessionType` or `sessionType` field
    - `--tag`: Match any tag in `tags` array
@@ -68,26 +68,26 @@ Multiple filters can be combined:
 
 ```bash
 # Get session list
-Glob: .memoria/sessions/**/*.json
+Glob: .mneme/sessions/**/*.json
 
 # Read each session file (metadata)
-Read: .memoria/sessions/{year}/{month}/{filename}.json
+Read: .mneme/sessions/{year}/{month}/{filename}.json
 
 # Get interactions from local SQLite (private, project-local)
-# Local DB location: .memoria/local.db
-sqlite3 ".memoria/local.db" "SELECT * FROM interactions WHERE session_id = '{id}' ORDER BY timestamp;"
+# Local DB location: .mneme/local.db
+sqlite3 ".mneme/local.db" "SELECT * FROM interactions WHERE session_id = '{id}' ORDER BY timestamp;"
 
 # Create session-link file (NEW - master session support)
-# This links current Claude session to the master memoria session
-Write: .memoria/session-links/{current_session_short_id}.json
+# This links current Claude session to the master mneme session
+Write: .mneme/session-links/{current_session_short_id}.json
   → {"masterSessionId": "{resumed_session_id}", "claudeSessionId": "{current_full_session_id}", "linkedAt": "{now}"}
 
 # Update MASTER session with workPeriods entry (NEW)
-Edit: .memoria/sessions/{master_year}/{master_month}/{master_id}.json
+Edit: .mneme/sessions/{master_year}/{master_month}/{master_id}.json
   → Add entry to workPeriods array: {"claudeSessionId": "{current_full_session_id}", "startedAt": "{now}", "endedAt": null}
 
 # Update CURRENT session with resumedFrom (legacy, for backwards compatibility)
-Edit: .memoria/sessions/{current_year}/{current_month}/{current_id}.json
+Edit: .mneme/sessions/{current_year}/{current_month}/{current_id}.json
   → Add "resumedFrom": "{resumed_session_id}"
 
 # Filter logic (pseudo-code)
@@ -189,7 +189,7 @@ Ready to continue?
 
 When resuming, inject context from JSON (metadata) and SQLite (interactions):
 
-### Structured Data (from JSON, set by /memoria:save):
+### Structured Data (from JSON, set by /mneme:save):
 1. **Summary**: title, goal, outcome, description, sessionType
 2. **Plan**: tasks, remaining → what was planned and what's left
 3. **Discussions**: decisions with reasoning and alternatives
@@ -206,7 +206,7 @@ When resuming, inject context from JSON (metadata) and SQLite (interactions):
 ### Interactions (from SQLite, auto-saved by SessionEnd):
 11. **Interactions**: Full conversation log with thinking (private, local only)
 
-**Privacy Note**: Interactions are stored in project-local SQLite (`.memoria/local.db`) and are private to each developer.
+**Privacy Note**: Interactions are stored in project-local SQLite (`.mneme/local.db`) and are private to each developer.
 If you're resuming a session created by another team member, interactions won't be available.
 
 **Important**:
@@ -221,11 +221,11 @@ When resuming session `abc123` (master) in a new Claude session `xyz789`:
 ### Step 1: Create session-link file
 
 ```bash
-# Create .memoria/session-links/ directory if not exists
-mkdir -p .memoria/session-links/
+# Create .mneme/session-links/ directory if not exists
+mkdir -p .mneme/session-links/
 
 # Write session-link file
-Write: .memoria/session-links/xyz78901.json
+Write: .mneme/session-links/xyz78901.json
 ```
 
 ```json
@@ -239,7 +239,7 @@ Write: .memoria/session-links/xyz78901.json
 ### Step 2: Update master session workPeriods
 
 ```bash
-Edit: .memoria/sessions/{year}/{month}/abc12345.json
+Edit: .mneme/sessions/{year}/{month}/abc12345.json
 ```
 
 Add to `workPeriods` array:
@@ -255,7 +255,7 @@ Add to `workPeriods` array:
 ### Step 3: Update current session (legacy, backwards compatibility)
 
 ```bash
-Edit: .memoria/sessions/{year}/{month}/xyz78901.json
+Edit: .mneme/sessions/{year}/{month}/xyz78901.json
 ```
 
 ```json
@@ -268,11 +268,11 @@ Edit: .memoria/sessions/{year}/{month}/xyz78901.json
 
 ### Result
 
-- **session-link file**: Links Claude session → memoria master session
+- **session-link file**: Links Claude session → mneme master session
 - **workPeriods**: Tracks all work periods in the master session
 - **resumedFrom**: Legacy chain tracking (backwards compatible)
 
 This design allows:
-1. Multiple Claude sessions to contribute to one logical memoria session
-2. `/memoria:save` to merge all data into the master session
+1. Multiple Claude sessions to contribute to one logical mneme session
+2. `/mneme:save` to merge all data into the master session
 3. Dashboard to show unified conversation history

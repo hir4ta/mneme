@@ -24,8 +24,8 @@ import {
 
 // =============================================================================
 // Note: Dashboard supports read and delete operations.
-// Create/update should be done via /memoria:* commands.
-// Data modifications should be done via /memoria:* commands.
+// Create/update should be done via /mneme:* commands.
+// Data modifications should be done via /mneme:* commands.
 // =============================================================================
 
 // =============================================================================
@@ -57,11 +57,11 @@ const app = new Hono();
 
 // Get project root from environment variable
 const getProjectRoot = () => {
-  return process.env.MEMORIA_PROJECT_ROOT || process.cwd();
+  return process.env.MNEME_PROJECT_ROOT || process.cwd();
 };
 
-const getMemoriaDir = () => {
-  return path.join(getProjectRoot(), ".memoria");
+const getMnemeDir = () => {
+  return path.join(getProjectRoot(), ".mneme");
 };
 
 const listJsonFiles = (dir: string): string[] => {
@@ -122,7 +122,7 @@ const findJsonFileById = (dir: string, id: string): string | null => {
   return null;
 };
 
-const rulesDir = () => path.join(getMemoriaDir(), "rules");
+const rulesDir = () => path.join(getMnemeDir(), "rules");
 
 // CORS for development (allow any localhost port)
 app.use(
@@ -220,7 +220,7 @@ app.get("/api/project", (c) => {
 app.get("/api/sessions", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   const params = parsePaginationParams(c);
 
   try {
@@ -230,12 +230,12 @@ app.get("/api/sessions", async (c) => {
     if (useIndex) {
       // Use allMonths to decide between recent or all indexes
       const index = params.allMonths
-        ? readAllSessionIndexes(memoriaDir)
-        : readRecentSessionIndexes(memoriaDir);
+        ? readAllSessionIndexes(mnemeDir)
+        : readRecentSessionIndexes(mnemeDir);
       items = index.items as Record<string, unknown>[];
     } else {
       // Fallback: read all files directly
-      const sessionsDir = path.join(memoriaDir, "sessions");
+      const sessionsDir = path.join(mnemeDir, "sessions");
       const files = listDatedJsonFiles(sessionsDir);
       if (files.length === 0) {
         return usePagination
@@ -319,10 +319,10 @@ app.get("/api/sessions", async (c) => {
 
 // Session Graph API - must be before /api/sessions/:id
 app.get("/api/sessions/graph", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   const showUntitled = c.req.query("showUntitled") === "true";
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir);
     // Filter out Untitled sessions for graph unless explicitly requested
     const filteredItems = showUntitled
       ? sessionsIndex.items
@@ -369,7 +369,7 @@ app.get("/api/sessions/graph", async (c) => {
 
 app.get("/api/sessions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
@@ -389,7 +389,7 @@ app.get("/api/sessions/:id", async (c) => {
 // Legacy: Get session markdown file (for backwards compatibility)
 app.get("/api/sessions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   try {
     const jsonPath = findJsonFileById(sessionsDir, id);
     if (!jsonPath) {
@@ -416,8 +416,8 @@ app.get("/api/sessions/:id/markdown", async (c) => {
 app.delete("/api/sessions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
   const dryRun = c.req.query("dry-run") === "true";
-  const memoriaDir = getMemoriaDir();
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const mnemeDir = getMnemeDir();
+  const sessionsDir = path.join(mnemeDir, "sessions");
 
   try {
     // Find JSON file
@@ -453,7 +453,7 @@ app.delete("/api/sessions/:id", async (c) => {
       }
 
       // Delete session-link if exists
-      const sessionLinksDir = path.join(memoriaDir, "session-links");
+      const sessionLinksDir = path.join(mnemeDir, "session-links");
       const linkPath = path.join(sessionLinksDir, `${id}.json`);
       if (fs.existsSync(linkPath)) {
         fs.unlinkSync(linkPath);
@@ -479,8 +479,8 @@ app.delete("/api/sessions", async (c) => {
   const repositoryFilter = c.req.query("repository");
   const beforeFilter = c.req.query("before");
 
-  const memoriaDir = getMemoriaDir();
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const mnemeDir = getMnemeDir();
+  const sessionsDir = path.join(mnemeDir, "sessions");
 
   try {
     // Get all session files
@@ -556,7 +556,7 @@ app.delete("/api/sessions", async (c) => {
         }
 
         // Delete session-link
-        const sessionLinksDir = path.join(memoriaDir, "session-links");
+        const sessionLinksDir = path.join(mnemeDir, "session-links");
         const linkPath = path.join(sessionLinksDir, `${session.id}.json`);
         if (fs.existsSync(linkPath)) {
           fs.unlinkSync(linkPath);
@@ -596,9 +596,9 @@ app.get("/api/current-user", async (c) => {
 // Supports master session: collects interactions from all linked sessions
 app.get("/api/sessions/:id/interactions", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const memoriaDir = getMemoriaDir();
-  const sessionLinksDir = path.join(memoriaDir, "session-links");
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const mnemeDir = getMnemeDir();
+  const sessionLinksDir = path.join(mnemeDir, "session-links");
+  const sessionsDir = path.join(mnemeDir, "sessions");
 
   try {
     // Find session file and get projectDir
@@ -801,7 +801,7 @@ app.get("/api/sessions/:id/interactions", async (c) => {
 app.get("/api/decisions", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   const params = parsePaginationParams(c);
 
   try {
@@ -810,12 +810,12 @@ app.get("/api/decisions", async (c) => {
     // Use index for listing (faster)
     if (useIndex) {
       const index = params.allMonths
-        ? readAllDecisionIndexes(memoriaDir)
-        : readRecentDecisionIndexes(memoriaDir);
+        ? readAllDecisionIndexes(mnemeDir)
+        : readRecentDecisionIndexes(mnemeDir);
       items = index.items as Record<string, unknown>[];
     } else {
       // Fallback: read all files directly
-      const decisionsDir = path.join(memoriaDir, "decisions");
+      const decisionsDir = path.join(mnemeDir, "decisions");
       const files = listDatedJsonFiles(decisionsDir);
       if (files.length === 0) {
         return usePagination
@@ -873,7 +873,7 @@ app.get("/api/decisions", async (c) => {
 
 app.get("/api/decisions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
@@ -891,16 +891,16 @@ app.get("/api/decisions/:id", async (c) => {
 });
 
 // Note: POST/PUT/DELETE for decisions removed - dashboard is read-only
-// Decisions are created via /memoria:save command
+// Decisions are created via /mneme:save command
 
 // Project info
 app.get("/api/info", async (c) => {
   const projectRoot = getProjectRoot();
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   return c.json({
     projectRoot,
-    memoriaDir,
-    exists: fs.existsSync(memoriaDir),
+    mnemeDir,
+    exists: fs.existsSync(mnemeDir),
   });
 });
 
@@ -952,7 +952,7 @@ app.put("/api/rules/:id", async (c) => {
 
 // Timeline API - セッションを時系列でグループ化
 app.get("/api/timeline", async (c) => {
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   try {
     const files = listDatedJsonFiles(sessionsDir);
     if (files.length === 0) {
@@ -996,7 +996,7 @@ app.get("/api/timeline", async (c) => {
 
 // Tag Network API - タグの共起ネットワーク
 app.get("/api/tag-network", async (c) => {
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   try {
     const files = listDatedJsonFiles(sessionsDir);
     const tagCounts: Map<string, number> = new Map();
@@ -1041,8 +1041,8 @@ app.get("/api/tag-network", async (c) => {
 // Decision Impact API - 決定の影響範囲
 app.get("/api/decisions/:id/impact", async (c) => {
   const decisionId = sanitizeId(c.req.param("id"));
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
-  const patternsDir = path.join(getMemoriaDir(), "patterns");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
+  const patternsDir = path.join(getMnemeDir(), "patterns");
 
   try {
     const impactedSessions: { id: string; title: string }[] = [];
@@ -1109,12 +1109,12 @@ const getOpenAIKey = (): string | null => {
 };
 
 app.get("/api/summary/weekly", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   const apiKey = getOpenAIKey();
 
   try {
-    const sessionsIndex = readRecentSessionIndexes(memoriaDir);
-    const decisionsIndex = readRecentDecisionIndexes(memoriaDir);
+    const sessionsIndex = readRecentSessionIndexes(mnemeDir);
+    const decisionsIndex = readRecentDecisionIndexes(mnemeDir);
 
     // Get last 7 days
     const now = new Date();
@@ -1176,8 +1176,8 @@ app.post("/api/summary/generate", async (c) => {
   const body = await c.req.json();
   const { sessionIds, prompt: customPrompt } = body;
 
-  const memoriaDir = getMemoriaDir();
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const mnemeDir = getMnemeDir();
+  const sessionsDir = path.join(mnemeDir, "sessions");
 
   try {
     const sessions: Record<string, unknown>[] = [];
@@ -1285,10 +1285,10 @@ async function generateAISummary(
 
 // Stats API
 app.get("/api/stats/overview", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir);
 
     // Filter out empty sessions (no interactions and not saved)
     const validSessions = sessionsIndex.items.filter(
@@ -1305,7 +1305,7 @@ app.get("/api/stats/overview", async (c) => {
     // Count patterns
     let totalPatterns = 0;
     const patternsByType: Record<string, number> = {};
-    const patternsPath = path.join(memoriaDir, "patterns");
+    const patternsPath = path.join(mnemeDir, "patterns");
     if (fs.existsSync(patternsPath)) {
       const patternFiles = listJsonFiles(patternsPath);
       for (const filePath of patternFiles) {
@@ -1327,7 +1327,7 @@ app.get("/api/stats/overview", async (c) => {
     // Count rules
     let totalRules = 0;
     const rulesByType: Record<string, number> = {};
-    const rulesPath = path.join(memoriaDir, "rules");
+    const rulesPath = path.join(mnemeDir, "rules");
     if (fs.existsSync(rulesPath)) {
       for (const ruleType of ["dev-rules", "review-guidelines"]) {
         const rulePath = path.join(rulesPath, `${ruleType}.json`);
@@ -1372,7 +1372,7 @@ app.get("/api/stats/overview", async (c) => {
 });
 
 app.get("/api/stats/activity", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
 
   // Prevent infinite loop with bounds checking
@@ -1380,8 +1380,8 @@ app.get("/api/stats/activity", async (c) => {
   const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
 
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir);
 
     // Calculate date range (include today)
     const now = new Date();
@@ -1432,9 +1432,9 @@ app.get("/api/stats/activity", async (c) => {
 });
 
 app.get("/api/stats/tags", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir);
 
     // Count tag usage
     const tagCount: Record<string, number> = {};
@@ -1458,7 +1458,7 @@ app.get("/api/stats/tags", async (c) => {
 });
 
 // Patterns API
-const patternsDir = () => path.join(getMemoriaDir(), "patterns");
+const patternsDir = () => path.join(getMnemeDir(), "patterns");
 
 app.get("/api/patterns", async (c) => {
   const dir = patternsDir();
@@ -1540,7 +1540,7 @@ app.get("/api/patterns/stats", async (c) => {
 });
 
 // Note: DELETE for patterns removed - dashboard is read-only
-// Patterns are managed via /memoria:save command
+// Patterns are managed via /mneme:save command
 
 // Export API
 function sessionToMarkdown(session: Record<string, unknown>): string {
@@ -1615,7 +1615,7 @@ function sessionToMarkdown(session: Record<string, unknown>): string {
   }
 
   lines.push("---");
-  lines.push("*Exported from memoria*");
+  lines.push("*Exported from mneme*");
 
   return lines.join("\n");
 }
@@ -1696,14 +1696,14 @@ function decisionToMarkdown(decision: Record<string, unknown>): string {
   }
 
   lines.push("---");
-  lines.push("*Exported from memoria*");
+  lines.push("*Exported from mneme*");
 
   return lines.join("\n");
 }
 
 app.get("/api/export/sessions/:id/markdown", async (c) => {
   const id = c.req.param("id");
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
 
   try {
     const filePath = findJsonFileById(sessionsDir, id);
@@ -1728,7 +1728,7 @@ app.get("/api/export/sessions/:id/markdown", async (c) => {
 
 app.get("/api/export/decisions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path.join(getMnemeDir(), "decisions");
 
   try {
     const filePath = findJsonFileById(decisionsDir, id);
@@ -1759,7 +1759,7 @@ app.post("/api/export/sessions/bulk", async (c) => {
     return c.json({ error: "No session IDs provided" }, 400);
   }
 
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   const markdowns: string[] = [];
 
   try {
@@ -1789,7 +1789,7 @@ app.post("/api/export/sessions/bulk", async (c) => {
 
 // Tags
 app.get("/api/tags", async (c) => {
-  const tagsPath = path.join(getMemoriaDir(), "tags.json");
+  const tagsPath = path.join(getMnemeDir(), "tags.json");
   try {
     if (!fs.existsSync(tagsPath)) {
       return c.json({ version: 1, tags: [] });
@@ -1807,10 +1807,10 @@ app.get("/api/tags", async (c) => {
 
 // Indexes
 app.get("/api/indexes/status", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir);
 
     return c.json({
       sessions: {
@@ -1833,11 +1833,11 @@ app.get("/api/indexes/status", async (c) => {
 });
 
 app.post("/api/indexes/rebuild", async (c) => {
-  const memoriaDir = getMemoriaDir();
+  const mnemeDir = getMnemeDir();
   try {
     // Rebuild all indexes by month
-    const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
-    const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+    const sessionIndexes = rebuildAllSessionIndexes(mnemeDir);
+    const decisionIndexes = rebuildAllDecisionIndexes(mnemeDir);
 
     // Count total items
     let sessionCount = 0;
@@ -1899,17 +1899,17 @@ const requestedPort = parseInt(process.env.PORT || "7777", 10);
 const maxPortAttempts = 10;
 
 // Initialize indexes on startup
-const memoriaDir = getMemoriaDir();
-if (fs.existsSync(memoriaDir)) {
+const mnemeDir = getMnemeDir();
+if (fs.existsSync(mnemeDir)) {
   try {
-    const sessionsIndex = readRecentSessionIndexes(memoriaDir, 1);
-    const decisionsIndex = readRecentDecisionIndexes(memoriaDir, 1);
+    const sessionsIndex = readRecentSessionIndexes(mnemeDir, 1);
+    const decisionsIndex = readRecentDecisionIndexes(mnemeDir, 1);
 
     // Rebuild if indexes are stale or missing
     if (isIndexStale(sessionsIndex) || isIndexStale(decisionsIndex)) {
       console.log("Building indexes...");
-      const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
-      const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+      const sessionIndexes = rebuildAllSessionIndexes(mnemeDir);
+      const decisionIndexes = rebuildAllDecisionIndexes(mnemeDir);
 
       let sessionCount = 0;
       for (const index of sessionIndexes.values()) {
@@ -1955,7 +1955,7 @@ async function startServer(port: number, attempt = 1): Promise<void> {
     });
 
     server.on("listening", () => {
-      console.log(`\nmemoria dashboard`);
+      console.log(`\nmneme dashboard`);
       console.log(`Project: ${getProjectRoot()}`);
       console.log(`URL: http://localhost:${port}\n`);
       resolve();

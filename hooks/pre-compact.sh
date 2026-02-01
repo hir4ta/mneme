@@ -2,9 +2,9 @@
 #
 # pre-compact.sh - Backup interactions before Auto-Compact
 #
-# Saves current interactions to project-local SQLite (.memoria/local.db)
+# Saves current interactions to project-local SQLite (.mneme/local.db)
 # pre_compact_backups table before context is compressed.
-# Does NOT create summary - summary creation is manual via /memoria:save.
+# Does NOT create summary - summary creation is manual via /mneme:save.
 #
 # Input (stdin): JSON with session_id, transcript_path, cwd, trigger
 # Output (stdout): JSON with {"continue": true}
@@ -34,15 +34,15 @@ if [ -z "$session_id" ]; then
 fi
 
 session_short_id="${session_id:0:8}"
-memoria_dir="${cwd}/.memoria"
-sessions_dir="${memoria_dir}/sessions"
-session_links_dir="${memoria_dir}/session-links"
+mneme_dir="${cwd}/.mneme"
+sessions_dir="${mneme_dir}/sessions"
+session_links_dir="${mneme_dir}/session-links"
 
 # Local database path (project-local)
-db_path="${memoria_dir}/local.db"
+db_path="${mneme_dir}/local.db"
 
 # The session ID to use for storing data (may be updated to master session ID)
-memoria_session_id="$session_short_id"
+mneme_session_id="$session_short_id"
 
 # First, try to find session file with current session ID
 session_file=$(find "$sessions_dir" -name "${session_short_id}.json" -type f 2>/dev/null | head -1)
@@ -55,8 +55,8 @@ if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
         if [ -n "$master_session_id" ]; then
             session_file=$(find "$sessions_dir" -type f -name "${master_session_id}.json" 2>/dev/null | head -1)
             if [ -n "$session_file" ] && [ -f "$session_file" ]; then
-                memoria_session_id="$master_session_id"
-                echo "[memoria] PreCompact: Using master session via session-link: ${master_session_id}" >&2
+                mneme_session_id="$master_session_id"
+                echo "[mneme] PreCompact: Using master session via session-link: ${master_session_id}" >&2
             fi
         fi
     fi
@@ -80,13 +80,13 @@ schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 
 # Initialize local SQLite database if not exists
 init_database() {
-    if [ ! -d "$memoria_dir" ]; then
-        mkdir -p "$memoria_dir"
+    if [ ! -d "$mneme_dir" ]; then
+        mkdir -p "$mneme_dir"
     fi
     if [ ! -f "$db_path" ]; then
         if [ -f "$schema_path" ]; then
             sqlite3 "$db_path" < "$schema_path"
-            echo "[memoria] Local SQLite database initialized: ${db_path}" >&2
+            echo "[mneme] Local SQLite database initialized: ${db_path}" >&2
         else
             # Minimal schema if schema.sql not found
             sqlite3 "$db_path" <<'SQLEOF'
@@ -127,7 +127,7 @@ SQLEOF
     sqlite3 "$db_path" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;" 2>/dev/null || true
 }
 
-echo "[memoria] PreCompact: Backing up interactions before Auto-Compact..." >&2
+echo "[mneme] PreCompact: Backing up interactions before Auto-Compact..." >&2
 
 # Extract current interactions from transcript (same logic as session-end.sh)
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
@@ -175,11 +175,11 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
         interactions_escaped="${interactions_json//\'/\'\'}"
 
         # Insert backup into local SQLite with project_path (use master session ID if linked)
-        sqlite3 "$db_path" "INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions) VALUES ('${memoria_session_id}', '${project_path_escaped}', '${owner}', '${interactions_escaped}');" 2>/dev/null || true
+        sqlite3 "$db_path" "INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions) VALUES ('${mneme_session_id}', '${project_path_escaped}', '${owner}', '${interactions_escaped}');" 2>/dev/null || true
 
-        echo "[memoria] PreCompact: Backed up ${interaction_count} interactions to local DB" >&2
+        echo "[mneme] PreCompact: Backed up ${interaction_count} interactions to local DB" >&2
     else
-        echo "[memoria] PreCompact: No interactions to backup" >&2
+        echo "[mneme] PreCompact: No interactions to backup" >&2
     fi
 fi
 

@@ -1,11 +1,11 @@
 {
   "title": "Decisions",
-  "subtitle": "Technical decisions extracted via /memoria:save with reasoning and alternatives.",
+  "subtitle": "Technical decisions extracted via /mneme:save with reasoning and alternatives.",
   "decisionCount": "{{count}} decision",
   "decisionCount_other": "{{count}} decisions",
   "searchPlaceholder": "Search decisions...",
   "noDecisionsFound": "No decisions found.",
-  "noDecisionsDescription": "Run /memoria:save to extract decisions from sessions.",
+  "noDecisionsDescription": "Run /mneme:save to extract decisions from sessions.",
   "noMatchingFilters": "No decisions match your filters.",
   "deleteTitle": "Delete decision?",
   "detail": {

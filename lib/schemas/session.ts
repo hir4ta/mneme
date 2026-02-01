@@ -77,7 +77,7 @@ export const PreCompactBackupSchema = z.object({
 
 export type PreCompactBackup = z.infer<typeof PreCompactBackupSchema>;
 
-// Structured data schemas (for /memoria:save)
+// Structured data schemas (for /mneme:save)
 // These were previously in YAML files, now integrated into Session JSON
 
 export const SessionSummarySchema = z.object({
@@ -226,7 +226,7 @@ export const SessionSchema = z.object({
   endedAt: z.string().optional(),
   updatedAt: z.string().optional(),
   context: SessionContextSchema,
-  // Search index fields (set by /memoria:save)
+  // Search index fields (set by /mneme:save)
   title: z.string(),
   tags: z.array(z.string()),
   // Auto-saved data (SessionEnd hook)
@@ -243,7 +243,7 @@ export const SessionSchema = z.object({
   preCompactBackups: z.array(PreCompactBackupSchema).optional(),
   // Status
   status: SessionStatusSchema.nullable().optional(),
-  // Structured data (set by /memoria:save, previously in YAML file)
+  // Structured data (set by /mneme:save, previously in YAML file)
   summary: SessionSummarySchema.optional(),
   plan: SessionPlanSchema.optional(),
   discussions: z.array(SessionDiscussionSchema).optional(),

@@ -13,7 +13,7 @@ export const SessionIndexItemSchema = z.object({
   user: z.string().optional(),
   interactionCount: z.number(),
   filePath: z.string(),
-  hasSummary: z.boolean().optional(), // true if session has been saved with /memoria:save
+  hasSummary: z.boolean().optional(), // true if session has been saved with /mneme:save
 });
 
 export type SessionIndexItem = z.infer<typeof SessionIndexItemSchema>;

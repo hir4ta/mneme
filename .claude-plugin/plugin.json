@@ -1,28 +1,28 @@
 {
-  "name": "memoria",
+  "name": "mneme",
   "description": "A plugin that provides long-term memory for Claude Code. It automatically saves context lost during auto-compact, offering features for session restoration, recording technical decisions, and learning developer patterns.",
-  "version": "0.16.6",
+  "version": "0.17.0",
   "author": {
     "name": "hir4ta"
   },
-  "homepage": "https://github.com/hir4ta/memoria",
-  "repository": "https://github.com/hir4ta/memoria",
+  "homepage": "https://github.com/hir4ta/mneme",
+  "repository": "https://github.com/hir4ta/mneme",
   "license": "MIT",
   "keywords": ["memory", "sessions", "decisions", "patterns", "dashboard"],
   "mcpServers": {
-    "memoria-search": {
+    "mneme-search": {
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/search-server.js"],
       "env": {
-        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}"
+        "MNEME_DATA_DIR": "${MNEME_DATA_DIR:-}"
       }
     },
-    "memoria-db": {
+    "mneme-db": {
       "command": "node",
       "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/db-server.js"],
       "env": {
-        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}",
-        "MEMORIA_PROJECT_PATH": "${PROJECT_DIR:-}"
+        "MNEME_DATA_DIR": "${MNEME_DATA_DIR:-}",
+        "MNEME_PROJECT_PATH": "${PROJECT_DIR:-}"
       }
     }
   }

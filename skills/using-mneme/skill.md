@@ -1,60 +1,60 @@
 ---
-name: using-memoria
+name: using-mneme
 description: |
-  Guide for using memoria plugin. Auto-loaded at session start to provide context.
+  Guide for using mneme plugin. Auto-loaded at session start to provide context.
 user-invocable: false
 ---
 
-# Using memoria
+# Using mneme
 
-memoria is a long-term memory plugin for Claude Code.
+mneme is a long-term memory plugin for Claude Code.
 
 ## Setup
 
-Initialize memoria in your project:
+Initialize mneme in your project:
 
 ```bash
 # From Claude Code (after /plugin add)
-/init-memoria
+/init-mneme
 
 # Or from terminal
-npx @hir4ta/memoria --init
+npx @hir4ta/mneme --init
 ```
 
-This creates the `.memoria/` directory with the required structure. memoria will not track sessions until initialized.
+This creates the `.mneme/` directory with the required structure. mneme will not track sessions until initialized.
 
 ## Features
 
 1. **Auto-save interactions**: Conversations auto-saved at session end (jq-based, no Claude needed)
 2. **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
-3. **Manual save**: `/memoria:save` for full data extraction (interactions, summary, decisions, patterns, rules)
-4. **Smart planning**: `/memoria:plan` for memory-informed design and task breakdown
-5. **Session resume**: `/memoria:resume` to restore past sessions with chain tracking
-6. **Knowledge search**: `/memoria:search` to find saved information
-7. **Rule-based review**: `/memoria:review` for code review based on rules (supports PR URLs)
-8. **Knowledge harvesting**: `/memoria:harvest` to extract rules/patterns from PR comments
-9. **Weekly reports**: `/memoria:report` to generate review summary
+3. **Manual save**: `/mneme:save` for full data extraction (interactions, summary, decisions, patterns, rules)
+4. **Smart planning**: `/mneme:plan` uses Claude Code's native plan mode with memory search
+5. **Session resume**: `/mneme:resume` to restore past sessions with chain tracking
+6. **Knowledge search**: `/mneme:search` to find saved information
+7. **Rule-based review**: `/mneme:review` for code review based on rules (supports PR URLs)
+8. **Knowledge harvesting**: `/mneme:harvest` to extract rules/patterns from PR comments
+9. **Weekly reports**: `/mneme:report` to generate review summary
 10. **Web dashboard**: Visual management of sessions and decisions
 
 ## Core Commands
 
 | Command | Description |
 |---------|-------------|
-| `/init-memoria` | Initialize memoria in current project |
-| `/memoria:save` | Save all data: interactions, summary, decisions, patterns, rules |
-| `/memoria:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
-| `/memoria:resume [id]` | Resume session (omit ID for list) |
-| `/memoria:search <query>` | Search knowledge |
-| `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based review |
-| `/memoria:review <PR URL>` | Review GitHub PR |
-| `/memoria:harvest <PR URL>` | Extract knowledge from PR review comments |
-| `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
+| `/init-mneme` | Initialize mneme in current project |
+| `/mneme:save` | Save all data: interactions, summary, decisions, patterns, rules |
+| `/mneme:plan [topic]` | Native plan mode + memory search + Socratic questions + design validation |
+| `/mneme:resume [id]` | Resume session (omit ID for list) |
+| `/mneme:search <query>` | Search knowledge |
+| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based review |
+| `/mneme:review <PR URL>` | Review GitHub PR |
+| `/mneme:harvest <PR URL>` | Extract knowledge from PR review comments |
+| `/mneme:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
 
 ## Session Saving
 
 ### Auto-Save (at Session End)
 
-**Interactions are auto-saved** by SessionEnd hook to `.memoria/local.db`:
+**Interactions are auto-saved** by SessionEnd hook to `.mneme/local.db`:
 
 ```
 [Session ends] → [SessionEnd hook] → [jq extracts from transcript] → [SQLite updated]
@@ -70,7 +70,7 @@ Automatically saved to local.db:
 automatically merges `preCompactBackups` with newly extracted interactions to preserve
 the complete conversation history.
 
-### Manual Save (`/memoria:save`)
+### Manual Save (`/mneme:save`)
 
 **Run anytime** to save all session data (no need to exit first):
 
@@ -95,7 +95,7 @@ Execute all phases in order:
 
 ### Auto Memory Search
 
-**On every prompt**, memoria automatically:
+**On every prompt**, mneme automatically:
 1. Extracts keywords from your message
 2. Searches sessions/decisions/patterns/rules
 3. Injects relevant context to Claude
@@ -108,23 +108,29 @@ This means past knowledge is always available without manual lookup.
 plan → implement → save → review
 ```
 
-1. **plan**: Design with memory lookup + Socratic questions + task breakdown
-2. **implement**: Follow the plan
+1. **plan**: `/mneme:plan` activates Claude Code's native plan mode
+   - Searches past decisions/patterns/rules
+   - Explores codebase (read-only)
+   - Asks clarifying questions (1 at a time)
+   - Presents design in sections for validation
+   - Writes design doc to `docs/plans/`
+   - Exits plan mode for approval
+2. **implement**: Follow the approved plan
 3. **save**: Extract decisions, patterns, rules
 4. **review**: Verify against plan and code quality
 
 ## Dashboard
 
 ```bash
-npx @hir4ta/memoria --dashboard
+npx @hir4ta/mneme --dashboard
 ```
 
 ## Data Location
 
-`.memoria/` directory stores all data:
+`.mneme/` directory stores all data:
 
 ```
-.memoria/
+.mneme/
 ├── local.db          # SQLite database (interactions - gitignored)
 ├── tags.json         # Tag master file
 ├── sessions/         # Session metadata (no interactions)
@@ -146,18 +152,18 @@ npx @hir4ta/memoria --dashboard
 
 | Field | Trigger | Destination |
 |-------|---------|-------------|
-| interactions | SessionEnd or /memoria:save | local.db |
-| files | SessionEnd or /memoria:save | sessions/*.json |
-| metrics | SessionEnd or /memoria:save | sessions/*.json |
-| title, tags | /memoria:save | sessions/*.json |
-| summary | /memoria:save | sessions/*.json |
-| discussions → decisions/ | /memoria:save | decisions/*.json |
-| errors → patterns/ | /memoria:save | patterns/*.json |
-| rules/ | /memoria:save | rules/*.json |
-| handoff | /memoria:save | sessions/*.json |
-| references | /memoria:save | sessions/*.json |
+| interactions | SessionEnd or /mneme:save | local.db |
+| files | SessionEnd or /mneme:save | sessions/*.json |
+| metrics | SessionEnd or /mneme:save | sessions/*.json |
+| title, tags | /mneme:save | sessions/*.json |
+| summary | /mneme:save | sessions/*.json |
+| discussions → decisions/ | /mneme:save | decisions/*.json |
+| errors → patterns/ | /mneme:save | patterns/*.json |
+| rules/ | /mneme:save | rules/*.json |
+| handoff | /mneme:save | sessions/*.json |
+| references | /mneme:save | sessions/*.json |
 
-**Note:** `/memoria:save` saves interactions to local.db immediately - no need to exit first.
+**Note:** `/mneme:save` saves interactions to local.db immediately - no need to exit first.
 
 ## tags.json (Tag Master)
 

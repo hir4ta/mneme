@@ -5,7 +5,7 @@
   "searchPlaceholder": "セッションを検索...",
   "untitled": "無題のセッション",
   "noSessionsFound": "セッションが見つかりません。",
-  "noSessionsDescription": "memoriaプラグインでClaude Codeを使用すると、ここにセッションが表示されます。",
+  "noSessionsDescription": "mnemeプラグインでClaude Codeを使用すると、ここにセッションが表示されます。",
   "noMatchingFilters": "フィルターに一致するセッションがありません。",
   "interactionCount": "{{count}}件のやり取り",
   "detail": {

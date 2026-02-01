@@ -3,7 +3,7 @@
 # post-tool-use.sh - Post-tool use hook for Bash operations
 #
 # This hook is called after Bash tool execution.
-# It detects errors, searches for matching patterns in memoria,
+# It detects errors, searches for matching patterns in mneme,
 # and suggests solutions from past error-solution patterns.
 #
 # Input (stdin): JSON with tool_name, tool_input, tool_response, cwd
@@ -32,7 +32,7 @@ fi
 if [[ "$exit_code" != "0" && -n "$stderr" ]]; then
   # Error detected - search for matching patterns first
 
-  patterns_dir="${cwd}/.memoria/patterns"
+  patterns_dir="${cwd}/.mneme/patterns"
   matched_solution=""
   matched_pattern=""
   matched_reasoning=""
@@ -85,7 +85,7 @@ if [[ "$exit_code" != "0" && -n "$stderr" ]]; then
     suggestion+="\\nApply this solution?"
   else
     # No match - just note the error
-    suggestion="Error detected (exit code: $exit_code). No matching pattern found in memoria."
+    suggestion="Error detected (exit code: $exit_code). No matching pattern found in mneme."
   fi
 
   # Output with additionalContext

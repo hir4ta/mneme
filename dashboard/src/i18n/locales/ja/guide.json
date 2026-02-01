@@ -1,0 +1,519 @@
+{
+  "nav": {
+    "overview": "概要",
+    "workflow": "ワークフロー",
+    "commands": "コマンド",
+    "useCases": "ユースケース",
+    "faq": "FAQ"
+  },
+  "common": {
+    "toggle": "開閉",
+    "expand": "展開",
+    "collapse": "折りたたむ",
+    "usage": "使い方",
+    "details": "詳細",
+    "options": "オプション",
+    "phases": "フェーズ",
+    "question": "Q",
+    "answer": "A"
+  },
+  "overview": {
+    "title": "mneme ガイド",
+    "subtitle": "Claude Code の長期記憶プラグイン",
+    "description": "mneme はセッションの知識、設計決定、開発者パターンをキャプチャし、Git互換のJSONファイルに保存します。Webダッシュボードで閲覧・管理できます。",
+    "features": {
+      "title": "主な機能",
+      "items": [
+        {
+          "title": "自動記憶検索",
+          "description": "各プロンプトで関連する過去のセッションや決定が自動的に注入されます"
+        },
+        {
+          "title": "セッション追跡",
+          "description": "会話はセッション終了時に自動保存され、完全なコンテキストが保持されます"
+        },
+        {
+          "title": "決定の記録",
+          "description": "理由と代替案を含む技術的決定がキャプチャされ、検索可能になります"
+        },
+        {
+          "title": "パターン学習",
+          "description": "エラーパターンとその解決策が将来の参照のために記録されます"
+        },
+        {
+          "title": "ルール管理",
+          "description": "開発ルールとレビューガイドラインが抽出され、適用されます"
+        },
+        {
+          "title": "コードレビュー",
+          "description": "ステージされた変更やGitHub PRに対応したルールベースのコードレビュー"
+        }
+      ]
+    },
+    "quickStart": {
+      "title": "クイックスタート",
+      "steps": [
+        {
+          "title": "mneme を初期化",
+          "description": "Claude Code で /init-mneme を実行、またはターミナルで npx @hir4ta/mneme --init",
+          "code": "/init-mneme"
+        },
+        {
+          "title": "作業を開始",
+          "description": "mneme は各プロンプトで過去の知識を自動検索し、セッション終了時に会話を自動保存します"
+        },
+        {
+          "title": "セッションデータを保存",
+          "description": "/mneme:save を実行して、セッションから決定、パターン、ルールを抽出します",
+          "code": "/mneme:save"
+        },
+        {
+          "title": "ダッシュボードで確認",
+          "description": "ダッシュボードを起動して、セッション、決定、パターンを閲覧します",
+          "code": "npx @hir4ta/mneme --dashboard"
+        }
+      ]
+    }
+  },
+  "workflow": {
+    "title": "推奨ワークフロー",
+    "subtitle": "plan → implement → save → review",
+    "intro": "このワークフローに従うことで、mneme のナレッジ管理の利点を最大化できます。",
+    "phases": [
+      {
+        "name": "Plan（計画）",
+        "command": "/mneme:plan",
+        "description": "記憶に基づいた設計から始めます。mneme は過去のセッションと決定を検索してコンテキストを提供します。",
+        "benefits": [
+          "関連する過去の決定が自動的に表示される",
+          "ソクラティック質問で要件が明確になる",
+          "タスク分割で整理された実装が可能"
+        ],
+        "example": "/mneme:plan \"認証機能を追加\""
+      },
+      {
+        "name": "Implement（実装）",
+        "command": null,
+        "description": "計画に従って機能を実装します。mneme の自動検索が作業中に関連するコンテキストを提供します。",
+        "benefits": [
+          "過去のパターンが実装をガイドする",
+          "エラー解決策がすぐに利用可能",
+          "以前の決定との一貫性を保てる"
+        ],
+        "example": null
+      },
+      {
+        "name": "Save（保存）",
+        "command": "/mneme:save",
+        "description": "セッションから知識を抽出して永続化します。決定、パターン、ルールをキャプチャします。",
+        "benefits": [
+          "決定が理由とともに文書化される",
+          "エラーパターンが検索可能になる",
+          "将来の適用のためにルールが抽出される"
+        ],
+        "example": "/mneme:save"
+      },
+      {
+        "name": "Review（レビュー）",
+        "command": "/mneme:review",
+        "description": "リポジトリ固有のルールとガイドラインに対してコードをレビューします。",
+        "benefits": [
+          "コミット前に問題を検出",
+          "チーム標準を適用",
+          "ステージされた変更とPRレビューに対応"
+        ],
+        "example": "/mneme:review --staged"
+      }
+    ],
+    "dataFlow": {
+      "title": "データフロー",
+      "description": "mneme を通じたデータの流れを理解する",
+      "steps": [
+        {
+          "event": "セッション開始",
+          "action": "セッションを初期化し、再開可能な最近のセッションを提案"
+        },
+        {
+          "event": "各プロンプト",
+          "action": "関連するコンテキスト注入のために mneme を自動検索"
+        },
+        {
+          "event": "セッション終了",
+          "action": "会話を SQLite に自動保存（jq + sqlite3）"
+        },
+        {
+          "event": "/mneme:save",
+          "action": "サマリー、決定、パターン、ルールを JSON ファイルに抽出"
+        }
+      ]
+    }
+  },
+  "commands": {
+    "title": "コマンドリファレンス",
+    "subtitle": "すべての mneme コマンドの詳細な使用方法",
+    "categories": {
+      "initialization": {
+        "title": "初期化",
+        "commands": [
+          {
+            "name": "/init-mneme",
+            "description": "現在のプロジェクトで mneme を初期化",
+            "usage": "/init-mneme",
+            "details": "必要なファイルを含む .mneme/ ディレクトリ構造を作成します。他のコマンドを使用する前に、プロジェクトごとに一度実行してください。",
+            "options": []
+          }
+        ]
+      },
+      "sessionManagement": {
+        "title": "セッション管理",
+        "commands": [
+          {
+            "name": "/mneme:save",
+            "description": "すべてのセッションデータを保存",
+            "usage": "/mneme:save",
+            "details": "以下を抽出して永続化します：会話（local.db へ）、サマリー、決定、パターン、ルール。セッション中またはセッション後いつでも実行できます。",
+            "options": [],
+            "phases": [
+              "Phase 0: マスターセッション（子セッションをマージ）",
+              "Phase 1: 会話（local.db に保存）",
+              "Phase 2: サマリー（タイトル、目標、結果）",
+              "Phase 3: 決定（技術的選択）",
+              "Phase 4: パターン（エラー解決策）",
+              "Phase 5: ルール（開発ルール、レビューガイドライン）"
+            ]
+          },
+          {
+            "name": "/mneme:resume",
+            "description": "以前のセッションを再開",
+            "usage": "/mneme:resume [session-id]",
+            "details": "以前のセッションからコンテキストを復元します。ID を省略すると最近のセッション一覧が表示されます。",
+            "options": [
+              {
+                "name": "session-id",
+                "description": "8文字のセッションID（オプション）"
+              }
+            ]
+          }
+        ]
+      },
+      "planning": {
+        "title": "計画",
+        "commands": [
+          {
+            "name": "/mneme:plan",
+            "description": "記憶に基づいた設計と計画",
+            "usage": "/mneme:plan [topic]",
+            "details": "過去の知識を検索し、質問で要件を明確にし、アプローチを提示し、タスク分割を作成します。",
+            "options": [
+              {
+                "name": "topic",
+                "description": "計画する機能またはタスク（オプション）"
+              }
+            ],
+            "phases": [
+              "Phase 1: 記憶検索（関連する過去の知識を検索）",
+              "Phase 2: ソクラティック質問（要件を明確化）",
+              "Phase 3: 設計決定（アプローチを提示）",
+              "Phase 4: タスク分割（実行可能なタスクを作成）"
+            ]
+          }
+        ]
+      },
+      "search": {
+        "title": "検索",
+        "commands": [
+          {
+            "name": "/mneme:search",
+            "description": "保存された知識を検索",
+            "usage": "/mneme:search <query>",
+            "details": "全文検索を使用してセッション、決定、パターン、ルールを検索します。",
+            "options": [
+              {
+                "name": "query",
+                "description": "検索キーワード（必須）"
+              }
+            ]
+          }
+        ]
+      },
+      "review": {
+        "title": "コードレビュー",
+        "commands": [
+          {
+            "name": "/mneme:review",
+            "description": "ルールベースのコードレビュー",
+            "usage": "/mneme:review [options|PR-URL]",
+            "details": "dev-rules.json と review-guidelines.json に対してコードをレビューします。ローカルの変更と GitHub PR に対応しています。",
+            "options": [
+              {
+                "name": "--staged",
+                "description": "ステージされた変更のみレビュー"
+              },
+              {
+                "name": "--all",
+                "description": "すべてのコミットされていない変更をレビュー"
+              },
+              {
+                "name": "--diff=branch",
+                "description": "指定したブランチとの差分をレビュー"
+              },
+              {
+                "name": "--full",
+                "description": "二段階レビュー（クイック + ディープ）"
+              },
+              {
+                "name": "PR-URL",
+                "description": "レビューする GitHub PR の URL"
+              }
+            ]
+          },
+          {
+            "name": "/mneme:harvest",
+            "description": "PR コメントから知識を抽出",
+            "usage": "/mneme:harvest <PR-URL>",
+            "details": "GitHub PR のレビューコメントからルール、パターン、決定を抽出します。",
+            "options": [
+              {
+                "name": "PR-URL",
+                "description": "GitHub PR の URL（必須）"
+              }
+            ]
+          }
+        ]
+      },
+      "reporting": {
+        "title": "レポート",
+        "commands": [
+          {
+            "name": "/mneme:report",
+            "description": "週次レビューレポートを生成",
+            "usage": "/mneme:report [--from DATE --to DATE]",
+            "details": ".mneme/reviews/ のレビュー結果をサマリーレポートに集約します。",
+            "options": [
+              {
+                "name": "--from",
+                "description": "開始日（YYYY-MM-DD）"
+              },
+              {
+                "name": "--to",
+                "description": "終了日（YYYY-MM-DD）"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "useCases": {
+    "title": "ユースケース",
+    "subtitle": "実際のシナリオと mneme の使い方",
+    "cases": [
+      {
+        "title": "新機能の開始",
+        "scenario": "新しい認証システムを実装する必要がある",
+        "steps": [
+          {
+            "action": "/mneme:plan \"ユーザー認証\" を実行",
+            "result": "mneme が認証関連の決定とパターンを検索"
+          },
+          {
+            "action": "質問に回答",
+            "result": "要件が明確になる（OAuth vs JWT、セッションストレージなど）"
+          },
+          {
+            "action": "提案されたアプローチを確認",
+            "result": "過去の決定に基づいて実装アプローチを選択"
+          },
+          {
+            "action": "タスク分割に従って実装",
+            "result": "整理された一貫性のある実装"
+          },
+          {
+            "action": "/mneme:save を実行",
+            "result": "新しい決定とパターンが将来の参照用にキャプチャされる"
+          }
+        ]
+      },
+      {
+        "title": "エラーのデバッグ",
+        "scenario": "不可解なエラーメッセージに遭遇した",
+        "steps": [
+          {
+            "action": "エラーを Claude に説明",
+            "result": "mneme が類似の過去のエラーを自動検索"
+          },
+          {
+            "action": "注入されたコンテキストを確認",
+            "result": "類似エラーの過去の解決策が提供される"
+          },
+          {
+            "action": "解決策を適用",
+            "result": "過去の知識を使ってエラーが解決される"
+          },
+          {
+            "action": "新しいパターンを発見した場合は /mneme:save を実行",
+            "result": "新しいエラー解決パターンが記録される"
+          }
+        ]
+      },
+      {
+        "title": "前回の作業を続ける",
+        "scenario": "昨日のセッションから作業を続けたい",
+        "steps": [
+          {
+            "action": "/mneme:resume を実行",
+            "result": "最近のセッション一覧が表示される"
+          },
+          {
+            "action": "再開するセッションを選択",
+            "result": "目標と進捗を含む完全なコンテキストが復元される"
+          },
+          {
+            "action": "実装を続行",
+            "result": "すべてのコンテキストが保持されたシームレスな継続"
+          }
+        ]
+      },
+      {
+        "title": "コミット前のコードレビュー",
+        "scenario": "コミット前に変更をレビューしたい",
+        "steps": [
+          {
+            "action": "git add で変更をステージ",
+            "result": "変更がレビュー準備完了"
+          },
+          {
+            "action": "/mneme:review --staged を実行",
+            "result": "プロジェクトのルールに対して変更がレビューされる"
+          },
+          {
+            "action": "見つかった問題を修正",
+            "result": "コードがプロジェクト標準を満たす"
+          },
+          {
+            "action": "自信を持ってコミット",
+            "result": "クリーンでレビュー済みのコードがコミットされる"
+          }
+        ]
+      },
+      {
+        "title": "PR フィードバックから学ぶ",
+        "scenario": "PR に保存したい価値あるレビューコメントがある",
+        "steps": [
+          {
+            "action": "/mneme:harvest <PR-URL> を実行",
+            "result": "レビューコメントが分析される"
+          },
+          {
+            "action": "抽出された知識を確認",
+            "result": "ルール、パターン、決定が識別される"
+          },
+          {
+            "action": "知識が保存される",
+            "result": "将来のレビューがこのフィードバックから恩恵を受ける"
+          }
+        ]
+      },
+      {
+        "title": "新しいチームメンバーのオンボーディング",
+        "scenario": "新しい開発者が参加し、過去の決定を理解する必要がある",
+        "steps": [
+          {
+            "action": ".mneme/ ディレクトリを共有（local.db を除く）",
+            "result": "過去の決定とパターンが利用可能になる"
+          },
+          {
+            "action": "新メンバーが /mneme:search を使用",
+            "result": "アーキテクチャ選択の理由を見つけることができる"
+          },
+          {
+            "action": "mneme が関連するコンテキストを自動注入",
+            "result": "チームパターンに従った一貫性のある実装"
+          }
+        ]
+      }
+    ]
+  },
+  "faq": {
+    "title": "FAQ & トラブルシューティング",
+    "subtitle": "よくある質問と解決策",
+    "categories": {
+      "general": {
+        "title": "一般",
+        "items": [
+          {
+            "question": "どのデータがチームと共有されますか？",
+            "answer": ".mneme/ 内の JSON ファイルのみが Git で共有されます。local.db ファイル（会話履歴を含む）は gitignore されており、プライベートのままです。"
+          },
+          {
+            "question": "自動検索はどのように機能しますか？",
+            "answer": "各プロンプトで、mneme はキーワードを抽出し、セッション、決定、パターン、ルールを検索します。関連する一致がコンテキストとして注入されます。"
+          },
+          {
+            "question": "/mneme:save はいつ実行すべきですか？",
+            "answer": "重要な決定を行った後、複雑なエラーを解決した後、または長いセッションを終了する前に実行してください。会話はセッション終了時に自動保存されますが、決定とパターンには手動保存が必要です。"
+          },
+          {
+            "question": "複数のプロジェクトで mneme を使用できますか？",
+            "answer": "はい。各プロジェクトには独自の .mneme/ ディレクトリがあります。ダッシュボードは任意のプロジェクトの mneme データを閲覧できます。"
+          }
+        ]
+      },
+      "sessions": {
+        "title": "セッション",
+        "items": [
+          {
+            "question": "auto-compact 中に何が起こりますか？",
+            "answer": "コンテキストが95%に達すると、Claude Code は自動的にコンパクト化します。mneme の PreCompact フックが先に会話を SQLite にバックアップし、完全な履歴を保持します。"
+          },
+          {
+            "question": "古いセッションを見つけるには？",
+            "answer": "ダッシュボードを使用するか、キーワードで /mneme:search を実行します。セッションは .mneme/sessions/YYYY/MM/ に保存されています。"
+          },
+          {
+            "question": "resume と search の違いは？",
+            "answer": "/mneme:resume は継続のために完全なセッションコンテキストを復元します。/mneme:search はコンテキストを復元せずに特定の情報を見つけます。"
+          }
+        ]
+      },
+      "decisions": {
+        "title": "決定",
+        "items": [
+          {
+            "question": "決定はどのように抽出されますか？",
+            "answer": "/mneme:save 中に、Claude が会話を分析して技術的決定を特定し、選択、理由、代替案、結果を抽出します。"
+          },
+          {
+            "question": "決定を編集できますか？",
+            "answer": "はい。決定ファイルは .mneme/decisions/ 内の JSON です。直接編集するか、ダッシュボードから編集できます。"
+          },
+          {
+            "question": "決定は将来のセッションにどのように影響しますか？",
+            "answer": "類似のトピックが発生すると、関連する決定が自動注入され、一貫性を確保し、重複した議論を避けます。"
+          }
+        ]
+      },
+      "troubleshooting": {
+        "title": "トラブルシューティング",
+        "items": [
+          {
+            "question": "mneme コマンドが動作しない",
+            "answer": "/init-mneme で mneme が初期化されていることを確認してください。.mneme/ ディレクトリが必要な構造で存在することを確認してください。"
+          },
+          {
+            "question": "自動検索で関連するコンテンツが見つからない",
+            "answer": "知識をキャプチャするために /mneme:save をより頻繁に実行してみてください。検索時には具体的なキーワードを使用してください。"
+          },
+          {
+            "question": "ダッシュボードにデータが表示されない",
+            "answer": ".mneme/ があるプロジェクトディレクトリからダッシュボードを実行していることを確認してください。セッションが保存されていることを確認してください。"
+          },
+          {
+            "question": "会話が保存されていない",
+            "answer": "会話は SessionEnd フックによってセッション終了時に保存されます。hooks.json でフックが正しく設定されていることを確認してください。"
+          }
+        ]
+      }
+    }
+  }
+}

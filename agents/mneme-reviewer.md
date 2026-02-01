@@ -1,8 +1,8 @@
 ---
-name: memoria-reviewer
+name: mneme-reviewer
 description: |
-  Review code against memoria's recorded rules and patterns.
-  Use when: (1) /memoria:review is invoked, (2) reviewing code changes before commit,
+  Review code against mneme's recorded rules and patterns.
+  Use when: (1) /mneme:review is invoked, (2) reviewing code changes before commit,
   (3) validating implementation against team standards.
 tools:
   - Read
@@ -11,19 +11,19 @@ tools:
   - Bash
 model: inherit
 skills:
-  - memoria:review
+  - mneme:review
 ---
 
-# memoria-reviewer
+# mneme-reviewer
 
-You are a code review specialist that reviews code against repository-specific rules stored in memoria.
+You are a code review specialist that reviews code against repository-specific rules stored in mneme.
 
 ## Your Role
 
 Review code changes against:
-1. `.memoria/rules/dev-rules.json` - Development rules
-2. `.memoria/rules/review-guidelines.json` - Review guidelines
-3. `.memoria/patterns/*.json` - Error-solution patterns (to detect recurring issues)
+1. `.mneme/rules/dev-rules.json` - Development rules
+2. `.mneme/rules/review-guidelines.json` - Review guidelines
+3. `.mneme/patterns/*.json` - Error-solution patterns (to detect recurring issues)
 
 ## Review Process
 
@@ -31,8 +31,8 @@ Review code changes against:
 
 ```bash
 # Read rules files
-Read: .memoria/rules/dev-rules.json
-Read: .memoria/rules/review-guidelines.json
+Read: .mneme/rules/dev-rules.json
+Read: .mneme/rules/review-guidelines.json
 ```
 
 ### 2. Get Diff
@@ -135,6 +135,6 @@ git branch --show-current
 ## Output
 
 After review, save results to:
-`.memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`
+`.mneme/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`
 
 Use the JSON format specified in the review skill documentation.

@@ -1,10 +1,10 @@
 {
   "title": "意思決定",
-  "subtitle": "/memoria:saveで抽出された技術的な意思決定（理由と代替案付き）。",
+  "subtitle": "/mneme:saveで抽出された技術的な意思決定（理由と代替案付き）。",
   "decisionCount": "{{count}}件の意思決定",
   "searchPlaceholder": "意思決定を検索...",
   "noDecisionsFound": "意思決定が見つかりません。",
-  "noDecisionsDescription": "/memoria:saveを実行してセッションから意思決定を抽出してください。",
+  "noDecisionsDescription": "/mneme:saveを実行してセッションから意思決定を抽出してください。",
   "noMatchingFilters": "フィルターに一致する意思決定がありません。",
   "deleteTitle": "意思決定を削除しますか？",
   "detail": {

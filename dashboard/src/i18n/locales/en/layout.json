@@ -3,11 +3,13 @@
     "project": "Project",
     "platform": "Platform",
     "settings": "Settings",
+    "help": "Help",
     "sessions": "Sessions",
     "decisions": "Decisions",
     "patterns": "Patterns",
     "statistics": "Statistics",
     "graph": "Graph",
-    "rules": "Rules"
+    "rules": "Rules",
+    "guide": "Guide"
   }
 }

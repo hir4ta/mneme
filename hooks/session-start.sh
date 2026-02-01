@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# session-start.sh - SessionStart hook for memoria plugin
+# session-start.sh - SessionStart hook for mneme plugin
 #
 # Purpose: Initialize session JSON and inject context via additionalContext
 #
@@ -18,9 +18,9 @@ input_json=$(cat)
 
 # Check for jq (required dependency)
 if ! command -v jq &> /dev/null; then
-    echo "[memoria] Warning: jq not found. Install with: brew install jq" >&2
-    echo "[memoria] Session tracking disabled for this session." >&2
-    exit 0  # Non-blocking - allow session to continue without memoria
+    echo "[mneme] Warning: jq not found. Install with: brew install jq" >&2
+    echo "[mneme] Session tracking disabled for this session." >&2
+    exit 0  # Non-blocking - allow session to continue without mneme
 fi
 
 cwd=$(echo "$input_json" | jq -r '.cwd // empty' 2>/dev/null || echo "")
@@ -37,16 +37,16 @@ cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 # Determine plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# Find .memoria directory
-memoria_dir="${cwd}/.memoria"
-sessions_dir="${memoria_dir}/sessions"
-rules_dir="${memoria_dir}/rules"
-patterns_dir="${memoria_dir}/patterns"
-session_links_dir="${memoria_dir}/session-links"
+# Find .mneme directory
+mneme_dir="${cwd}/.mneme"
+sessions_dir="${mneme_dir}/sessions"
+rules_dir="${mneme_dir}/rules"
+patterns_dir="${mneme_dir}/patterns"
+session_links_dir="${mneme_dir}/session-links"
 
-# Check if memoria is initialized
-if [ ! -d "$memoria_dir" ]; then
-    echo "[memoria] Not initialized in this project. Run: npx @hir4ta/memoria --init" >&2
+# Check if mneme is initialized
+if [ ! -d "$mneme_dir" ]; then
+    echo "[mneme] Not initialized in this project. Run: npx @hir4ta/mneme --init" >&2
     exit 0
 fi
 
@@ -105,7 +105,7 @@ if [ -f "$session_link_file" ]; then
     if [ -n "$master_session_id" ]; then
         # Find master session file
         master_session_path=$(find "$sessions_dir" -name "${master_session_id}.json" -type f 2>/dev/null | head -1)
-        echo "[memoria] Session linked to master: ${master_session_id}" >&2
+        echo "[mneme] Session linked to master: ${master_session_id}" >&2
     fi
 fi
 
@@ -167,10 +167,10 @@ if [ "$is_resumed" = true ]; then
     # Resume: reset status to null for re-processing at SessionEnd
     jq --arg resumedAt "$now" '.status = null | .resumedAt = $resumedAt' "$session_path" > "${session_path}.tmp" \
         && mv "${session_path}.tmp" "$session_path"
-    echo "[memoria] Session resumed (status reset): ${session_path}" >&2
+    echo "[mneme] Session resumed (status reset): ${session_path}" >&2
 else
     # New session: create initial JSON (log-focused schema)
-    # Note: summary, discussions, errors, handoff are set by /memoria:save
+    # Note: summary, discussions, errors, handoff are set by /mneme:save
     session_json=$(jq -n \
         --arg id "$file_id" \
         --arg sessionId "${session_id:-$session_short_id}" \
@@ -208,7 +208,7 @@ else
         }')
 
     echo "$session_json" > "$session_path"
-    echo "[memoria] Session initialized: ${session_path}" >&2
+    echo "[mneme] Session initialized: ${session_path}" >&2
 fi
 
 # ============================================
@@ -233,9 +233,9 @@ if [ -n "$master_session_id" ] && [ -n "$master_session_path" ] && [ -f "$master
             .updatedAt = $startedAt
         ' "$master_session_path" > "${master_session_path}.tmp" \
             && mv "${master_session_path}.tmp" "$master_session_path"
-        echo "[memoria] Master session workPeriods updated: ${master_session_path}" >&2
+        echo "[mneme] Master session workPeriods updated: ${master_session_path}" >&2
     else
-        echo "[memoria] Master session workPeriod already exists for this Claude session" >&2
+        echo "[mneme] Master session workPeriod already exists for this Claude session" >&2
     fi
 fi
 
@@ -246,20 +246,20 @@ session_relative_path="${session_path#$cwd/}"
 # ============================================
 # Initialize tags.json if not exists
 # ============================================
-tags_path="${memoria_dir}/tags.json"
+tags_path="${mneme_dir}/tags.json"
 default_tags_path="${SCRIPT_DIR}/default-tags.json"
 
 if [ ! -f "$tags_path" ]; then
     if [ -f "$default_tags_path" ]; then
         cp "$default_tags_path" "$tags_path"
-        echo "[memoria] Tags master file created: ${tags_path}" >&2
+        echo "[mneme] Tags master file created: ${tags_path}" >&2
     fi
 fi
 
 # ============================================
 # Initialize local database
 # ============================================
-local_db_path="${memoria_dir}/local.db"
+local_db_path="${mneme_dir}/local.db"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 
@@ -267,7 +267,7 @@ schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 if [ ! -f "$local_db_path" ]; then
     if [ -f "$schema_path" ]; then
         sqlite3 "$local_db_path" < "$schema_path"
-        echo "[memoria] Local database initialized: ${local_db_path}" >&2
+        echo "[mneme] Local database initialized: ${local_db_path}" >&2
     fi
 fi
 # Configure pragmas
@@ -300,8 +300,8 @@ init_rules_file "${rules_dir}/dev-rules.json"
 # ============================================
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# Read using-memoria skill content
-using_memoria_content=$(cat "${PLUGIN_ROOT}/skills/using-memoria/skill.md" 2>/dev/null || echo "")
+# Read using-mneme skill content
+using_mneme_content=$(cat "${PLUGIN_ROOT}/skills/using-mneme/skill.md" 2>/dev/null || echo "")
 
 # Escape for JSON using pure bash (superpowers style)
 escape_for_json() {
@@ -322,7 +322,7 @@ escape_for_json() {
     printf '%s' "$output"
 }
 
-using_memoria_escaped=$(escape_for_json "$using_memoria_content")
+using_mneme_escaped=$(escape_for_json "$using_mneme_content")
 
 resume_note=""
 needs_summary=false
@@ -341,7 +341,7 @@ session_info="**Session:** ${file_id}${resume_note}
 
 Sessions are saved:
 - **Automatically** before Auto-Compact (context 95% full)
-- **Manually** via \`/memoria:save\` or asking \"save the session\""
+- **Manually** via \`/mneme:save\` or asking \"save the session\""
 
 # Add recent sessions suggestion for new sessions
 if [ "$is_resumed" = false ] && [ -n "$recent_sessions_info" ]; then
@@ -350,7 +350,7 @@ if [ "$is_resumed" = false ] && [ -n "$recent_sessions_info" ]; then
 ---
 **Recent sessions:**
 $(echo -e "$recent_sessions_info")
-Continue from a previous session? Use \`/memoria:resume <id>\` or \`/memoria:resume\` to see more."
+Continue from a previous session? Use \`/mneme:resume <id>\` or \`/mneme:resume\` to see more."
 fi
 
 # Add summary creation prompt if needed (for resumed sessions)
@@ -359,7 +359,7 @@ if [ "$needs_summary" = true ]; then
 
 ---
 **Note:** This session was resumed but has no summary yet.
-When you have enough context, consider creating a summary with \`/memoria:save\` to capture:
+When you have enough context, consider creating a summary with \`/mneme:save\` to capture:
 - What was accomplished in the previous session
 - Key decisions made
 - Any ongoing work or next steps"
@@ -372,7 +372,7 @@ cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
-    "additionalContext": "${session_info_escaped}\n\n${using_memoria_escaped}"
+    "additionalContext": "${session_info_escaped}\n\n${using_mneme_escaped}"
   }
 }
 EOF

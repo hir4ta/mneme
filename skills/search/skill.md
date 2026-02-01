@@ -1,52 +1,52 @@
 ---
 name: search
 description: |
-  Search saved sessions, decisions, and patterns in memoria's knowledge base.
+  Search saved sessions, decisions, and patterns in mneme's knowledge base.
   Use when: (1) looking for past solutions to similar problems, (2) finding previous decisions,
   (3) recalling how something was implemented before.
 argument-hint: "<query>"
 ---
 
-# /memoria:search
+# /mneme:search
 
 Search saved sessions, decisions, and patterns.
 
 ## Usage
 
 ```
-/memoria:search <query>
+/mneme:search <query>
 ```
 
 ### Filter by Type
 
 ```
-/memoria:search <query> --type session
-/memoria:search <query> --type decision
-/memoria:search <query> --type pattern
+/mneme:search <query> --type session
+/mneme:search <query> --type decision
+/mneme:search <query> --type pattern
 ```
 
 ## Execution Steps
 
-**Use the `memoria_search` MCP tool for fast, unified search:**
+**Use the `mneme_search` MCP tool for fast, unified search:**
 
-1. Call `memoria_search` with the query
+1. Call `mneme_search` with the query
 2. Display scored results
-3. If user wants details, use `memoria_get_session` or `memoria_get_decision`
+3. If user wants details, use `mneme_get_session` or `mneme_get_decision`
 
 ### MCP Tools
 
 ```typescript
 // Search all types
-memoria_search({ query: "JWT auth", limit: 10 })
+mneme_search({ query: "JWT auth", limit: 10 })
 
 // Filter by type
-memoria_search({ query: "JWT auth", types: ["decision", "session"] })
+mneme_search({ query: "JWT auth", types: ["decision", "session"] })
 
 // Get full session details
-memoria_get_session({ sessionId: "abc123" })
+mneme_get_session({ sessionId: "abc123" })
 
 // Get full decision details
-memoria_get_decision({ decisionId: "jwt-auth-001" })
+mneme_get_decision({ decisionId: "jwt-auth-001" })
 ```
 
 **Fallback (if MCP unavailable):** Read JSON files directly using Glob + Read tools.
@@ -68,7 +68,7 @@ If query matches an alias in tags.json, search using the corresponding id:
 
 ## Search Target Fields
 
-### Sessions (.memoria/sessions/**/*.json)
+### Sessions (.mneme/sessions/**/*.json)
 
 **Search index fields:**
 - `title` - Session title
@@ -79,7 +79,7 @@ If query matches an alias in tags.json, search using the corresponding id:
 - `interactions[].thinking` - Thought process
 - `interactions[].assistant` - Assistant response
 
-**Structured data (set by /memoria:save):**
+**Structured data (set by /mneme:save):**
 - `summary.title` - Session title
 - `summary.goal` - Session goal
 - `summary.description` - What was accomplished
@@ -94,13 +94,13 @@ If query matches an alias in tags.json, search using the corresponding id:
 - `handoff.stoppedReason` - Why session ended
 - `handoff.nextSteps[]` - Next steps
 
-### Decisions (.memoria/decisions/**/*.json)
+### Decisions (.mneme/decisions/**/*.json)
 - `title` - Title
 - `decision` - What was decided
 - `reasoning` - Why
 - `tags` - Tags
 
-### Patterns (.memoria/patterns/*.json)
+### Patterns (.mneme/patterns/*.json)
 - `title` - Title
 - `description` - Description
 - `example` - Example

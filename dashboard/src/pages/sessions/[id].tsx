@@ -368,8 +368,8 @@ function ContextRestorationCard({ session }: { session: Session }) {
     }
   };
 
-  // Generate resume command for memoria
-  const resumeCommand = `/memoria:resume ${session.id}`;
+  // Generate resume command for mneme
+  const resumeCommand = `/mneme:resume ${session.id}`;
 
   const copyResumeCommand = () => {
     navigator.clipboard.writeText(resumeCommand);

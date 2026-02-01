@@ -1,4 +1,14 @@
-# memoria
+# mneme
+
+> **⚠️ 破壊的変更 (v0.17.0)**: `memoria` から `mneme` に名称変更しました。
+> `@hir4ta/memoria` からアップグレードする場合は再インストールしてください：
+> ```bash
+> claude mcp remove mneme-search mneme-db
+> claude plugin remove @hir4ta/memoria
+> claude plugin add @hir4ta/mneme
+> ```
+> データディレクトリも変更: `.memoria/` → `.mneme/`
+> 手動でリネーム: `mv .memoria .mneme`
 
 Claude Codeの長期記憶を実現するプラグイン
 
@@ -10,13 +20,13 @@ Claude Codeの長期記憶を実現するプラグイン
 - **会話の自動保存**: セッション終了時にjqで自動保存（確実・高速）
 - **自動記憶検索**: プロンプトごとに関連する過去のセッション・判断を自動で注入
 - **PreCompactバックアップ**: Auto-Compact前にinteractionsをバックアップ（コンテキスト95%で発動）
-- **フルデータ抽出**: `/memoria:save` で要約・判断・パターン・ルールを一括保存
-- **記憶参照プランニング**: `/memoria:plan` で過去の知見を活用した設計・計画
-- **セッション再開**: `/memoria:resume` で過去のセッションを再開（チェーン追跡付き）
+- **フルデータ抽出**: `/mneme:save` で要約・判断・パターン・ルールを一括保存
+- **記憶参照プランニング**: `/mneme:plan` で過去の知見を活用した設計・計画
+- **セッション再開**: `/mneme:resume` で過去のセッションを再開（チェーン追跡付き）
 - **セッション提案**: セッション開始時に最新3件を提案
 - **ルールベースレビュー**: `dev-rules.json` / `review-guidelines.json` に基づくレビュー
-- **GitHub PRレビュー**: `/memoria:review <PR URL>` でGitHub PRをレビュー
-- **知見の抽出**: `/memoria:harvest` でPRコメントからルール・パターンを抽出
+- **GitHub PRレビュー**: `/mneme:review <PR URL>` でGitHub PRをレビュー
+- **知見の抽出**: `/mneme:harvest` でPRコメントからルール・パターンを抽出
 - **週次レポート**: レビュー結果を集計したMarkdownレポートを自動生成
 - **Webダッシュボード**: セッション・判断・パターン・ルールの閲覧
 
@@ -29,7 +39,7 @@ Claude Codeの長期記憶を実現するプラグイン
 - **同じミスの繰り返し**: 同じエラーを何度も解決（学習されない）
 - **知見の再利用が難しい**: 過去のやり取りや決定を検索・参照しづらい
 
-### memoria でできること
+### mneme でできること
 
 - **自動保存 + 再開**で、セッションを跨いだ文脈の継続が可能
 - **自動記憶検索**で、関連する過去の知見が常に会話に反映される
@@ -39,7 +49,7 @@ Claude Codeの長期記憶を実現するプラグイン
 
 ### チーム利用のメリット
 
-- `.memoria/` のJSONファイルは**Git管理可能**なので、判断や会話の履歴をチームで共有できる
+- `.mneme/` のJSONファイルは**Git管理可能**なので、判断や会話の履歴をチームで共有できる
 - オンボーディングやレビュー時に「背景・経緯」を短時間で把握できる
 
 ## インストール
@@ -70,18 +80,18 @@ winget install jqlang.jq
 Claude Code内で以下を実行
 
 ```bash
-/plugin marketplace add hir4ta/memoria-marketplace
-/plugin install memoria@memoria-marketplace
+/plugin marketplace add hir4ta/mneme-marketplace
+/plugin install mneme@mneme-marketplace
 ```
 
-プロジェクトでmemoriaを初期化：
+プロジェクトでmnemeを初期化：
 
 ```bash
 # Claude Code内で
-/init-memoria
+/init-mneme
 
 # またはターミナルから
-npx @hir4ta/memoria --init
+npx @hir4ta/mneme --init
 ```
 
 Claude Codeを再起動して完了
@@ -91,7 +101,7 @@ Claude Codeを再起動して完了
 Claude Code内で以下を実行
 
 ```bash
-/plugin marketplace update memoria-marketplace
+/plugin marketplace update mneme-marketplace
 ```
 
 Claude Codeを再起動
@@ -100,7 +110,7 @@ Claude Codeを再起動
 
 1. `/plugin` を実行
 2. Marketplaces タブを選択
-3. `memoria-marketplace` を選択
+3. `mneme-marketplace` を選択
 4. "Enable auto-update" を有効化
 
 これによりClaude Code起動時に自動でアップデートされます
@@ -115,7 +125,7 @@ Claude Codeを再起動
 
 ### 自動記憶検索
 
-**プロンプトごとに**、memoriaは自動で：
+**プロンプトごとに**、mnemeは自動で：
 1. メッセージからキーワードを抽出
 2. sessions/decisions/patternsを検索
 3. 関連情報をClaudeに注入
@@ -132,22 +142,22 @@ Claude Codeを再起動
   2. [def456] ダッシュボードUI (2026-01-26, main)
   3. [ghi789] バグ修正 (2026-01-25, main)
 
-Continue from a previous session? Use `/memoria:resume <id>`
+Continue from a previous session? Use `/mneme:resume <id>`
 ```
 
 ### コマンド
 
 | コマンド | 説明 |
 | --------- | ------ |
-| `/init-memoria` | プロジェクトでmemoriaを初期化 |
-| `/memoria:save` | 全データ抽出: 要約・判断・パターン・ルール |
-| `/memoria:plan [トピック]` | 記憶参照 + ソクラティック質問 + タスク分割 |
-| `/memoria:resume [id]` | セッションを再開（ID省略で一覧表示） |
-| `/memoria:search "クエリ"` | セッション・判断・パターンを検索 |
-| `/memoria:review [--staged\|--all\|--diff=branch\|--full]` | ルールに基づくレビュー |
-| `/memoria:review <PR URL>` | GitHub PRをレビュー |
-| `/memoria:harvest <PR URL>` | PRレビューコメントから知見を抽出 |
-| `/memoria:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | 週次レビューレポート |
+| `/init-mneme` | プロジェクトでmnemeを初期化 |
+| `/mneme:save` | 全データ抽出: 要約・判断・パターン・ルール |
+| `/mneme:plan [トピック]` | 記憶参照 + ソクラティック質問 + タスク分割 |
+| `/mneme:resume [id]` | セッションを再開（ID省略で一覧表示） |
+| `/mneme:search "クエリ"` | セッション・判断・パターンを検索 |
+| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | ルールに基づくレビュー |
+| `/mneme:review <PR URL>` | GitHub PRをレビュー |
+| `/mneme:harvest <PR URL>` | PRレビューコメントから知見を抽出 |
+| `/mneme:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | 週次レビューレポート |
 
 ### 推奨ワークフロー
 
@@ -165,7 +175,7 @@ plan → implement → save → review
 プロジェクトディレクトリで以下を実行
 
 ```bash
-npx @hir4ta/memoria --dashboard
+npx @hir4ta/mneme --dashboard
 ```
 
 ブラウザで <http://localhost:7777> を開く。
@@ -173,7 +183,7 @@ npx @hir4ta/memoria --dashboard
 ポート変更:
 
 ```bash
-npx @hir4ta/memoria --dashboard --port 8080
+npx @hir4ta/mneme --dashboard --port 8080
 ```
 
 #### 画面一覧
@@ -191,21 +201,21 @@ npx @hir4ta/memoria --dashboard --port 8080
 
 ### MCPツール
 
-memoriaはMCPサーバーを提供し、Claude Codeから直接呼び出せる検索・データベースツールを提供：
+mnemeはMCPサーバーを提供し、Claude Codeから直接呼び出せる検索・データベースツールを提供：
 
 | サーバー | ツール | 説明 |
 |---------|--------|------|
-| memoria-search | `memoria_search` | 統合検索（FTS5、タグエイリアス解決） |
-| memoria-search | `memoria_get_session` | セッション詳細取得 |
-| memoria-search | `memoria_get_decision` | 決定詳細取得 |
-| memoria-db | `memoria_list_projects` | 全プロジェクト一覧 |
-| memoria-db | `memoria_cross_project_search` | クロスプロジェクト検索 |
+| mneme-search | `mneme_search` | 統合検索（FTS5、タグエイリアス解決） |
+| mneme-search | `mneme_get_session` | セッション詳細取得 |
+| mneme-search | `mneme_get_decision` | 決定詳細取得 |
+| mneme-db | `mneme_list_projects` | 全プロジェクト一覧 |
+| mneme-db | `mneme_cross_project_search` | クロスプロジェクト検索 |
 
 ### サブエージェント
 
 | エージェント | 説明 |
 |-------------|------|
-| `memoria-reviewer` | ルールベースのコードレビュー（独立コンテキスト） |
+| `mneme-reviewer` | ルールベースのコードレビュー（独立コンテキスト） |
 
 ## 仕組み
 
@@ -229,22 +239,22 @@ flowchart TB
     end
 
     subgraph manual [手動操作]
-        L["memoria:save"] --> M[判断 + パターン + ルールを抽出]
-        N["memoria:plan"] --> O[記憶参照 + 設計 + タスク分割]
+        L["mneme:save"] --> M[判断 + パターン + ルールを抽出]
+        N["mneme:plan"] --> O[記憶参照 + 設計 + タスク分割]
     end
 
     subgraph resume [セッション再開]
-        P["memoria:resume"] --> Q[一覧から選択]
+        P["mneme:resume"] --> Q[一覧から選択]
         Q --> R[過去の文脈を復元 + resumedFrom設定]
     end
 
     subgraph review [レビュー]
-        S["memoria:review"] --> T[ルールに基づく指摘]
+        S["mneme:review"] --> T[ルールに基づく指摘]
         T --> U[レビュー結果を保存]
     end
 
     subgraph dashboard [ダッシュボード]
-        V["npx @hir4ta/memoria -d"] --> W[ブラウザで表示]
+        V["npx @hir4ta/mneme -d"] --> W[ブラウザで表示]
         W --> X[全データを閲覧]
     end
 
@@ -256,12 +266,12 @@ flowchart TB
 
 ## データ保存
 
-memoriaは**ハイブリッドストレージ**方式でプライバシーと共有を両立：
+mnemeは**ハイブリッドストレージ**方式でプライバシーと共有を両立：
 
 | ストレージ | 場所 | 用途 | 共有 |
 |-----------|------|------|------|
-| **JSON** | `.memoria/` | 要約、決定、パターン、ルール | Git管理（チーム共有） |
-| **SQLite** | `.memoria/local.db` | 会話履歴、バックアップ | ローカル専用（gitignored） |
+| **JSON** | `.mneme/` | 要約、決定、パターン、ルール | Git管理（チーム共有） |
+| **SQLite** | `.mneme/local.db` | 会話履歴、バックアップ | ローカル専用（gitignored） |
 
 **なぜハイブリッド？**
 - **プライバシー**: 会話履歴（interactions）はローカルのみ（gitignored）
@@ -270,9 +280,9 @@ memoriaは**ハイブリッドストレージ**方式でプライバシーと共
 
 ### ディレクトリ構成
 
-**プロジェクト内** (`.memoria/`):
+**プロジェクト内** (`.mneme/`):
 ```text
-.memoria/
+.mneme/
 ├── local.db          # SQLite（会話履歴）- gitignored
 ├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
 ├── sessions/         # セッションメタデータ - Git管理
@@ -288,7 +298,7 @@ memoriaは**ハイブリッドストレージ**方式でプライバシーと共
 └── reports/          # 週次レポート (YYYY-MM) - Git管理
 ```
 
-`local.db` は `.memoria/.gitignore` に追加され、会話はプライベートに保たれます。
+`local.db` は `.mneme/.gitignore` に追加され、会話はプライベートに保たれます。
 
 ### セッションJSONスキーマ
 
@@ -377,7 +387,7 @@ memoriaは**ハイブリッドストレージ**方式でプライバシーと共
 
 ### タグ
 
-タグは `.memoria/tags.json` から選択され、表記揺れを防止します（例: 「フロント」→「frontend」）。マスターファイルには11カテゴリ93タグが含まれています：
+タグは `.mneme/tags.json` から選択され、表記揺れを防止します（例: 「フロント」→「frontend」）。マスターファイルには11カテゴリ93タグが含まれています：
 
 - **domain**: frontend, backend, api, db, infra, mobile, cli
 - **phase**: feature, bugfix, refactor, test, docs

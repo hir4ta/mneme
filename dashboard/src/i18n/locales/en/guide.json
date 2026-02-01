@@ -1,0 +1,519 @@
+{
+  "nav": {
+    "overview": "Overview",
+    "workflow": "Workflow",
+    "commands": "Commands",
+    "useCases": "Use Cases",
+    "faq": "FAQ"
+  },
+  "common": {
+    "toggle": "Toggle",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "usage": "Usage",
+    "details": "Details",
+    "options": "Options",
+    "phases": "Phases",
+    "question": "Q",
+    "answer": "A"
+  },
+  "overview": {
+    "title": "mneme Guide",
+    "subtitle": "Long-term memory plugin for Claude Code",
+    "description": "mneme captures session knowledge, design decisions, and developer patterns, storing them in Git-compatible JSON files. View and manage through a web dashboard.",
+    "features": {
+      "title": "Key Features",
+      "items": [
+        {
+          "title": "Auto Memory Search",
+          "description": "Related past sessions and decisions are automatically injected on each prompt"
+        },
+        {
+          "title": "Session Tracking",
+          "description": "Conversations are auto-saved at session end with full context preservation"
+        },
+        {
+          "title": "Decision Recording",
+          "description": "Technical decisions with reasoning and alternatives are captured and searchable"
+        },
+        {
+          "title": "Pattern Learning",
+          "description": "Error patterns and solutions are recorded for future reference"
+        },
+        {
+          "title": "Rule Management",
+          "description": "Development rules and review guidelines are extracted and enforced"
+        },
+        {
+          "title": "Code Review",
+          "description": "Rule-based code review with support for staged changes and GitHub PRs"
+        }
+      ]
+    },
+    "quickStart": {
+      "title": "Quick Start",
+      "steps": [
+        {
+          "title": "Initialize mneme",
+          "description": "Run /init-mneme in Claude Code or npx @hir4ta/mneme --init in terminal",
+          "code": "/init-mneme"
+        },
+        {
+          "title": "Start working",
+          "description": "mneme automatically searches past knowledge on each prompt and saves interactions at session end"
+        },
+        {
+          "title": "Save session data",
+          "description": "Run /mneme:save to extract decisions, patterns, and rules from your session",
+          "code": "/mneme:save"
+        },
+        {
+          "title": "View in dashboard",
+          "description": "Launch the dashboard to browse sessions, decisions, and patterns",
+          "code": "npx @hir4ta/mneme --dashboard"
+        }
+      ]
+    }
+  },
+  "workflow": {
+    "title": "Recommended Workflow",
+    "subtitle": "plan → implement → save → review",
+    "intro": "Follow this workflow to maximize the benefits of mneme's knowledge management.",
+    "phases": [
+      {
+        "name": "Plan",
+        "command": "/mneme:plan",
+        "description": "Start with memory-informed design. mneme searches past sessions and decisions to provide context.",
+        "benefits": [
+          "Automatically surfaces relevant past decisions",
+          "Socratic questions clarify requirements",
+          "Task breakdown for organized implementation"
+        ],
+        "example": "/mneme:plan \"add authentication\""
+      },
+      {
+        "name": "Implement",
+        "command": null,
+        "description": "Follow your plan and implement the feature. mneme's auto-search provides relevant context as you work.",
+        "benefits": [
+          "Past patterns guide implementation",
+          "Error solutions are readily available",
+          "Consistent with previous decisions"
+        ],
+        "example": null
+      },
+      {
+        "name": "Save",
+        "command": "/mneme:save",
+        "description": "Extract and persist knowledge from your session. Captures decisions, patterns, and rules.",
+        "benefits": [
+          "Decisions are documented with reasoning",
+          "Error patterns become searchable",
+          "Rules are extracted for future enforcement"
+        ],
+        "example": "/mneme:save"
+      },
+      {
+        "name": "Review",
+        "command": "/mneme:review",
+        "description": "Review code against repository-specific rules and guidelines.",
+        "benefits": [
+          "Catches issues before commit",
+          "Enforces team standards",
+          "Supports staged changes and PR review"
+        ],
+        "example": "/mneme:review --staged"
+      }
+    ],
+    "dataFlow": {
+      "title": "Data Flow",
+      "description": "Understanding how data flows through mneme",
+      "steps": [
+        {
+          "event": "Session Start",
+          "action": "Initialize session, suggest recent sessions to resume"
+        },
+        {
+          "event": "Each Prompt",
+          "action": "Auto-search mneme for relevant context injection"
+        },
+        {
+          "event": "Session End",
+          "action": "Auto-save interactions to SQLite (jq + sqlite3)"
+        },
+        {
+          "event": "/mneme:save",
+          "action": "Extract summary, decisions, patterns, rules to JSON files"
+        }
+      ]
+    }
+  },
+  "commands": {
+    "title": "Command Reference",
+    "subtitle": "All mneme commands with detailed usage",
+    "categories": {
+      "initialization": {
+        "title": "Initialization",
+        "commands": [
+          {
+            "name": "/init-mneme",
+            "description": "Initialize mneme in the current project",
+            "usage": "/init-mneme",
+            "details": "Creates the .mneme/ directory structure with required files. Run this once per project before using other commands.",
+            "options": []
+          }
+        ]
+      },
+      "sessionManagement": {
+        "title": "Session Management",
+        "commands": [
+          {
+            "name": "/mneme:save",
+            "description": "Save all session data",
+            "usage": "/mneme:save",
+            "details": "Extracts and persists: interactions (to local.db), summary, decisions, patterns, and rules. Run anytime during or after a session.",
+            "options": [],
+            "phases": [
+              "Phase 0: Master Session (merge child sessions)",
+              "Phase 1: Interactions (save to local.db)",
+              "Phase 2: Summary (title, goal, outcome)",
+              "Phase 3: Decisions (technical choices)",
+              "Phase 4: Patterns (error solutions)",
+              "Phase 5: Rules (dev rules, review guidelines)"
+            ]
+          },
+          {
+            "name": "/mneme:resume",
+            "description": "Resume a previous session",
+            "usage": "/mneme:resume [session-id]",
+            "details": "Restores context from a previous session. Omit the ID to see a list of recent sessions.",
+            "options": [
+              {
+                "name": "session-id",
+                "description": "8-character session ID (optional)"
+              }
+            ]
+          }
+        ]
+      },
+      "planning": {
+        "title": "Planning",
+        "commands": [
+          {
+            "name": "/mneme:plan",
+            "description": "Memory-informed design and planning",
+            "usage": "/mneme:plan [topic]",
+            "details": "Searches past knowledge, asks clarifying questions, presents approaches, and creates task breakdown.",
+            "options": [
+              {
+                "name": "topic",
+                "description": "Feature or task to plan (optional)"
+              }
+            ],
+            "phases": [
+              "Phase 1: Memory Search (find relevant past knowledge)",
+              "Phase 2: Socratic Questions (clarify requirements)",
+              "Phase 3: Design Decision (present approaches)",
+              "Phase 4: Task Breakdown (create actionable tasks)"
+            ]
+          }
+        ]
+      },
+      "search": {
+        "title": "Search",
+        "commands": [
+          {
+            "name": "/mneme:search",
+            "description": "Search saved knowledge",
+            "usage": "/mneme:search <query>",
+            "details": "Searches sessions, decisions, patterns, and rules using full-text search.",
+            "options": [
+              {
+                "name": "query",
+                "description": "Search keywords (required)"
+              }
+            ]
+          }
+        ]
+      },
+      "review": {
+        "title": "Code Review",
+        "commands": [
+          {
+            "name": "/mneme:review",
+            "description": "Rule-based code review",
+            "usage": "/mneme:review [options|PR-URL]",
+            "details": "Reviews code against dev-rules.json and review-guidelines.json. Supports local changes and GitHub PRs.",
+            "options": [
+              {
+                "name": "--staged",
+                "description": "Review staged changes only"
+              },
+              {
+                "name": "--all",
+                "description": "Review all uncommitted changes"
+              },
+              {
+                "name": "--diff=branch",
+                "description": "Review diff against specified branch"
+              },
+              {
+                "name": "--full",
+                "description": "Two-stage review (quick + deep)"
+              },
+              {
+                "name": "PR-URL",
+                "description": "GitHub PR URL to review"
+              }
+            ]
+          },
+          {
+            "name": "/mneme:harvest",
+            "description": "Extract knowledge from PR comments",
+            "usage": "/mneme:harvest <PR-URL>",
+            "details": "Extracts rules, patterns, and decisions from GitHub PR review comments.",
+            "options": [
+              {
+                "name": "PR-URL",
+                "description": "GitHub PR URL (required)"
+              }
+            ]
+          }
+        ]
+      },
+      "reporting": {
+        "title": "Reporting",
+        "commands": [
+          {
+            "name": "/mneme:report",
+            "description": "Generate weekly review report",
+            "usage": "/mneme:report [--from DATE --to DATE]",
+            "details": "Aggregates review results from .mneme/reviews/ into a summary report.",
+            "options": [
+              {
+                "name": "--from",
+                "description": "Start date (YYYY-MM-DD)"
+              },
+              {
+                "name": "--to",
+                "description": "End date (YYYY-MM-DD)"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "useCases": {
+    "title": "Use Cases",
+    "subtitle": "Real-world scenarios and how to use mneme",
+    "cases": [
+      {
+        "title": "Starting a New Feature",
+        "scenario": "You need to implement a new authentication system",
+        "steps": [
+          {
+            "action": "Run /mneme:plan \"user authentication\"",
+            "result": "mneme searches past sessions for auth-related decisions and patterns"
+          },
+          {
+            "action": "Answer clarifying questions",
+            "result": "Requirements are clarified (OAuth vs JWT, session storage, etc.)"
+          },
+          {
+            "action": "Review suggested approaches",
+            "result": "Choose implementation approach based on past decisions"
+          },
+          {
+            "action": "Implement following task breakdown",
+            "result": "Organized, consistent implementation"
+          },
+          {
+            "action": "Run /mneme:save",
+            "result": "New decisions and patterns are captured for future reference"
+          }
+        ]
+      },
+      {
+        "title": "Debugging an Error",
+        "scenario": "You encounter a cryptic error message",
+        "steps": [
+          {
+            "action": "Describe the error to Claude",
+            "result": "mneme auto-searches for similar past errors"
+          },
+          {
+            "action": "Check injected context",
+            "result": "Past solutions for similar errors are provided"
+          },
+          {
+            "action": "Apply the solution",
+            "result": "Error is resolved using past knowledge"
+          },
+          {
+            "action": "Run /mneme:save if new pattern discovered",
+            "result": "New error-solution pattern is recorded"
+          }
+        ]
+      },
+      {
+        "title": "Continuing Previous Work",
+        "scenario": "You want to continue work from yesterday's session",
+        "steps": [
+          {
+            "action": "Run /mneme:resume",
+            "result": "List of recent sessions is displayed"
+          },
+          {
+            "action": "Select the session to resume",
+            "result": "Full context is restored including goals and progress"
+          },
+          {
+            "action": "Continue implementation",
+            "result": "Seamless continuation with all context preserved"
+          }
+        ]
+      },
+      {
+        "title": "Pre-commit Code Review",
+        "scenario": "You want to review changes before committing",
+        "steps": [
+          {
+            "action": "Stage your changes with git add",
+            "result": "Changes are ready for review"
+          },
+          {
+            "action": "Run /mneme:review --staged",
+            "result": "Changes are reviewed against project rules"
+          },
+          {
+            "action": "Fix any issues found",
+            "result": "Code meets project standards"
+          },
+          {
+            "action": "Commit with confidence",
+            "result": "Clean, reviewed code is committed"
+          }
+        ]
+      },
+      {
+        "title": "Learning from PR Feedback",
+        "scenario": "A PR has valuable review comments you want to preserve",
+        "steps": [
+          {
+            "action": "Run /mneme:harvest <PR-URL>",
+            "result": "Review comments are analyzed"
+          },
+          {
+            "action": "Confirm extracted knowledge",
+            "result": "Rules, patterns, decisions are identified"
+          },
+          {
+            "action": "Knowledge is saved",
+            "result": "Future reviews benefit from this feedback"
+          }
+        ]
+      },
+      {
+        "title": "Onboarding New Team Members",
+        "scenario": "A new developer joins and needs to understand past decisions",
+        "steps": [
+          {
+            "action": "Share .mneme/ directory (except local.db)",
+            "result": "Past decisions and patterns are available"
+          },
+          {
+            "action": "New member uses /mneme:search",
+            "result": "Can find reasoning behind architectural choices"
+          },
+          {
+            "action": "mneme auto-injects relevant context",
+            "result": "Consistent implementation following team patterns"
+          }
+        ]
+      }
+    ]
+  },
+  "faq": {
+    "title": "FAQ & Troubleshooting",
+    "subtitle": "Common questions and solutions",
+    "categories": {
+      "general": {
+        "title": "General",
+        "items": [
+          {
+            "question": "What data is shared with my team?",
+            "answer": "Only JSON files in .mneme/ are shared via Git. The local.db file (containing conversation history) is gitignored and stays private."
+          },
+          {
+            "question": "How does auto-search work?",
+            "answer": "On each prompt, mneme extracts keywords and searches sessions, decisions, patterns, and rules. Relevant matches are injected as context."
+          },
+          {
+            "question": "When should I run /mneme:save?",
+            "answer": "Run it after making important decisions, solving complex errors, or before ending a long session. Interactions are auto-saved at session end, but decisions and patterns require manual save."
+          },
+          {
+            "question": "Can I use mneme across multiple projects?",
+            "answer": "Yes. Each project has its own .mneme/ directory. The dashboard can browse any project's mneme data."
+          }
+        ]
+      },
+      "sessions": {
+        "title": "Sessions",
+        "items": [
+          {
+            "question": "What happens during auto-compact?",
+            "answer": "When context reaches 95%, Claude Code auto-compacts. mneme's PreCompact hook backs up interactions to SQLite first, preserving full history."
+          },
+          {
+            "question": "How do I find old sessions?",
+            "answer": "Use the dashboard or /mneme:search with keywords. Sessions are stored in .mneme/sessions/YYYY/MM/."
+          },
+          {
+            "question": "What's the difference between resume and search?",
+            "answer": "/mneme:resume restores full session context for continuation. /mneme:search finds specific information without restoring context."
+          }
+        ]
+      },
+      "decisions": {
+        "title": "Decisions",
+        "items": [
+          {
+            "question": "How are decisions extracted?",
+            "answer": "During /mneme:save, Claude analyzes the conversation for technical decisions, extracting the choice, reasoning, alternatives, and outcome."
+          },
+          {
+            "question": "Can I edit decisions?",
+            "answer": "Yes. Decision files are JSON in .mneme/decisions/. You can edit them directly or through the dashboard."
+          },
+          {
+            "question": "How do decisions affect future sessions?",
+            "answer": "Relevant decisions are auto-injected when similar topics arise, ensuring consistency and avoiding repeated discussions."
+          }
+        ]
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting",
+        "items": [
+          {
+            "question": "mneme commands are not working",
+            "answer": "Ensure mneme is initialized with /init-mneme. Check that .mneme/ directory exists with the required structure."
+          },
+          {
+            "question": "Auto-search is not finding relevant content",
+            "answer": "Try running /mneme:save more frequently to capture knowledge. Use specific keywords when searching."
+          },
+          {
+            "question": "Dashboard shows no data",
+            "answer": "Ensure you're running the dashboard from the project directory with .mneme/. Check that sessions have been saved."
+          },
+          {
+            "question": "Interactions are not being saved",
+            "answer": "Interactions are saved at session end by the SessionEnd hook. Ensure hooks are properly configured in hooks.json."
+          }
+        ]
+      }
+    }
+  }
+}

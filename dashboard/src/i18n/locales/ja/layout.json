@@ -3,11 +3,13 @@
     "project": "プロジェクト",
     "platform": "プラットフォーム",
     "settings": "設定",
+    "help": "ヘルプ",
     "sessions": "セッション",
     "decisions": "意思決定",
     "patterns": "パターン",
     "statistics": "統計",
     "graph": "グラフ",
-    "rules": "ルール"
+    "rules": "ルール",
+    "guide": "ガイド"
   }
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# user-prompt-submit.sh - UserPromptSubmit hook for memoria plugin
+# user-prompt-submit.sh - UserPromptSubmit hook for mneme plugin
 #
-# Purpose: Search memoria for relevant context and inject as additionalContext
+# Purpose: Search mneme for relevant context and inject as additionalContext
 #
 # Input (stdin): JSON with prompt, cwd
 # Output (stdout): JSON with hookSpecificOutput.additionalContext (if matches found)
@@ -18,7 +18,7 @@ input_json=$(cat)
 
 # Check for jq (required dependency)
 if ! command -v jq &> /dev/null; then
-    echo "[memoria] Warning: jq not found, memory search skipped." >&2
+    echo "[mneme] Warning: jq not found, memory search skipped." >&2
     exit 0  # Non-blocking - continue without memory search
 fi
 
@@ -36,19 +36,19 @@ if [ -z "$cwd" ]; then
     cwd="${PWD}"
 fi
 
-# Define memoria directory
-memoria_dir="${cwd}/.memoria"
+# Define mneme directory
+mneme_dir="${cwd}/.mneme"
 
 # Local database path
-local_db_path="${memoria_dir}/local.db"
+local_db_path="${mneme_dir}/local.db"
 
-# Exit if no .memoria directory
-if [ ! -d "$memoria_dir" ]; then
+# Exit if no .mneme directory
+if [ ! -d "$mneme_dir" ]; then
     exit 0
 fi
 
-# Skip if prompt starts with /memoria (user is explicitly using memoria)
-if [[ "$prompt" == /memoria* ]]; then
+# Skip if prompt starts with /mneme (user is explicitly using mneme)
+if [[ "$prompt" == /mneme* ]]; then
     exit 0
 fi
 
@@ -66,7 +66,7 @@ if [ -z "$raw_keywords" ]; then
 fi
 
 # Expand keywords using tag aliases from tags.json (fuzzy-search style)
-tags_path="${memoria_dir}/tags.json"
+tags_path="${mneme_dir}/tags.json"
 expanded_keywords="$raw_keywords"
 
 if [ -f "$tags_path" ]; then
@@ -143,13 +143,13 @@ search_local_db() {
 }
 
 # Search function - simple grep-based search
-search_memoria() {
+search_mneme() {
     local pattern="$1"
     local results=""
 
     # Search sessions (limit to recent 10 files)
-    if [ -d "${memoria_dir}/sessions" ]; then
-        local session_matches=$(find "${memoria_dir}/sessions" -name "*.json" -type f 2>/dev/null | \
+    if [ -d "${mneme_dir}/sessions" ]; then
+        local session_matches=$(find "${mneme_dir}/sessions" -name "*.json" -type f 2>/dev/null | \
             xargs -I{} sh -c "grep -l -i -E '$pattern' '{}' 2>/dev/null || true" | \
             head -3)
 
@@ -165,8 +165,8 @@ search_memoria() {
     fi
 
     # Search decisions
-    if [ -d "${memoria_dir}/decisions" ]; then
-        local decision_matches=$(find "${memoria_dir}/decisions" -name "*.json" -type f 2>/dev/null | \
+    if [ -d "${mneme_dir}/decisions" ]; then
+        local decision_matches=$(find "${mneme_dir}/decisions" -name "*.json" -type f 2>/dev/null | \
             xargs -I{} sh -c "grep -l -i -E '$pattern' '{}' 2>/dev/null || true" | \
             head -3)
 
@@ -182,8 +182,8 @@ search_memoria() {
     fi
 
     # Search patterns
-    if [ -d "${memoria_dir}/patterns" ]; then
-        for file in "${memoria_dir}/patterns"/*.json; do
+    if [ -d "${mneme_dir}/patterns" ]; then
+        for file in "${mneme_dir}/patterns"/*.json; do
             if [ -f "$file" ]; then
                 local pattern_matches=$(jq -r --arg p "$pattern" \
                     '.patterns[]? | select(.errorPattern | test($p; "i")) | "[pattern] \(.errorPattern | .[0:50])... → \(.solution | .[0:50])..."' \
@@ -205,7 +205,7 @@ search_memoria() {
 }
 
 # Perform search
-search_results=$(search_memoria "$keywords")
+search_results=$(search_mneme "$keywords")
 
 # Exit if no results
 if [ -z "$search_results" ] || [ "$search_results" = "\n" ]; then
@@ -232,11 +232,11 @@ escape_for_json() {
 }
 
 # Build context message
-context_message="<memoria-context>
+context_message="<mneme-context>
 Related memories found:
 $(echo -e "$search_results")
-Use /memoria:search for more details.
-</memoria-context>"
+Use /mneme:search for more details.
+</mneme-context>"
 
 context_escaped=$(escape_for_json "$context_message")
 

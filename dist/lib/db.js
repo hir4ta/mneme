@@ -25,7 +25,7 @@ function getCurrentUser() {
   }
 }
 function getLocalDbPath(projectPath) {
-  return join(projectPath, ".memoria", "local.db");
+  return join(projectPath, ".mneme", "local.db");
 }
 function configurePragmas(db) {
   db.exec("PRAGMA journal_mode = WAL");
@@ -33,9 +33,9 @@ function configurePragmas(db) {
   db.exec("PRAGMA synchronous = NORMAL");
 }
 function initLocalDatabase(projectPath) {
-  const memoriaDir = join(projectPath, ".memoria");
-  if (!existsSync(memoriaDir)) {
-    mkdirSync(memoriaDir, { recursive: true });
+  const mnemeDir = join(projectPath, ".mneme");
+  if (!existsSync(mnemeDir)) {
+    mkdirSync(mnemeDir, { recursive: true });
   }
   const dbPath = getLocalDbPath(projectPath);
   const db = new DatabaseSync(dbPath);

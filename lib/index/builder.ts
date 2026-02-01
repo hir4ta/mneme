@@ -65,11 +65,11 @@ function listYearMonths(dir: string): { year: string; month: string }[] {
  * Build session index for a specific month
  */
 export function buildSessionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): SessionIndex {
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const sessionsDir = path.join(mnemeDir, "sessions");
   const monthDir = path.join(sessionsDir, year, month);
   const files = listMonthJsonFiles(monthDir);
 
@@ -129,15 +129,15 @@ export function buildSessionIndexForMonth(
  * Build all session indexes (one per month)
  */
 export function buildAllSessionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
 ): Map<string, SessionIndex> {
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const sessionsDir = path.join(mnemeDir, "sessions");
   const yearMonths = listYearMonths(sessionsDir);
   const indexes = new Map<string, SessionIndex>();
 
   for (const { year, month } of yearMonths) {
     const key = `${year}/${month}`;
-    const index = buildSessionIndexForMonth(memoriaDir, year, month);
+    const index = buildSessionIndexForMonth(mnemeDir, year, month);
     if (index.items.length > 0) {
       indexes.set(key, index);
     }
@@ -150,11 +150,11 @@ export function buildAllSessionIndexes(
  * Build decision index for a specific month
  */
 export function buildDecisionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): DecisionIndex {
-  const decisionsDir = path.join(memoriaDir, "decisions");
+  const decisionsDir = path.join(mnemeDir, "decisions");
   const monthDir = path.join(decisionsDir, year, month);
   const files = listMonthJsonFiles(monthDir);
 
@@ -200,15 +200,15 @@ export function buildDecisionIndexForMonth(
  * Build all decision indexes (one per month)
  */
 export function buildAllDecisionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
 ): Map<string, DecisionIndex> {
-  const decisionsDir = path.join(memoriaDir, "decisions");
+  const decisionsDir = path.join(mnemeDir, "decisions");
   const yearMonths = listYearMonths(decisionsDir);
   const indexes = new Map<string, DecisionIndex>();
 
   for (const { year, month } of yearMonths) {
     const key = `${year}/${month}`;
-    const index = buildDecisionIndexForMonth(memoriaDir, year, month);
+    const index = buildDecisionIndexForMonth(mnemeDir, year, month);
     if (index.items.length > 0) {
       indexes.set(key, index);
     }
@@ -221,9 +221,9 @@ export function buildAllDecisionIndexes(
  * Get list of available year/months for sessions
  */
 export function getSessionYearMonths(
-  memoriaDir: string,
+  mnemeDir: string,
 ): { year: string; month: string }[] {
-  const sessionsDir = path.join(memoriaDir, "sessions");
+  const sessionsDir = path.join(mnemeDir, "sessions");
   return listYearMonths(sessionsDir);
 }
 
@@ -231,9 +231,9 @@ export function getSessionYearMonths(
  * Get list of available year/months for decisions
  */
 export function getDecisionYearMonths(
-  memoriaDir: string,
+  mnemeDir: string,
 ): { year: string; month: string }[] {
-  const decisionsDir = path.join(memoriaDir, "decisions");
+  const decisionsDir = path.join(mnemeDir, "decisions");
   return listYearMonths(decisionsDir);
 }
 
@@ -241,8 +241,8 @@ export function getDecisionYearMonths(
 /**
  * @deprecated Use buildAllSessionIndexes instead
  */
-export function buildSessionIndex(memoriaDir: string): SessionIndex {
-  const allIndexes = buildAllSessionIndexes(memoriaDir);
+export function buildSessionIndex(mnemeDir: string): SessionIndex {
+  const allIndexes = buildAllSessionIndexes(mnemeDir);
   const items: SessionIndexItem[] = [];
 
   for (const index of allIndexes.values()) {
@@ -264,8 +264,8 @@ export function buildSessionIndex(memoriaDir: string): SessionIndex {
 /**
  * @deprecated Use buildAllDecisionIndexes instead
  */
-export function buildDecisionIndex(memoriaDir: string): DecisionIndex {
-  const allIndexes = buildAllDecisionIndexes(memoriaDir);
+export function buildDecisionIndex(mnemeDir: string): DecisionIndex {
+  const allIndexes = buildAllDecisionIndexes(mnemeDir);
   const items: DecisionIndexItem[] = [];
 
   for (const index of allIndexes.values()) {
@@ -287,12 +287,12 @@ export function buildDecisionIndex(memoriaDir: string): DecisionIndex {
 /**
  * @deprecated Use buildAllSessionIndexes and buildAllDecisionIndexes instead
  */
-export function buildAllIndexes(memoriaDir: string): {
+export function buildAllIndexes(mnemeDir: string): {
   sessions: SessionIndex;
   decisions: DecisionIndex;
 } {
   return {
-    sessions: buildSessionIndex(memoriaDir),
-    decisions: buildDecisionIndex(memoriaDir),
+    sessions: buildSessionIndex(mnemeDir),
+    decisions: buildDecisionIndex(mnemeDir),
   };
 }

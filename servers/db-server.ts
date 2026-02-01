@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * memoria MCP Database Server
+ * mneme MCP Database Server
  *
  * Provides direct database access for:
  * - Cross-project queries
@@ -92,11 +92,11 @@ interface Stats {
 
 // Get project path from env or current working directory
 function getProjectPath(): string {
-  return process.env.MEMORIA_PROJECT_PATH || process.cwd();
+  return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 
 function getLocalDbPath(): string {
-  return path.join(getProjectPath(), ".memoria", "local.db");
+  return path.join(getProjectPath(), ".mneme", "local.db");
 }
 
 // Database connection (lazy initialization)
@@ -442,7 +442,7 @@ function crossProjectSearch(
 function getTranscriptPath(claudeSessionId: string): string | null {
   const projectPath = getProjectPath();
   // Encode project path: replace / with -
-  // Claude Code keeps the leading dash (e.g., -Users-user-Projects-memoria)
+  // Claude Code keeps the leading dash (e.g., -Users-user-Projects-mneme)
   const encodedPath = projectPath.replace(/\//g, "-");
 
   const transcriptPath = path.join(
@@ -650,7 +650,7 @@ interface SaveInteractionsResult {
 
 async function saveInteractions(
   claudeSessionId: string,
-  memoriaSessionId?: string,
+  mnemeSessionId?: string,
 ): Promise<SaveInteractionsResult> {
   const transcriptPath = getTranscriptPath(claudeSessionId);
   if (!transcriptPath) {
@@ -673,7 +673,7 @@ async function saveInteractions(
   }
 
   const projectPath = getProjectPath();
-  const sessionId = memoriaSessionId || claudeSessionId.slice(0, 8);
+  const sessionId = mnemeSessionId || claudeSessionId.slice(0, 8);
 
   // Get owner from git or fallback
   let owner = "unknown";
@@ -831,16 +831,16 @@ async function saveInteractions(
 
 // MCP Server setup
 const server = new McpServer({
-  name: "memoria-db",
+  name: "mneme-db",
   version: "0.1.0",
 });
 
-// Tool: memoria_list_projects
+// Tool: mneme_list_projects
 server.registerTool(
-  "memoria_list_projects",
+  "mneme_list_projects",
   {
     description:
-      "List all projects tracked in memoria's local database with session counts and last activity",
+      "List all projects tracked in mneme's local database with session counts and last activity",
     inputSchema: {},
   },
   async () => {
@@ -851,9 +851,9 @@ server.registerTool(
   },
 );
 
-// Tool: memoria_list_sessions
+// Tool: mneme_list_sessions
 server.registerTool(
-  "memoria_list_sessions",
+  "mneme_list_sessions",
   {
     description: "List sessions, optionally filtered by project or repository",
     inputSchema: {
@@ -873,9 +873,9 @@ server.registerTool(
   },
 );
 
-// Tool: memoria_get_interactions
+// Tool: mneme_get_interactions
 server.registerTool(
-  "memoria_get_interactions",
+  "mneme_get_interactions",
   {
     description: "Get conversation interactions for a specific session",
     inputSchema: {
@@ -905,9 +905,9 @@ server.registerTool(
   },
 );
 
-// Tool: memoria_stats
+// Tool: mneme_stats
 server.registerTool(
-  "memoria_stats",
+  "mneme_stats",
   {
     description:
       "Get statistics across all projects: total counts, per-project breakdown, recent activity",
@@ -927,9 +927,9 @@ server.registerTool(
   },
 );
 
-// Tool: memoria_cross_project_search
+// Tool: mneme_cross_project_search
 server.registerTool(
-  "memoria_cross_project_search",
+  "mneme_cross_project_search",
   {
     description:
       "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
@@ -946,28 +946,28 @@ server.registerTool(
   },
 );
 
-// Tool: memoria_save_interactions
+// Tool: mneme_save_interactions
 server.registerTool(
-  "memoria_save_interactions",
+  "mneme_save_interactions",
   {
     description:
       "Save conversation interactions from Claude Code transcript to SQLite. " +
-      "Use this during /memoria:save to persist the conversation history. " +
+      "Use this during /mneme:save to persist the conversation history. " +
       "Reads the transcript file directly and extracts user/assistant messages.",
     inputSchema: {
       claudeSessionId: z
         .string()
         .describe("Full Claude Code session UUID (36 chars)"),
-      memoriaSessionId: z
+      mnemeSessionId: z
         .string()
         .optional()
         .describe(
-          "Memoria session ID (8 chars). If not provided, uses first 8 chars of claudeSessionId",
+          "Mneme session ID (8 chars). If not provided, uses first 8 chars of claudeSessionId",
         ),
     },
   },
-  async ({ claudeSessionId, memoriaSessionId }) => {
-    const result = await saveInteractions(claudeSessionId, memoriaSessionId);
+  async ({ claudeSessionId, mnemeSessionId }) => {
+    const result = await saveInteractions(claudeSessionId, mnemeSessionId);
     return {
       content: [
         {
@@ -984,7 +984,7 @@ server.registerTool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("memoria-db MCP server running");
+  console.error("mneme-db MCP server running");
 }
 
 main().catch((error) => {

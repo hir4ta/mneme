@@ -1,5 +1,5 @@
 {
-  "description": "memoria plugin hooks for session management, auto-save, and memory search",
+  "description": "mneme plugin hooks for session management, auto-save, and memory search",
   "hooks": {
     "UserPromptSubmit": [
       {

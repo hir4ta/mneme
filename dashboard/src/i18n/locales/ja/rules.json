@@ -1,18 +1,18 @@
 {
   "title": "開発ルール",
-  "subtitle": "/memoria:reviewで使用されるレビュー基準。/memoria:saveで抽出されます。",
+  "subtitle": "/mneme:reviewで使用されるレビュー基準。/mneme:saveで抽出されます。",
   "count": "{{filtered}} / {{total}}",
   "searchPlaceholder": "ルールを検索...",
   "allPriority": "すべての優先度",
   "allCategories": "すべてのカテゴリ",
   "allScopes": "すべてのスコープ",
-  "noRules": "ルールがまだありません。/memoria:saveを実行してセッションからルールを抽出してください。",
+  "noRules": "ルールがまだありません。/mneme:saveを実行してセッションからルールを抽出してください。",
   "noMatchingFilters": "フィルターに一致するルールがありません。",
   "explanation": {
     "title": "ルールとは？",
     "devRules": "コーディング標準とアーキテクチャルール（例：N+1クエリを避ける）",
     "reviewGuidelines": "コードレビューチェックリスト項目（例：トランザクションを確認）",
-    "description": "<code>/memoria:save</code>を実行するとセッションからルールが抽出されます。<code>/memoria:review</code>でこれらのルールに基づいてコードをチェックできます。"
+    "description": "<code>/mneme:save</code>を実行するとセッションからルールが抽出されます。<code>/mneme:review</code>でこれらのルールに基づいてコードをチェックできます。"
   },
   "fields": {
     "text": "タイトル",

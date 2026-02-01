@@ -1,9 +1,9 @@
 {
   "title": "Learned Patterns",
-  "subtitle": "Patterns extracted from development sessions via /memoria:save",
+  "subtitle": "Patterns extracted from development sessions via /mneme:save",
   "patternCount": "{{count}} patterns",
   "searchPlaceholder": "Search patterns...",
-  "noPatterns": "No patterns learned yet. Run /memoria:save to extract patterns from sessions.",
+  "noPatterns": "No patterns learned yet. Run /mneme:save to extract patterns from sessions.",
   "noMatchingFilters": "No patterns match your filters.",
   "deleteTitle": "Delete pattern?",
   "explanation": {
@@ -11,7 +11,7 @@
     "goodPattern": "Recommended coding patterns (e.g., parallelize with Promise.all)",
     "antiPattern": "Patterns to avoid (e.g., N+1 queries)",
     "errorSolution": "Common errors and their fixes (e.g., JWT signing error → convert to PEM format)",
-    "description": "Patterns are extracted from sessions when you run <code>/memoria:save</code>. Errors encountered and solutions found are automatically captured."
+    "description": "Patterns are extracted from sessions when you run <code>/mneme:save</code>. Errors encountered and solutions found are automatically captured."
   },
   "types": {
     "good": "Good Pattern",

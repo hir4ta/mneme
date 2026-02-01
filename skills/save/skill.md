@@ -6,7 +6,7 @@ description: |
   (3) solving complex errors worth documenting, (4) before ending a long session.
 ---
 
-# /memoria:save
+# /mneme:save
 
 Extract and save all meaningful data from the current session.
 
@@ -15,14 +15,14 @@ Extract and save all meaningful data from the current session.
 **Run at the end of meaningful sessions** to extract:
 
 - Summary (title, goal, outcome)
-- Technical decisions → `.memoria/decisions/`
-- Error patterns → `.memoria/patterns/`
-- Development rules → `.memoria/rules/`
+- Technical decisions → `.mneme/decisions/`
+- Error patterns → `.mneme/patterns/`
+- Development rules → `.mneme/rules/`
 
 ## Usage
 
 ```
-/memoria:save
+/mneme:save
 ```
 
 ## What Gets Saved
@@ -50,26 +50,26 @@ Execute all phases in order. Each phase builds on the previous.
 
 ### Phase 0: Identify Master Session and Merge Children
 
-**Purpose:** Support multiple Claude sessions contributing to one logical memoria session.
+**Purpose:** Support multiple Claude sessions contributing to one logical mneme session.
 
-1. Get current session path from additionalContext (e.g., `.memoria/sessions/2026/01/xyz78901.json`)
+1. Get current session path from additionalContext (e.g., `.mneme/sessions/2026/01/xyz78901.json`)
 2. Get session ID from the path (e.g., `xyz78901`)
 
 3. **Check for session-link file:**
    ```bash
-   Read: .memoria/session-links/xyz78901.json
+   Read: .mneme/session-links/xyz78901.json
    ```
    If exists, extract `masterSessionId`. If not, current session IS the master.
 
 4. **Find master session file:**
    ```bash
-   Glob: .memoria/sessions/**/{masterSessionId}.json
+   Glob: .mneme/sessions/**/{masterSessionId}.json
    ```
 
 5. **Find all child sessions linked to this master:**
    ```bash
    # Read all session-link files
-   Glob: .memoria/session-links/*.json
+   Glob: .mneme/session-links/*.json
 
    # Filter by masterSessionId
    for each link:
@@ -80,7 +80,7 @@ Execute all phases in order. Each phase builds on the previous.
 6. **Also check legacy `resumedFrom` chains:**
    ```bash
    # Find sessions where resumedFrom points to master or any child
-   Glob: .memoria/sessions/**/*.json
+   Glob: .mneme/sessions/**/*.json
    for each session:
      if session.resumedFrom == masterSessionId or session.resumedFrom in childSessionIds:
        childSessionIds.push(session.id)
@@ -97,7 +97,7 @@ Execute all phases in order. Each phase builds on the previous.
 
 8. **Mark child sessions as merged:**
    ```bash
-   Edit: .memoria/sessions/{year}/{month}/{childId}.json
+   Edit: .mneme/sessions/{year}/{month}/{childId}.json
    ```
    ```json
    {
@@ -111,17 +111,17 @@ Execute all phases in order. Each phase builds on the previous.
 
 ### Phase 1: Save Interactions to SQLite
 
-**REQUIRED:** You MUST save interactions to `.memoria/local.db` in this phase.
+**REQUIRED:** You MUST save interactions to `.mneme/local.db` in this phase.
 Do NOT skip this step or delegate to SessionEnd hook.
 
 1. Use master session ID from Phase 0 (e.g., `abc12345`)
 2. Get Claude Code session ID from the system (check session context for the full UUID)
 
-3. **Create session-link file** (for SessionEnd hook to find the correct memoria session):
+3. **Create session-link file** (for SessionEnd hook to find the correct mneme session):
    ```bash
-   mkdir -p .memoria/session-links
+   mkdir -p .mneme/session-links
    ```
-   Write to `.memoria/session-links/{claude-session-short-id}.json`:
+   Write to `.mneme/session-links/{claude-session-short-id}.json`:
    ```json
    {
      "masterSessionId": "abc12345",
@@ -133,15 +133,15 @@ Do NOT skip this step or delegate to SessionEnd hook.
 
 4. **Save interactions using MCP tool:**
 
-   Call the `memoria_save_interactions` MCP tool with:
+   Call the `mneme_save_interactions` MCP tool with:
    - `claudeSessionId`: The full Claude Code session UUID (36 chars)
-   - `memoriaSessionId`: The master session ID from Phase 0 (8 chars)
+   - `mnemeSessionId`: The master session ID from Phase 0 (8 chars)
 
    Example:
    ```
-   mcp__memoria-db__memoria_save_interactions({
+   mcp__mneme-db__mneme_save_interactions({
      claudeSessionId: "86ea2268-ae4d-4f5c-bb38-424d3716061f",
-     memoriaSessionId: "abc12345"
+     mnemeSessionId: "abc12345"
    })
    ```
 
@@ -149,7 +149,7 @@ Do NOT skip this step or delegate to SessionEnd hook.
    - Read the transcript file directly from `~/.claude/projects/`
    - Extract all user/assistant messages with thinking blocks
    - Merge with any pre_compact_backups
-   - Save to `.memoria/local.db`
+   - Save to `.mneme/local.db`
 
 5. **Verify the result:**
    Check the tool response for:
@@ -230,8 +230,8 @@ Do NOT skip this step or delegate to SessionEnd hook.
 **For each discussion with a clear decision:**
 
 1. Generate ID from topic: `slugify(topic)-001`
-2. Check for duplicates in `.memoria/decisions/`
-3. Save to `.memoria/decisions/YYYY/MM/{id}.json`:
+2. Check for duplicates in `.mneme/decisions/`
+3. Save to `.mneme/decisions/YYYY/MM/{id}.json`:
 
 ```json
 {
@@ -263,7 +263,7 @@ Do NOT skip this step or delegate to SessionEnd hook.
 
 **For each error that was solved:**
 
-1. Read or create `.memoria/patterns/{git-user-name}.json`
+1. Read or create `.mneme/patterns/{git-user-name}.json`
 2. Check if similar pattern exists (by errorPattern)
 3. Add or update pattern:
 
@@ -387,24 +387,24 @@ Before adding:
 
 ```bash
 # Local SQLite (interactions - project-local)
-# Location: .memoria/local.db
-Read + Write: .memoria/local.db
+# Location: .mneme/local.db
+Read + Write: .mneme/local.db
   - interactions table
   - pre_compact_backups table
 
 # Session JSON (metadata - shared)
-Read + Edit: .memoria/sessions/YYYY/MM/{id}.json
+Read + Edit: .mneme/sessions/YYYY/MM/{id}.json
 
 # Decisions (create if new)
-Read: .memoria/decisions/YYYY/MM/*.json (for duplicate check)
-Write: .memoria/decisions/YYYY/MM/{decision-id}.json
+Read: .mneme/decisions/YYYY/MM/*.json (for duplicate check)
+Write: .mneme/decisions/YYYY/MM/{decision-id}.json
 
 # Patterns (merge into user file)
-Read + Edit: .memoria/patterns/{git-user-name}.json
+Read + Edit: .mneme/patterns/{git-user-name}.json
 
 # Rules (append)
-Read + Edit: .memoria/rules/dev-rules.json
-Read + Edit: .memoria/rules/review-guidelines.json
+Read + Edit: .mneme/rules/dev-rules.json
+Read + Edit: .mneme/rules/review-guidelines.json
 ```
 
 ## Handling Long Sessions
@@ -428,7 +428,7 @@ Report each phase result:
 **Session saved.**
 
 **Master Session ID:** abc12345
-**Path:** .memoria/sessions/2026/01/abc12345.json
+**Path:** .mneme/sessions/2026/01/abc12345.json
 
 **Phase 0 - Master Session:**
   Master: abc12345
@@ -436,7 +436,7 @@ Report each phase result:
   Work periods: 3
 
 **Phase 1 - Interactions:** Saved to local.db
-  - Link: .memoria/session-links/{claude-session-id}.json
+  - Link: .mneme/session-links/{claude-session-id}.json
   - Interactions saved: 15 (user: 8, assistant: 7)
 
 **Phase 2 - Summary:**
@@ -473,10 +473,10 @@ If no rules are found, report what was scanned:
 ## Notes
 
 - Session path is shown in additionalContext at session start
-- **Phase 1 MUST save interactions** to `.memoria/local.db` immediately - do NOT skip or defer
-- SessionEnd hook is only a backup; `/memoria:save` is the primary way to persist interactions
-- **Privacy**: Interactions in SQLite are local (`.memoria/local.db` should be gitignored)
-- **Project-local storage**: Each project has its own `.memoria/local.db`
+- **Phase 1 MUST save interactions** to `.mneme/local.db` immediately - do NOT skip or defer
+- SessionEnd hook is only a backup; `/mneme:save` is the primary way to persist interactions
+- **Privacy**: Interactions in SQLite are local (`.mneme/local.db` should be gitignored)
+- **Project-local storage**: Each project has its own `.mneme/local.db`
 - **JSON lightness**: Session JSON contains only metadata (no interactions)
 - Decisions and patterns are also kept in session JSON for context
 - Duplicate checking prevents bloat in decisions/ and patterns/

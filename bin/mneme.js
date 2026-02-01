@@ -30,43 +30,43 @@ const projectRoot = process.cwd();
 
 function showHelp() {
   console.log(`
-memoria - Claude Code Long-term Memory Plugin
+mneme - Claude Code Long-term Memory Plugin
 
 Usage:
-  memoria --init         Initialize .memoria directory in current project
-  memoria --dashboard    Start the web dashboard
-  memoria -d             Same as above (short form)
-  memoria --port <port>  Specify port (default: 7777)
-  memoria --help         Show this help
+  mneme --init         Initialize .mneme directory in current project
+  mneme --dashboard    Start the web dashboard
+  mneme -d             Same as above (short form)
+  mneme --port <port>  Specify port (default: 7777)
+  mneme --help         Show this help
 
 Examples:
   cd /path/to/your/project
-  npx @hir4ta/memoria --init
-  npx @hir4ta/memoria --dashboard
-  npx @hir4ta/memoria -d --port 8080
+  npx @hir4ta/mneme --init
+  npx @hir4ta/mneme --dashboard
+  npx @hir4ta/mneme -d --port 8080
 `);
 }
 
-function checkMemoriaDir() {
-  const memoriaDir = path.join(projectRoot, ".memoria");
-  if (!fs.existsSync(memoriaDir)) {
-    console.log(`\nWARNING: .memoria directory not found: ${projectRoot}`);
-    console.log("         Run: npx @hir4ta/memoria --init");
+function checkMnemeDir() {
+  const mnemeDir = path.join(projectRoot, ".mneme");
+  if (!fs.existsSync(mnemeDir)) {
+    console.log(`\nWARNING: .mneme directory not found: ${projectRoot}`);
+    console.log("         Run: npx @hir4ta/mneme --init");
   }
 }
 
-function initMemoria() {
-  const memoriaDir = path.join(projectRoot, ".memoria");
-  const sessionsDir = path.join(memoriaDir, "sessions");
-  const rulesDir = path.join(memoriaDir, "rules");
-  const patternsDir = path.join(memoriaDir, "patterns");
-  const tagsPath = path.join(memoriaDir, "tags.json");
-  const localDbPath = path.join(memoriaDir, "local.db");
-  const gitignorePath = path.join(memoriaDir, ".gitignore");
+function initMneme() {
+  const mnemeDir = path.join(projectRoot, ".mneme");
+  const sessionsDir = path.join(mnemeDir, "sessions");
+  const rulesDir = path.join(mnemeDir, "rules");
+  const patternsDir = path.join(mnemeDir, "patterns");
+  const tagsPath = path.join(mnemeDir, "tags.json");
+  const localDbPath = path.join(mnemeDir, "local.db");
+  const gitignorePath = path.join(mnemeDir, ".gitignore");
 
   // Check if already initialized
-  if (fs.existsSync(memoriaDir)) {
-    console.log(`memoria is already initialized: ${memoriaDir}`);
+  if (fs.existsSync(mnemeDir)) {
+    console.log(`mneme is already initialized: ${mnemeDir}`);
     return;
   }
 
@@ -126,7 +126,7 @@ local.db-shm
     );
   }
 
-  console.log(`memoria initialized: ${memoriaDir}`);
+  console.log(`mneme initialized: ${mnemeDir}`);
   console.log(`
 Created:
   ${sessionsDir}/
@@ -138,7 +138,7 @@ Created:
   ${gitignorePath}
   ${localDbPath}
 
-You can now use memoria with Claude Code in this project.
+You can now use mneme with Claude Code in this project.
 `);
 }
 
@@ -151,7 +151,7 @@ function getPort() {
 }
 
 function startDashboard() {
-  checkMemoriaDir();
+  checkMnemeDir();
 
   const port = getPort();
   const serverPath = path.join(packageDir, "dist", "server.js");
@@ -166,7 +166,7 @@ function startDashboard() {
     cwd: packageDir,
     env: {
       ...process.env,
-      MEMORIA_PROJECT_ROOT: projectRoot,
+      MNEME_PROJECT_ROOT: projectRoot,
       PORT: port.toString(),
     },
     stdio: "inherit",
@@ -193,7 +193,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 }
 
 if (args.includes("--init")) {
-  initMemoria();
+  initMneme();
 } else if (args.includes("--dashboard") || args.includes("-d")) {
   startDashboard();
 } else {

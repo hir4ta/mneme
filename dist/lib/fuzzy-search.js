@@ -83,18 +83,18 @@ function calculateSimilarity(text, query) {
 async function search(options) {
   const {
     query,
-    memoriaDir,
+    mnemeDir,
     targets = ["sessions", "decisions"],
     limit = 20,
     timeout = 1e4
   } = options;
   const startTime = Date.now();
   const results = [];
-  const tagsPath = path2.join(memoriaDir, "tags.json");
+  const tagsPath = path2.join(mnemeDir, "tags.json");
   const tagsData = safeReadJson(tagsPath, { tags: [] });
   const expandedQueries = expandAliases(query, tagsData.tags);
   if (targets.includes("sessions")) {
-    const sessionsDir = path2.join(memoriaDir, "sessions");
+    const sessionsDir = path2.join(mnemeDir, "sessions");
     if (fs2.existsSync(sessionsDir)) {
       const files = findJsonFiles(sessionsDir);
       for (const file of files) {
@@ -118,7 +118,7 @@ async function search(options) {
     }
   }
   if (targets.includes("decisions")) {
-    const decisionsDir = path2.join(memoriaDir, "decisions");
+    const decisionsDir = path2.join(mnemeDir, "decisions");
     if (fs2.existsSync(decisionsDir)) {
       const files = findJsonFiles(decisionsDir);
       for (const file of files) {
@@ -142,7 +142,7 @@ async function search(options) {
     }
   }
   if (targets.includes("patterns")) {
-    const patternsDir = path2.join(memoriaDir, "patterns");
+    const patternsDir = path2.join(mnemeDir, "patterns");
     if (fs2.existsSync(patternsDir)) {
       const files = findJsonFiles(patternsDir);
       for (const file of files) {
@@ -195,12 +195,12 @@ if (isMain && process.argv.length > 2) {
   const args = process.argv.slice(2);
   const queryIndex = args.indexOf("--query");
   const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
-  const memoriaDir = `${process.cwd()}/.memoria`;
+  const mnemeDir = `${process.cwd()}/.mneme`;
   if (!query) {
     console.error(JSON.stringify({ success: false, error: "Missing --query" }));
     process.exit(0);
   }
-  search({ query, memoriaDir }).then((results) => {
+  search({ query, mnemeDir }).then((results) => {
     console.log(JSON.stringify({ success: true, results }));
   }).catch((error) => {
     console.error(JSON.stringify({ success: false, error: String(error) }));

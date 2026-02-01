@@ -22,13 +22,14 @@ const navGroups: NavGroup[] = [
       { href: "/", labelKey: "nav.sessions", icon: "folder" },
       { href: "/decisions", labelKey: "nav.decisions", icon: "lightbulb" },
       { href: "/patterns", labelKey: "nav.patterns", icon: "pattern" },
+      { href: "/rules", labelKey: "nav.rules", icon: "check" },
       { href: "/stats", labelKey: "nav.statistics", icon: "chart" },
       { href: "/graph", labelKey: "nav.graph", icon: "graph" },
     ],
   },
   {
-    labelKey: "nav.settings",
-    items: [{ href: "/rules", labelKey: "nav.rules", icon: "check" }],
+    labelKey: "nav.help",
+    items: [{ href: "/guide", labelKey: "nav.guide", icon: "book" }],
   },
 ];
 
@@ -126,6 +127,22 @@ const icons: Record<string, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+      />
+    </svg>
+  ),
+  book: (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <title>Guide</title>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
       />
     </svg>
   ),

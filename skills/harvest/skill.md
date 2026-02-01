@@ -1,20 +1,20 @@
 ---
 name: harvest
 description: |
-  Extract knowledge from GitHub PR review comments and save to memoria's knowledge base.
+  Extract knowledge from GitHub PR review comments and save to mneme's knowledge base.
   Use when: (1) a PR has valuable review feedback, (2) learning from code review discussions,
   (3) capturing team knowledge from merged PRs.
 argument-hint: "<PR-URL>"
 ---
 
-# /memoria:harvest
+# /mneme:harvest
 
-Extract knowledge from GitHub PR review comments and save to memoria's knowledge base.
+Extract knowledge from GitHub PR review comments and save to mneme's knowledge base.
 
 ## Usage
 
 ```
-/memoria:harvest https://github.com/owner/repo/pull/123
+/mneme:harvest https://github.com/owner/repo/pull/123
 ```
 
 ## What Gets Extracted
@@ -132,9 +132,9 @@ All saved items include `prSource` for traceability:
   "category": "code-style",
   "prSource": {
     "owner": "hir4ta",
-    "repo": "memoria",
+    "repo": "mneme",
     "prNumber": 42,
-    "url": "https://github.com/hir4ta/memoria/pull/42",
+    "url": "https://github.com/hir4ta/mneme/pull/42",
     "commentId": 123456789
   },
   "createdAt": "2026-01-30T10:00:00Z"

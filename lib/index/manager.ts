@@ -16,41 +16,41 @@ const INDEXES_DIR = ".indexes";
 /**
  * Get index directory path
  */
-function getIndexDir(memoriaDir: string): string {
-  return path.join(memoriaDir, INDEXES_DIR);
+function getIndexDir(mnemeDir: string): string {
+  return path.join(mnemeDir, INDEXES_DIR);
 }
 
 /**
  * Get session index file path for a specific month
  */
 function getSessionIndexPath(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): string {
-  return path.join(getIndexDir(memoriaDir), "sessions", year, `${month}.json`);
+  return path.join(getIndexDir(mnemeDir), "sessions", year, `${month}.json`);
 }
 
 /**
  * Get decision index file path for a specific month
  */
 function getDecisionIndexPath(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): string {
-  return path.join(getIndexDir(memoriaDir), "decisions", year, `${month}.json`);
+  return path.join(getIndexDir(mnemeDir), "decisions", year, `${month}.json`);
 }
 
 /**
  * Read session index for a specific month
  */
 export function readSessionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): SessionIndex | null {
-  const indexPath = getSessionIndexPath(memoriaDir, year, month);
+  const indexPath = getSessionIndexPath(mnemeDir, year, month);
   if (!fs.existsSync(indexPath)) {
     return null;
   }
@@ -65,11 +65,11 @@ export function readSessionIndexForMonth(
  * Read decision index for a specific month
  */
 export function readDecisionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): DecisionIndex | null {
-  const indexPath = getDecisionIndexPath(memoriaDir, year, month);
+  const indexPath = getDecisionIndexPath(mnemeDir, year, month);
   if (!fs.existsSync(indexPath)) {
     return null;
   }
@@ -84,12 +84,12 @@ export function readDecisionIndexForMonth(
  * Write session index for a specific month
  */
 export function writeSessionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
   index: SessionIndex,
 ): void {
-  const indexPath = getSessionIndexPath(memoriaDir, year, month);
+  const indexPath = getSessionIndexPath(mnemeDir, year, month);
   ensureDir(path.dirname(indexPath));
   fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
@@ -98,12 +98,12 @@ export function writeSessionIndexForMonth(
  * Write decision index for a specific month
  */
 export function writeDecisionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
   index: DecisionIndex,
 ): void {
-  const indexPath = getDecisionIndexPath(memoriaDir, year, month);
+  const indexPath = getDecisionIndexPath(mnemeDir, year, month);
   ensureDir(path.dirname(indexPath));
   fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
@@ -112,13 +112,13 @@ export function writeDecisionIndexForMonth(
  * Rebuild session index for a specific month
  */
 export function rebuildSessionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): SessionIndex {
-  const index = buildSessionIndexForMonth(memoriaDir, year, month);
+  const index = buildSessionIndexForMonth(mnemeDir, year, month);
   if (index.items.length > 0) {
-    writeSessionIndexForMonth(memoriaDir, year, month, index);
+    writeSessionIndexForMonth(mnemeDir, year, month, index);
   }
   return index;
 }
@@ -127,13 +127,13 @@ export function rebuildSessionIndexForMonth(
  * Rebuild decision index for a specific month
  */
 export function rebuildDecisionIndexForMonth(
-  memoriaDir: string,
+  mnemeDir: string,
   year: string,
   month: string,
 ): DecisionIndex {
-  const index = buildDecisionIndexForMonth(memoriaDir, year, month);
+  const index = buildDecisionIndexForMonth(mnemeDir, year, month);
   if (index.items.length > 0) {
-    writeDecisionIndexForMonth(memoriaDir, year, month, index);
+    writeDecisionIndexForMonth(mnemeDir, year, month, index);
   }
   return index;
 }
@@ -142,13 +142,13 @@ export function rebuildDecisionIndexForMonth(
  * Rebuild all session indexes
  */
 export function rebuildAllSessionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
 ): Map<string, SessionIndex> {
-  const allIndexes = buildAllSessionIndexes(memoriaDir);
+  const allIndexes = buildAllSessionIndexes(mnemeDir);
 
   for (const [key, index] of allIndexes) {
     const [year, month] = key.split("/");
-    writeSessionIndexForMonth(memoriaDir, year, month, index);
+    writeSessionIndexForMonth(mnemeDir, year, month, index);
   }
 
   return allIndexes;
@@ -158,13 +158,13 @@ export function rebuildAllSessionIndexes(
  * Rebuild all decision indexes
  */
 export function rebuildAllDecisionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
 ): Map<string, DecisionIndex> {
-  const allIndexes = buildAllDecisionIndexes(memoriaDir);
+  const allIndexes = buildAllDecisionIndexes(mnemeDir);
 
   for (const [key, index] of allIndexes) {
     const [year, month] = key.split("/");
-    writeDecisionIndexForMonth(memoriaDir, year, month, index);
+    writeDecisionIndexForMonth(mnemeDir, year, month, index);
   }
 
   return allIndexes;
@@ -174,21 +174,21 @@ export function rebuildAllDecisionIndexes(
  * Read recent session indexes (last N months)
  */
 export function readRecentSessionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
   monthCount = 6,
 ): SessionIndex {
-  const yearMonths = getSessionYearMonths(memoriaDir);
+  const yearMonths = getSessionYearMonths(mnemeDir);
   const recentMonths = yearMonths.slice(0, monthCount);
 
   const allItems: SessionIndex["items"] = [];
   let latestUpdate = "";
 
   for (const { year, month } of recentMonths) {
-    let index = readSessionIndexForMonth(memoriaDir, year, month);
+    let index = readSessionIndexForMonth(mnemeDir, year, month);
 
     // Rebuild if not found or stale
     if (!index || isIndexStale(index)) {
-      index = rebuildSessionIndexForMonth(memoriaDir, year, month);
+      index = rebuildSessionIndexForMonth(mnemeDir, year, month);
     }
 
     if (index.items.length > 0) {
@@ -215,21 +215,21 @@ export function readRecentSessionIndexes(
  * Read recent decision indexes (last N months)
  */
 export function readRecentDecisionIndexes(
-  memoriaDir: string,
+  mnemeDir: string,
   monthCount = 6,
 ): DecisionIndex {
-  const yearMonths = getDecisionYearMonths(memoriaDir);
+  const yearMonths = getDecisionYearMonths(mnemeDir);
   const recentMonths = yearMonths.slice(0, monthCount);
 
   const allItems: DecisionIndex["items"] = [];
   let latestUpdate = "";
 
   for (const { year, month } of recentMonths) {
-    let index = readDecisionIndexForMonth(memoriaDir, year, month);
+    let index = readDecisionIndexForMonth(mnemeDir, year, month);
 
     // Rebuild if not found or stale
     if (!index || isIndexStale(index)) {
-      index = rebuildDecisionIndexForMonth(memoriaDir, year, month);
+      index = rebuildDecisionIndexForMonth(mnemeDir, year, month);
     }
 
     if (index.items.length > 0) {
@@ -255,18 +255,18 @@ export function readRecentDecisionIndexes(
 /**
  * Read all session indexes (all months)
  */
-export function readAllSessionIndexes(memoriaDir: string): SessionIndex {
-  const yearMonths = getSessionYearMonths(memoriaDir);
+export function readAllSessionIndexes(mnemeDir: string): SessionIndex {
+  const yearMonths = getSessionYearMonths(mnemeDir);
 
   const allItems: SessionIndex["items"] = [];
   let latestUpdate = "";
 
   for (const { year, month } of yearMonths) {
-    let index = readSessionIndexForMonth(memoriaDir, year, month);
+    let index = readSessionIndexForMonth(mnemeDir, year, month);
 
     // Rebuild if not found or stale
     if (!index || isIndexStale(index)) {
-      index = rebuildSessionIndexForMonth(memoriaDir, year, month);
+      index = rebuildSessionIndexForMonth(mnemeDir, year, month);
     }
 
     if (index.items.length > 0) {
@@ -292,18 +292,18 @@ export function readAllSessionIndexes(memoriaDir: string): SessionIndex {
 /**
  * Read all decision indexes (all months)
  */
-export function readAllDecisionIndexes(memoriaDir: string): DecisionIndex {
-  const yearMonths = getDecisionYearMonths(memoriaDir);
+export function readAllDecisionIndexes(mnemeDir: string): DecisionIndex {
+  const yearMonths = getDecisionYearMonths(mnemeDir);
 
   const allItems: DecisionIndex["items"] = [];
   let latestUpdate = "";
 
   for (const { year, month } of yearMonths) {
-    let index = readDecisionIndexForMonth(memoriaDir, year, month);
+    let index = readDecisionIndexForMonth(mnemeDir, year, month);
 
     // Rebuild if not found or stale
     if (!index || isIndexStale(index)) {
-      index = rebuildDecisionIndexForMonth(memoriaDir, year, month);
+      index = rebuildDecisionIndexForMonth(mnemeDir, year, month);
     }
 
     if (index.items.length > 0) {
@@ -349,86 +349,83 @@ export function isIndexStale(
 /**
  * @deprecated Use readRecentSessionIndexes or readAllSessionIndexes instead
  */
-export function readSessionIndex(memoriaDir: string): SessionIndex | null {
-  return readRecentSessionIndexes(memoriaDir);
+export function readSessionIndex(mnemeDir: string): SessionIndex | null {
+  return readRecentSessionIndexes(mnemeDir);
 }
 
 /**
  * @deprecated Use readRecentDecisionIndexes or readAllDecisionIndexes instead
  */
-export function readDecisionIndex(memoriaDir: string): DecisionIndex | null {
-  return readRecentDecisionIndexes(memoriaDir);
+export function readDecisionIndex(mnemeDir: string): DecisionIndex | null {
+  return readRecentDecisionIndexes(mnemeDir);
 }
 
 /**
  * @deprecated Use writeSessionIndexForMonth instead
  */
-export function writeSessionIndex(
-  memoriaDir: string,
-  index: SessionIndex,
-): void {
+export function writeSessionIndex(mnemeDir: string, index: SessionIndex): void {
   // Write to current month
   const now = new Date();
   const year = now.getFullYear().toString();
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  writeSessionIndexForMonth(memoriaDir, year, month, index);
+  writeSessionIndexForMonth(mnemeDir, year, month, index);
 }
 
 /**
  * @deprecated Use writeDecisionIndexForMonth instead
  */
 export function writeDecisionIndex(
-  memoriaDir: string,
+  mnemeDir: string,
   index: DecisionIndex,
 ): void {
   // Write to current month
   const now = new Date();
   const year = now.getFullYear().toString();
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  writeDecisionIndexForMonth(memoriaDir, year, month, index);
+  writeDecisionIndexForMonth(mnemeDir, year, month, index);
 }
 
 /**
  * @deprecated Use rebuildSessionIndexForMonth instead
  */
-export function rebuildSessionIndex(memoriaDir: string): SessionIndex {
-  rebuildAllSessionIndexes(memoriaDir);
-  return readAllSessionIndexes(memoriaDir);
+export function rebuildSessionIndex(mnemeDir: string): SessionIndex {
+  rebuildAllSessionIndexes(mnemeDir);
+  return readAllSessionIndexes(mnemeDir);
 }
 
 /**
  * @deprecated Use rebuildDecisionIndexForMonth instead
  */
-export function rebuildDecisionIndex(memoriaDir: string): DecisionIndex {
-  rebuildAllDecisionIndexes(memoriaDir);
-  return readAllDecisionIndexes(memoriaDir);
+export function rebuildDecisionIndex(mnemeDir: string): DecisionIndex {
+  rebuildAllDecisionIndexes(mnemeDir);
+  return readAllDecisionIndexes(mnemeDir);
 }
 
 /**
  * @deprecated Use rebuildAllSessionIndexes and rebuildAllDecisionIndexes instead
  */
-export function rebuildAllIndexes(memoriaDir: string): {
+export function rebuildAllIndexes(mnemeDir: string): {
   sessions: SessionIndex;
   decisions: DecisionIndex;
 } {
-  rebuildAllSessionIndexes(memoriaDir);
-  rebuildAllDecisionIndexes(memoriaDir);
+  rebuildAllSessionIndexes(mnemeDir);
+  rebuildAllDecisionIndexes(mnemeDir);
   return {
-    sessions: readAllSessionIndexes(memoriaDir),
-    decisions: readAllDecisionIndexes(memoriaDir),
+    sessions: readAllSessionIndexes(mnemeDir),
+    decisions: readAllDecisionIndexes(mnemeDir),
   };
 }
 
 /**
  * @deprecated Use readRecentSessionIndexes instead
  */
-export function getOrCreateSessionIndex(memoriaDir: string): SessionIndex {
-  return readRecentSessionIndexes(memoriaDir);
+export function getOrCreateSessionIndex(mnemeDir: string): SessionIndex {
+  return readRecentSessionIndexes(mnemeDir);
 }
 
 /**
  * @deprecated Use readRecentDecisionIndexes instead
  */
-export function getOrCreateDecisionIndex(memoriaDir: string): DecisionIndex {
-  return readRecentDecisionIndexes(memoriaDir);
+export function getOrCreateDecisionIndex(mnemeDir: string): DecisionIndex {
+  return readRecentDecisionIndexes(mnemeDir);
 }

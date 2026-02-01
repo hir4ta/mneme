@@ -29939,13 +29939,13 @@ process.emit = (event, ...args) => {
 };
 var { DatabaseSync } = await import("node:sqlite");
 function getProjectPath() {
-  return process.env.MEMORIA_PROJECT_PATH || process.cwd();
+  return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
-function getMemoriaDir() {
-  return path.join(getProjectPath(), ".memoria");
+function getMnemeDir() {
+  return path.join(getProjectPath(), ".mneme");
 }
 function getLocalDbPath() {
-  return path.join(getMemoriaDir(), "local.db");
+  return path.join(getMnemeDir(), "local.db");
 }
 var db = null;
 function getDb() {
@@ -29963,7 +29963,7 @@ function getDb() {
   }
 }
 function loadTags() {
-  const tagsPath = path.join(getMemoriaDir(), "tags.json");
+  const tagsPath = path.join(getMnemeDir(), "tags.json");
   if (!fs.existsSync(tagsPath)) return null;
   try {
     const content = fs.readFileSync(tagsPath, "utf-8");
@@ -30055,7 +30055,7 @@ function searchInteractions(keywords, projectPath, limit = 5) {
   return results;
 }
 function searchSessions(keywords, limit = 5) {
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   if (!fs.existsSync(sessionsDir)) return [];
   const results = [];
   const pattern = new RegExp(keywords.join("|"), "i");
@@ -30119,7 +30119,7 @@ function searchSessions(keywords, limit = 5) {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 function searchDecisions(keywords, limit = 5) {
-  const decisionsDir = path.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path.join(getMnemeDir(), "decisions");
   if (!fs.existsSync(decisionsDir)) return [];
   const results = [];
   const pattern = new RegExp(keywords.join("|"), "i");
@@ -30170,7 +30170,7 @@ function searchDecisions(keywords, limit = 5) {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 function searchPatterns(keywords, limit = 5) {
-  const patternsDir = path.join(getMemoriaDir(), "patterns");
+  const patternsDir = path.join(getMnemeDir(), "patterns");
   if (!fs.existsSync(patternsDir)) return [];
   const results = [];
   const pattern = new RegExp(keywords.join("|"), "i");
@@ -30242,7 +30242,7 @@ function search(query, options = {}) {
   }).slice(0, limit);
 }
 function getSession(sessionId) {
-  const sessionsDir = path.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   if (!fs.existsSync(sessionsDir)) return null;
   function findSession(dir) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -30265,7 +30265,7 @@ function getSession(sessionId) {
   return findSession(sessionsDir);
 }
 function getDecision(decisionId) {
-  const decisionsDir = path.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path.join(getMnemeDir(), "decisions");
   if (!fs.existsSync(decisionsDir)) return null;
   function findDecision(dir) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -30288,13 +30288,13 @@ function getDecision(decisionId) {
   return findDecision(decisionsDir);
 }
 var server = new McpServer({
-  name: "memoria-search",
+  name: "mneme-search",
   version: "0.1.0"
 });
 server.registerTool(
-  "memoria_search",
+  "mneme_search",
   {
-    description: "Search memoria's knowledge base for sessions, decisions, patterns, and interactions. Returns scored results with matched fields.",
+    description: "Search mneme's knowledge base for sessions, decisions, patterns, and interactions. Returns scored results with matched fields.",
     inputSchema: {
       query: external_exports3.string().describe("Search query (keywords)"),
       types: external_exports3.array(external_exports3.enum(["session", "decision", "pattern", "interaction"])).optional().describe("Types to search (default: all)"),
@@ -30314,7 +30314,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_get_session",
+  "mneme_get_session",
   {
     description: "Get full details of a specific session by ID",
     inputSchema: {
@@ -30335,7 +30335,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_get_decision",
+  "mneme_get_decision",
   {
     description: "Get full details of a specific decision by ID",
     inputSchema: {
@@ -30358,7 +30358,7 @@ server.registerTool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("memoria-search MCP server running");
+  console.error("mneme-search MCP server running");
 }
 main().catch((error48) => {
   console.error("Server error:", error48);

@@ -1,24 +1,24 @@
 ---
-name: init-memoria
+name: init-mneme
 description: |
-  Initialize memoria in the current project by creating .memoria directory structure.
-  Use when: (1) setting up memoria in a new project, (2) the project doesn't have .memoria yet.
+  Initialize mneme in the current project by creating .mneme directory structure.
+  Use when: (1) setting up mneme in a new project, (2) the project doesn't have .mneme yet.
 user-invocable: true
 ---
 
-# Initialize memoria
+# Initialize mneme
 
 <instructions>
-Create the `.memoria` directory structure in the current project.
+Create the `.mneme` directory structure in the current project.
 
-1. Check if `.memoria` already exists - if so, inform the user it's already initialized
+1. Check if `.mneme` already exists - if so, inform the user it's already initialized
 2. Create the directory structure:
-   - `.memoria/sessions/`
-   - `.memoria/rules/`
-   - `.memoria/patterns/`
-   - `.memoria/decisions/`
-3. Copy default tags from the plugin's `hooks/default-tags.json` to `.memoria/tags.json`
-4. Create `.memoria/.gitignore` to exclude local database:
+   - `.mneme/sessions/`
+   - `.mneme/rules/`
+   - `.mneme/patterns/`
+   - `.mneme/decisions/`
+3. Copy default tags from the plugin's `hooks/default-tags.json` to `.mneme/tags.json`
+4. Create `.mneme/.gitignore` to exclude local database:
    ```
    # Local SQLite database (private interactions)
    local.db
@@ -26,9 +26,9 @@ Create the `.memoria` directory structure in the current project.
    local.db-shm
    ```
 5. Create empty rules files:
-   - `.memoria/rules/dev-rules.json`
-   - `.memoria/rules/review-guidelines.json`
-6. Initialize local SQLite database at `.memoria/local.db`
+   - `.mneme/rules/dev-rules.json`
+   - `.mneme/rules/review-guidelines.json`
+6. Initialize local SQLite database at `.mneme/local.db`
    - Note: Data is stored locally within the project
    - The local.db is gitignored (private interactions)
 
@@ -45,17 +45,17 @@ Use this JSON template for the rules files:
 For SQLite initialization (local database):
 ```bash
 # Local database location
-MEMORIA_DIR=".memoria"
+MNEME_DIR=".mneme"
 
 # Initialize with schema
-sqlite3 "$MEMORIA_DIR/local.db" < /path/to/memoria/lib/schema.sql
+sqlite3 "$MNEME_DIR/local.db" < /path/to/mneme/lib/schema.sql
 ```
 
 Or if schema.sql is not available, create minimal schema:
 ```bash
-MEMORIA_DIR=".memoria"
+MNEME_DIR=".mneme"
 
-sqlite3 "$MEMORIA_DIR/local.db" "
+sqlite3 "$MNEME_DIR/local.db" "
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
@@ -97,5 +97,5 @@ CREATE TABLE IF NOT EXISTS migrations (
 
 **Note:** The local database stores interactions for this project only. It is gitignored to keep conversations private.
 
-After creation, confirm success and explain that memoria will now track sessions in this project.
+After creation, confirm success and explain that mneme will now track sessions in this project.
 </instructions>

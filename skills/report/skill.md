@@ -1,39 +1,39 @@
 ---
 name: report
 description: |
-  Generate weekly report aggregating review results from .memoria/reviews/.
+  Generate weekly report aggregating review results from .mneme/reviews/.
   Use when: (1) preparing weekly status updates, (2) summarizing team review activity,
   (3) tracking code quality trends over time.
 argument-hint: "[--from YYYY-MM-DD] [--to YYYY-MM-DD]"
 ---
 
-# /memoria:report
+# /mneme:report
 
-Generate weekly report from review results (`.memoria/reviews/`).
+Generate weekly report from review results (`.mneme/reviews/`).
 
 ## Usage
 
 ```
-/memoria:report
-/memoria:report --from 2026-01-01 --to 2026-01-07
+/mneme:report
+/mneme:report --from 2026-01-01 --to 2026-01-07
 ```
 
 ### Default
 
 - If `--from/--to` not specified: **last 7 days**
-- Save location: `.memoria/reports/YYYY-MM/weekly-YYYY-MM-DD.md` (based on `--to` date)
+- Save location: `.mneme/reports/YYYY-MM/weekly-YYYY-MM-DD.md` (based on `--to` date)
 
 ## Execution Steps
 
 1. **Determine target period**
-2. **Read `.memoria/reviews/YYYY/MM/*.json`**
+2. **Read `.mneme/reviews/YYYY/MM/*.json`**
 3. Aggregate reviews in period:
    - Blocker / Warning / Suggestion counts
    - Top matched rules
    - New rule proposals list
    - Stale rules list
 4. **Generate Markdown report**
-5. Save to `.memoria/reports/YYYY-MM/weekly-YYYY-MM-DD.md`
+5. Save to `.mneme/reports/YYYY-MM/weekly-YYYY-MM-DD.md`
 
 ## Output Format (Markdown)
 
@@ -70,5 +70,5 @@ Generate weekly report from review results (`.memoria/reviews/`).
 
 ## Notes
 
-- Create `.memoria/reports/YYYY-MM/` if it doesn't exist
+- Create `.mneme/reports/YYYY-MM/` if it doesn't exist
 - If multiple reports on same day, append sequence number

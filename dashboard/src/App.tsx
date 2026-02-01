@@ -3,6 +3,11 @@ import { MainLayout } from "./components/layout/main-layout";
 import { DecisionsPage } from "./pages/decisions";
 import { DecisionDetailPage } from "./pages/decisions/[id]";
 import { GraphPage } from "./pages/graph";
+import { GuidePage } from "./pages/guide";
+import { GuideCommandsPage } from "./pages/guide/commands";
+import { GuideFaqPage } from "./pages/guide/faq";
+import { GuideUseCasesPage } from "./pages/guide/use-cases";
+import { GuideWorkflowPage } from "./pages/guide/workflow";
 import { NotFoundPage } from "./pages/not-found";
 import { PatternsPage } from "./pages/patterns";
 import { RulesPage } from "./pages/rules";
@@ -22,6 +27,11 @@ export default function App() {
         <Route path="/patterns" element={<PatternsPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/graph" element={<GraphPage />} />
+        <Route path="/guide" element={<GuidePage />} />
+        <Route path="/guide/workflow" element={<GuideWorkflowPage />} />
+        <Route path="/guide/commands" element={<GuideCommandsPage />} />
+        <Route path="/guide/use-cases" element={<GuideUseCasesPage />} />
+        <Route path="/guide/faq" element={<GuideFaqPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </MainLayout>

@@ -7,19 +7,19 @@ description: |
 argument-hint: "[--staged|--all|--diff=branch|PR-URL]"
 ---
 
-# /memoria:review
+# /mneme:review
 
 Code review based on repository-specific rules (`dev-rules.json` / `review-guidelines.json`).
 
 ## Usage
 
 ```
-/memoria:review           # Default: --staged (Stage 2 only)
-/memoria:review --staged  # Review staged changes
-/memoria:review --all     # Review all changes
-/memoria:review --diff=main  # Review diff against branch
-/memoria:review --full    # Two-stage review (Stage 1: Spec + Stage 2: Code)
-/memoria:review https://github.com/owner/repo/pull/123  # Review GitHub PR
+/mneme:review           # Default: --staged (Stage 2 only)
+/mneme:review --staged  # Review staged changes
+/mneme:review --all     # Review all changes
+/mneme:review --diff=main  # Review diff against branch
+/mneme:review --full    # Two-stage review (Stage 1: Spec + Stage 2: Code)
+/mneme:review https://github.com/owner/repo/pull/123  # Review GitHub PR
 ```
 
 ### Default Behavior
@@ -52,12 +52,12 @@ When `--full` is specified, perform two-stage review:
 
 ## Execution
 
-**Recommended**: Use the `memoria-reviewer` subagent for isolated review context:
+**Recommended**: Use the `mneme-reviewer` subagent for isolated review context:
 
 ```typescript
 Task({
-  subagent_type: "memoria-reviewer",
-  prompt: "Review staged changes against memoria rules",
+  subagent_type: "mneme-reviewer",
+  prompt: "Review staged changes against mneme rules",
   description: "Code review"
 })
 ```
@@ -89,8 +89,8 @@ If PR URL detected:
    - `--diff=branch`: `git diff <branch>...HEAD`
    - PR URL: `gh pr diff {number} --repo {owner}/{repo}`
 2. **Load rules**
-   - `.memoria/rules/dev-rules.json`
-   - `.memoria/rules/review-guidelines.json`
+   - `.mneme/rules/dev-rules.json`
+   - `.mneme/rules/review-guidelines.json`
 3. **Filter applicable rules**
    - Only `status: active`
    - Filter by `scope / tags / appliesTo / exceptions`
@@ -100,7 +100,7 @@ If PR URL detected:
 5. **Output review**
    - Structure: Blocker / Warning / Suggestion
 6. **Save review result**
-   - `.memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`
+   - `.mneme/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`
 
 ### Two-Stage Review (--full)
 
@@ -240,7 +240,7 @@ If PR URL detected:
 
 ## Review JSON Format
 
-Save to `.memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`:
+Save to `.mneme/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json`:
 
 ```json
 {
@@ -401,9 +401,9 @@ Extended format for `--full` reviews:
 
 **Note:** Review interactions are auto-saved by SessionEnd hook.
 
-Review results are saved to `.memoria/reviews/` directory (separate from session files).
+Review results are saved to `.mneme/reviews/` directory (separate from session files).
 
-If significant decisions were made during review (e.g., architectural changes), capture them via `/memoria:save`:
+If significant decisions were made during review (e.g., architectural changes), capture them via `/mneme:save`:
 
 ```yaml
 discussions:
@@ -414,6 +414,6 @@ discussions:
 
 references:
   - type: review
-    path: ".memoria/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json"
+    path: ".mneme/reviews/YYYY/MM/review-YYYY-MM-DD_HHMMSS.json"
     description: "Review result"
 ```

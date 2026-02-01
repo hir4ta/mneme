@@ -2904,7 +2904,7 @@ function getCurrentUser() {
   }
 }
 function getLocalDbPath(projectPath) {
-  return join2(projectPath, ".memoria", "local.db");
+  return join2(projectPath, ".mneme", "local.db");
 }
 function configurePragmas(db) {
   db.exec("PRAGMA journal_mode = WAL");
@@ -3027,8 +3027,8 @@ function listYearMonths(dir) {
   });
   return results;
 }
-function buildSessionIndexForMonth(memoriaDir2, year, month) {
-  const sessionsDir = path.join(memoriaDir2, "sessions");
+function buildSessionIndexForMonth(mnemeDir2, year, month) {
+  const sessionsDir = path.join(mnemeDir2, "sessions");
   const monthDir = path.join(sessionsDir, year, month);
   const files = listMonthJsonFiles(monthDir);
   const items = [];
@@ -3068,21 +3068,21 @@ function buildSessionIndexForMonth(memoriaDir2, year, month) {
     items
   };
 }
-function buildAllSessionIndexes(memoriaDir2) {
-  const sessionsDir = path.join(memoriaDir2, "sessions");
+function buildAllSessionIndexes(mnemeDir2) {
+  const sessionsDir = path.join(mnemeDir2, "sessions");
   const yearMonths = listYearMonths(sessionsDir);
   const indexes = /* @__PURE__ */ new Map();
   for (const { year, month } of yearMonths) {
     const key = `${year}/${month}`;
-    const index = buildSessionIndexForMonth(memoriaDir2, year, month);
+    const index = buildSessionIndexForMonth(mnemeDir2, year, month);
     if (index.items.length > 0) {
       indexes.set(key, index);
     }
   }
   return indexes;
 }
-function buildDecisionIndexForMonth(memoriaDir2, year, month) {
-  const decisionsDir = path.join(memoriaDir2, "decisions");
+function buildDecisionIndexForMonth(mnemeDir2, year, month) {
+  const decisionsDir = path.join(mnemeDir2, "decisions");
   const monthDir = path.join(decisionsDir, year, month);
   const files = listMonthJsonFiles(monthDir);
   const items = [];
@@ -3114,41 +3114,41 @@ function buildDecisionIndexForMonth(memoriaDir2, year, month) {
     items
   };
 }
-function buildAllDecisionIndexes(memoriaDir2) {
-  const decisionsDir = path.join(memoriaDir2, "decisions");
+function buildAllDecisionIndexes(mnemeDir2) {
+  const decisionsDir = path.join(mnemeDir2, "decisions");
   const yearMonths = listYearMonths(decisionsDir);
   const indexes = /* @__PURE__ */ new Map();
   for (const { year, month } of yearMonths) {
     const key = `${year}/${month}`;
-    const index = buildDecisionIndexForMonth(memoriaDir2, year, month);
+    const index = buildDecisionIndexForMonth(mnemeDir2, year, month);
     if (index.items.length > 0) {
       indexes.set(key, index);
     }
   }
   return indexes;
 }
-function getSessionYearMonths(memoriaDir2) {
-  const sessionsDir = path.join(memoriaDir2, "sessions");
+function getSessionYearMonths(mnemeDir2) {
+  const sessionsDir = path.join(mnemeDir2, "sessions");
   return listYearMonths(sessionsDir);
 }
-function getDecisionYearMonths(memoriaDir2) {
-  const decisionsDir = path.join(memoriaDir2, "decisions");
+function getDecisionYearMonths(mnemeDir2) {
+  const decisionsDir = path.join(mnemeDir2, "decisions");
   return listYearMonths(decisionsDir);
 }
 
 // lib/index/manager.ts
 var INDEXES_DIR = ".indexes";
-function getIndexDir(memoriaDir2) {
-  return path2.join(memoriaDir2, INDEXES_DIR);
+function getIndexDir(mnemeDir2) {
+  return path2.join(mnemeDir2, INDEXES_DIR);
 }
-function getSessionIndexPath(memoriaDir2, year, month) {
-  return path2.join(getIndexDir(memoriaDir2), "sessions", year, `${month}.json`);
+function getSessionIndexPath(mnemeDir2, year, month) {
+  return path2.join(getIndexDir(mnemeDir2), "sessions", year, `${month}.json`);
 }
-function getDecisionIndexPath(memoriaDir2, year, month) {
-  return path2.join(getIndexDir(memoriaDir2), "decisions", year, `${month}.json`);
+function getDecisionIndexPath(mnemeDir2, year, month) {
+  return path2.join(getIndexDir(mnemeDir2), "decisions", year, `${month}.json`);
 }
-function readSessionIndexForMonth(memoriaDir2, year, month) {
-  const indexPath = getSessionIndexPath(memoriaDir2, year, month);
+function readSessionIndexForMonth(mnemeDir2, year, month) {
+  const indexPath = getSessionIndexPath(mnemeDir2, year, month);
   if (!fs3.existsSync(indexPath)) {
     return null;
   }
@@ -3158,8 +3158,8 @@ function readSessionIndexForMonth(memoriaDir2, year, month) {
     items: []
   });
 }
-function readDecisionIndexForMonth(memoriaDir2, year, month) {
-  const indexPath = getDecisionIndexPath(memoriaDir2, year, month);
+function readDecisionIndexForMonth(mnemeDir2, year, month) {
+  const indexPath = getDecisionIndexPath(mnemeDir2, year, month);
   if (!fs3.existsSync(indexPath)) {
     return null;
   }
@@ -3169,55 +3169,55 @@ function readDecisionIndexForMonth(memoriaDir2, year, month) {
     items: []
   });
 }
-function writeSessionIndexForMonth(memoriaDir2, year, month, index) {
-  const indexPath = getSessionIndexPath(memoriaDir2, year, month);
+function writeSessionIndexForMonth(mnemeDir2, year, month, index) {
+  const indexPath = getSessionIndexPath(mnemeDir2, year, month);
   ensureDir(path2.dirname(indexPath));
   fs3.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
-function writeDecisionIndexForMonth(memoriaDir2, year, month, index) {
-  const indexPath = getDecisionIndexPath(memoriaDir2, year, month);
+function writeDecisionIndexForMonth(mnemeDir2, year, month, index) {
+  const indexPath = getDecisionIndexPath(mnemeDir2, year, month);
   ensureDir(path2.dirname(indexPath));
   fs3.writeFileSync(indexPath, JSON.stringify(index, null, 2));
 }
-function rebuildSessionIndexForMonth(memoriaDir2, year, month) {
-  const index = buildSessionIndexForMonth(memoriaDir2, year, month);
+function rebuildSessionIndexForMonth(mnemeDir2, year, month) {
+  const index = buildSessionIndexForMonth(mnemeDir2, year, month);
   if (index.items.length > 0) {
-    writeSessionIndexForMonth(memoriaDir2, year, month, index);
+    writeSessionIndexForMonth(mnemeDir2, year, month, index);
   }
   return index;
 }
-function rebuildDecisionIndexForMonth(memoriaDir2, year, month) {
-  const index = buildDecisionIndexForMonth(memoriaDir2, year, month);
+function rebuildDecisionIndexForMonth(mnemeDir2, year, month) {
+  const index = buildDecisionIndexForMonth(mnemeDir2, year, month);
   if (index.items.length > 0) {
-    writeDecisionIndexForMonth(memoriaDir2, year, month, index);
+    writeDecisionIndexForMonth(mnemeDir2, year, month, index);
   }
   return index;
 }
-function rebuildAllSessionIndexes(memoriaDir2) {
-  const allIndexes = buildAllSessionIndexes(memoriaDir2);
+function rebuildAllSessionIndexes(mnemeDir2) {
+  const allIndexes = buildAllSessionIndexes(mnemeDir2);
   for (const [key, index] of allIndexes) {
     const [year, month] = key.split("/");
-    writeSessionIndexForMonth(memoriaDir2, year, month, index);
+    writeSessionIndexForMonth(mnemeDir2, year, month, index);
   }
   return allIndexes;
 }
-function rebuildAllDecisionIndexes(memoriaDir2) {
-  const allIndexes = buildAllDecisionIndexes(memoriaDir2);
+function rebuildAllDecisionIndexes(mnemeDir2) {
+  const allIndexes = buildAllDecisionIndexes(mnemeDir2);
   for (const [key, index] of allIndexes) {
     const [year, month] = key.split("/");
-    writeDecisionIndexForMonth(memoriaDir2, year, month, index);
+    writeDecisionIndexForMonth(mnemeDir2, year, month, index);
   }
   return allIndexes;
 }
-function readRecentSessionIndexes(memoriaDir2, monthCount = 6) {
-  const yearMonths = getSessionYearMonths(memoriaDir2);
+function readRecentSessionIndexes(mnemeDir2, monthCount = 6) {
+  const yearMonths = getSessionYearMonths(mnemeDir2);
   const recentMonths = yearMonths.slice(0, monthCount);
   const allItems = [];
   let latestUpdate = "";
   for (const { year, month } of recentMonths) {
-    let index = readSessionIndexForMonth(memoriaDir2, year, month);
+    let index = readSessionIndexForMonth(mnemeDir2, year, month);
     if (!index || isIndexStale(index)) {
-      index = rebuildSessionIndexForMonth(memoriaDir2, year, month);
+      index = rebuildSessionIndexForMonth(mnemeDir2, year, month);
     }
     if (index.items.length > 0) {
       allItems.push(...index.items);
@@ -3235,15 +3235,15 @@ function readRecentSessionIndexes(memoriaDir2, monthCount = 6) {
     items: allItems
   };
 }
-function readRecentDecisionIndexes(memoriaDir2, monthCount = 6) {
-  const yearMonths = getDecisionYearMonths(memoriaDir2);
+function readRecentDecisionIndexes(mnemeDir2, monthCount = 6) {
+  const yearMonths = getDecisionYearMonths(mnemeDir2);
   const recentMonths = yearMonths.slice(0, monthCount);
   const allItems = [];
   let latestUpdate = "";
   for (const { year, month } of recentMonths) {
-    let index = readDecisionIndexForMonth(memoriaDir2, year, month);
+    let index = readDecisionIndexForMonth(mnemeDir2, year, month);
     if (!index || isIndexStale(index)) {
-      index = rebuildDecisionIndexForMonth(memoriaDir2, year, month);
+      index = rebuildDecisionIndexForMonth(mnemeDir2, year, month);
     }
     if (index.items.length > 0) {
       allItems.push(...index.items);
@@ -3261,14 +3261,14 @@ function readRecentDecisionIndexes(memoriaDir2, monthCount = 6) {
     items: allItems
   };
 }
-function readAllSessionIndexes(memoriaDir2) {
-  const yearMonths = getSessionYearMonths(memoriaDir2);
+function readAllSessionIndexes(mnemeDir2) {
+  const yearMonths = getSessionYearMonths(mnemeDir2);
   const allItems = [];
   let latestUpdate = "";
   for (const { year, month } of yearMonths) {
-    let index = readSessionIndexForMonth(memoriaDir2, year, month);
+    let index = readSessionIndexForMonth(mnemeDir2, year, month);
     if (!index || isIndexStale(index)) {
-      index = rebuildSessionIndexForMonth(memoriaDir2, year, month);
+      index = rebuildSessionIndexForMonth(mnemeDir2, year, month);
     }
     if (index.items.length > 0) {
       allItems.push(...index.items);
@@ -3286,14 +3286,14 @@ function readAllSessionIndexes(memoriaDir2) {
     items: allItems
   };
 }
-function readAllDecisionIndexes(memoriaDir2) {
-  const yearMonths = getDecisionYearMonths(memoriaDir2);
+function readAllDecisionIndexes(mnemeDir2) {
+  const yearMonths = getDecisionYearMonths(mnemeDir2);
   const allItems = [];
   let latestUpdate = "";
   for (const { year, month } of yearMonths) {
-    let index = readDecisionIndexForMonth(memoriaDir2, year, month);
+    let index = readDecisionIndexForMonth(mnemeDir2, year, month);
     if (!index || isIndexStale(index)) {
-      index = rebuildDecisionIndexForMonth(memoriaDir2, year, month);
+      index = rebuildDecisionIndexForMonth(mnemeDir2, year, month);
     }
     if (index.items.length > 0) {
       allItems.push(...index.items);
@@ -3334,10 +3334,10 @@ function safeParseJsonFile(filePath) {
 }
 var app = new Hono2();
 var getProjectRoot = () => {
-  return process.env.MEMORIA_PROJECT_ROOT || process.cwd();
+  return process.env.MNEME_PROJECT_ROOT || process.cwd();
 };
-var getMemoriaDir = () => {
-  return path3.join(getProjectRoot(), ".memoria");
+var getMnemeDir = () => {
+  return path3.join(getProjectRoot(), ".mneme");
 };
 var listJsonFiles = (dir) => {
   if (!fs4.existsSync(dir)) {
@@ -3390,7 +3390,7 @@ var findJsonFileById = (dir, id) => {
   }
   return null;
 };
-var rulesDir = () => path3.join(getMemoriaDir(), "rules");
+var rulesDir = () => path3.join(getMnemeDir(), "rules");
 app.use(
   "/api/*",
   cors({
@@ -3459,15 +3459,15 @@ app.get("/api/project", (c) => {
 app.get("/api/sessions", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   const params = parsePaginationParams(c);
   try {
     let items;
     if (useIndex) {
-      const index = params.allMonths ? readAllSessionIndexes(memoriaDir2) : readRecentSessionIndexes(memoriaDir2);
+      const index = params.allMonths ? readAllSessionIndexes(mnemeDir2) : readRecentSessionIndexes(mnemeDir2);
       items = index.items;
     } else {
-      const sessionsDir = path3.join(memoriaDir2, "sessions");
+      const sessionsDir = path3.join(mnemeDir2, "sessions");
       const files = listDatedJsonFiles(sessionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
@@ -3529,10 +3529,10 @@ app.get("/api/sessions", async (c) => {
   }
 });
 app.get("/api/sessions/graph", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   const showUntitled = c.req.query("showUntitled") === "true";
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
     const filteredItems = showUntitled ? sessionsIndex.items : sessionsIndex.items.filter((s) => s.hasSummary === true);
     const nodes = filteredItems.map((session) => ({
       id: session.id,
@@ -3566,7 +3566,7 @@ app.get("/api/sessions/graph", async (c) => {
 });
 app.get("/api/sessions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
@@ -3584,7 +3584,7 @@ app.get("/api/sessions/:id", async (c) => {
 });
 app.get("/api/sessions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   try {
     const jsonPath = findJsonFileById(sessionsDir, id);
     if (!jsonPath) {
@@ -3604,8 +3604,8 @@ app.get("/api/sessions/:id/markdown", async (c) => {
 app.delete("/api/sessions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
   const dryRun = c.req.query("dry-run") === "true";
-  const memoriaDir2 = getMemoriaDir();
-  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path3.join(mnemeDir2, "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
@@ -3628,7 +3628,7 @@ app.delete("/api/sessions/:id", async (c) => {
       if (fs4.existsSync(mdPath)) {
         fs4.unlinkSync(mdPath);
       }
-      const sessionLinksDir = path3.join(memoriaDir2, "session-links");
+      const sessionLinksDir = path3.join(mnemeDir2, "session-links");
       const linkPath = path3.join(sessionLinksDir, `${id}.json`);
       if (fs4.existsSync(linkPath)) {
         fs4.unlinkSync(linkPath);
@@ -3650,8 +3650,8 @@ app.delete("/api/sessions", async (c) => {
   const projectFilter = c.req.query("project");
   const repositoryFilter = c.req.query("repository");
   const beforeFilter = c.req.query("before");
-  const memoriaDir2 = getMemoriaDir();
-  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path3.join(mnemeDir2, "sessions");
   try {
     const files = listDatedJsonFiles(sessionsDir);
     const sessionsToDelete = [];
@@ -3705,7 +3705,7 @@ app.delete("/api/sessions", async (c) => {
         if (fs4.existsSync(mdPath)) {
           fs4.unlinkSync(mdPath);
         }
-        const sessionLinksDir = path3.join(memoriaDir2, "session-links");
+        const sessionLinksDir = path3.join(mnemeDir2, "session-links");
         const linkPath = path3.join(sessionLinksDir, `${session.id}.json`);
         if (fs4.existsSync(linkPath)) {
           fs4.unlinkSync(linkPath);
@@ -3739,9 +3739,9 @@ app.get("/api/current-user", async (c) => {
 });
 app.get("/api/sessions/:id/interactions", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const memoriaDir2 = getMemoriaDir();
-  const sessionLinksDir = path3.join(memoriaDir2, "session-links");
-  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  const mnemeDir2 = getMnemeDir();
+  const sessionLinksDir = path3.join(mnemeDir2, "session-links");
+  const sessionsDir = path3.join(mnemeDir2, "sessions");
   try {
     const sessionFilePath = findJsonFileById(sessionsDir, id);
     let projectDir = getProjectRoot();
@@ -3862,15 +3862,15 @@ app.get("/api/sessions/:id/interactions", async (c) => {
 app.get("/api/decisions", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   const params = parsePaginationParams(c);
   try {
     let items;
     if (useIndex) {
-      const index = params.allMonths ? readAllDecisionIndexes(memoriaDir2) : readRecentDecisionIndexes(memoriaDir2);
+      const index = params.allMonths ? readAllDecisionIndexes(mnemeDir2) : readRecentDecisionIndexes(mnemeDir2);
       items = index.items;
     } else {
-      const decisionsDir = path3.join(memoriaDir2, "decisions");
+      const decisionsDir = path3.join(mnemeDir2, "decisions");
       const files = listDatedJsonFiles(decisionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
@@ -3918,7 +3918,7 @@ app.get("/api/decisions", async (c) => {
 });
 app.get("/api/decisions/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path3.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path3.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
@@ -3936,11 +3936,11 @@ app.get("/api/decisions/:id", async (c) => {
 });
 app.get("/api/info", async (c) => {
   const projectRoot = getProjectRoot();
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   return c.json({
     projectRoot,
-    memoriaDir: memoriaDir2,
-    exists: fs4.existsSync(memoriaDir2)
+    mnemeDir: mnemeDir2,
+    exists: fs4.existsSync(mnemeDir2)
   });
 });
 app.get("/api/rules/:id", async (c) => {
@@ -3984,7 +3984,7 @@ app.put("/api/rules/:id", async (c) => {
   }
 });
 app.get("/api/timeline", async (c) => {
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   try {
     const files = listDatedJsonFiles(sessionsDir);
     if (files.length === 0) {
@@ -4020,7 +4020,7 @@ app.get("/api/timeline", async (c) => {
   }
 });
 app.get("/api/tag-network", async (c) => {
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   try {
     const files = listDatedJsonFiles(sessionsDir);
     const tagCounts = /* @__PURE__ */ new Map();
@@ -4055,8 +4055,8 @@ app.get("/api/tag-network", async (c) => {
 });
 app.get("/api/decisions/:id/impact", async (c) => {
   const decisionId = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
-  const patternsDir2 = path3.join(getMemoriaDir(), "patterns");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
+  const patternsDir2 = path3.join(getMnemeDir(), "patterns");
   try {
     const impactedSessions = [];
     const impactedPatterns = [];
@@ -4102,11 +4102,11 @@ var getOpenAIKey = () => {
   return process.env.OPENAI_API_KEY || null;
 };
 app.get("/api/summary/weekly", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   const apiKey = getOpenAIKey();
   try {
-    const sessionsIndex = readRecentSessionIndexes(memoriaDir2);
-    const decisionsIndex = readRecentDecisionIndexes(memoriaDir2);
+    const sessionsIndex = readRecentSessionIndexes(mnemeDir2);
+    const decisionsIndex = readRecentDecisionIndexes(mnemeDir2);
     const now = /* @__PURE__ */ new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     const recentSessions = sessionsIndex.items.filter(
@@ -4155,8 +4155,8 @@ app.post("/api/summary/generate", async (c) => {
   }
   const body = await c.req.json();
   const { sessionIds, prompt: customPrompt } = body;
-  const memoriaDir2 = getMemoriaDir();
-  const sessionsDir = path3.join(memoriaDir2, "sessions");
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path3.join(mnemeDir2, "sessions");
   try {
     const sessions = [];
     for (const id of sessionIds || []) {
@@ -4230,10 +4230,10 @@ async function generateAISummary(apiKey, prompt) {
   return data.choices?.[0]?.message?.content || "Unable to generate summary.";
 }
 app.get("/api/stats/overview", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
     const validSessions = sessionsIndex.items.filter(
       (session) => session.interactionCount > 0 || session.hasSummary === true
     );
@@ -4244,7 +4244,7 @@ app.get("/api/stats/overview", async (c) => {
     }
     let totalPatterns = 0;
     const patternsByType = {};
-    const patternsPath = path3.join(memoriaDir2, "patterns");
+    const patternsPath = path3.join(mnemeDir2, "patterns");
     if (fs4.existsSync(patternsPath)) {
       const patternFiles = listJsonFiles(patternsPath);
       for (const filePath of patternFiles) {
@@ -4263,7 +4263,7 @@ app.get("/api/stats/overview", async (c) => {
     }
     let totalRules = 0;
     const rulesByType = {};
-    const rulesPath = path3.join(memoriaDir2, "rules");
+    const rulesPath = path3.join(mnemeDir2, "rules");
     if (fs4.existsSync(rulesPath)) {
       for (const ruleType of ["dev-rules", "review-guidelines"]) {
         const rulePath = path3.join(rulesPath, `${ruleType}.json`);
@@ -4305,13 +4305,13 @@ app.get("/api/stats/overview", async (c) => {
   }
 });
 app.get("/api/stats/activity", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
   const MAX_DAYS = 365;
   const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
     const now = /* @__PURE__ */ new Date();
     const startDate = new Date(
       now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1e3
@@ -4342,9 +4342,9 @@ app.get("/api/stats/activity", async (c) => {
   }
 });
 app.get("/api/stats/tags", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
     const tagCount = {};
     for (const session of sessionsIndex.items) {
       for (const tag of session.tags || []) {
@@ -4358,7 +4358,7 @@ app.get("/api/stats/tags", async (c) => {
     return c.json({ error: "Failed to get tag stats" }, 500);
   }
 });
-var patternsDir = () => path3.join(getMemoriaDir(), "patterns");
+var patternsDir = () => path3.join(getMnemeDir(), "patterns");
 app.get("/api/patterns", async (c) => {
   const dir = patternsDir();
   try {
@@ -4484,7 +4484,7 @@ function sessionToMarkdown(session) {
     lines.push("");
   }
   lines.push("---");
-  lines.push("*Exported from memoria*");
+  lines.push("*Exported from mneme*");
   return lines.join("\n");
 }
 function decisionToMarkdown(decision) {
@@ -4554,12 +4554,12 @@ function decisionToMarkdown(decision) {
     lines.push("");
   }
   lines.push("---");
-  lines.push("*Exported from memoria*");
+  lines.push("*Exported from mneme*");
   return lines.join("\n");
 }
 app.get("/api/export/sessions/:id/markdown", async (c) => {
   const id = c.req.param("id");
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
@@ -4579,7 +4579,7 @@ app.get("/api/export/sessions/:id/markdown", async (c) => {
 });
 app.get("/api/export/decisions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path3.join(getMemoriaDir(), "decisions");
+  const decisionsDir = path3.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
@@ -4603,7 +4603,7 @@ app.post("/api/export/sessions/bulk", async (c) => {
   if (!ids || ids.length === 0) {
     return c.json({ error: "No session IDs provided" }, 400);
   }
-  const sessionsDir = path3.join(getMemoriaDir(), "sessions");
+  const sessionsDir = path3.join(getMnemeDir(), "sessions");
   const markdowns = [];
   try {
     for (const id of ids) {
@@ -4628,7 +4628,7 @@ app.post("/api/export/sessions/bulk", async (c) => {
   }
 });
 app.get("/api/tags", async (c) => {
-  const tagsPath = path3.join(getMemoriaDir(), "tags.json");
+  const tagsPath = path3.join(getMnemeDir(), "tags.json");
   try {
     if (!fs4.existsSync(tagsPath)) {
       return c.json({ version: 1, tags: [] });
@@ -4644,10 +4644,10 @@ app.get("/api/tags", async (c) => {
   }
 });
 app.get("/api/indexes/status", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   try {
-    const sessionsIndex = readAllSessionIndexes(memoriaDir2);
-    const decisionsIndex = readAllDecisionIndexes(memoriaDir2);
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
     return c.json({
       sessions: {
         exists: sessionsIndex.items.length > 0,
@@ -4668,10 +4668,10 @@ app.get("/api/indexes/status", async (c) => {
   }
 });
 app.post("/api/indexes/rebuild", async (c) => {
-  const memoriaDir2 = getMemoriaDir();
+  const mnemeDir2 = getMnemeDir();
   try {
-    const sessionIndexes = rebuildAllSessionIndexes(memoriaDir2);
-    const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir2);
+    const sessionIndexes = rebuildAllSessionIndexes(mnemeDir2);
+    const decisionIndexes = rebuildAllDecisionIndexes(mnemeDir2);
     let sessionCount = 0;
     let sessionUpdatedAt = "";
     for (const index of sessionIndexes.values()) {
@@ -4722,15 +4722,15 @@ if (fs4.existsSync(distPath)) {
 }
 var requestedPort = parseInt(process.env.PORT || "7777", 10);
 var maxPortAttempts = 10;
-var memoriaDir = getMemoriaDir();
-if (fs4.existsSync(memoriaDir)) {
+var mnemeDir = getMnemeDir();
+if (fs4.existsSync(mnemeDir)) {
   try {
-    const sessionsIndex = readRecentSessionIndexes(memoriaDir, 1);
-    const decisionsIndex = readRecentDecisionIndexes(memoriaDir, 1);
+    const sessionsIndex = readRecentSessionIndexes(mnemeDir, 1);
+    const decisionsIndex = readRecentDecisionIndexes(mnemeDir, 1);
     if (isIndexStale(sessionsIndex) || isIndexStale(decisionsIndex)) {
       console.log("Building indexes...");
-      const sessionIndexes = rebuildAllSessionIndexes(memoriaDir);
-      const decisionIndexes = rebuildAllDecisionIndexes(memoriaDir);
+      const sessionIndexes = rebuildAllSessionIndexes(mnemeDir);
+      const decisionIndexes = rebuildAllDecisionIndexes(mnemeDir);
       let sessionCount = 0;
       for (const index of sessionIndexes.values()) {
         sessionCount += index.items.length;
@@ -4770,7 +4770,7 @@ async function startServer(port, attempt = 1) {
     });
     server.on("listening", () => {
       console.log(`
-memoria dashboard`);
+mneme dashboard`);
       console.log(`Project: ${getProjectRoot()}`);
       console.log(`URL: http://localhost:${port}
 `);

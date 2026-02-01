@@ -90,7 +90,7 @@ export function calculateSimilarity(text: string, query: string): number {
 
 export interface SearchOptions {
   query: string;
-  memoriaDir: string;
+  mnemeDir: string;
   targets?: ("sessions" | "decisions" | "patterns")[];
   limit?: number;
   timeout?: number;
@@ -102,7 +102,7 @@ export interface SearchOptions {
 export async function search(options: SearchOptions): Promise<SearchResult[]> {
   const {
     query,
-    memoriaDir,
+    mnemeDir,
     targets = ["sessions", "decisions"],
     limit = 20,
     timeout = 10000,
@@ -112,13 +112,13 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   // タグ展開
-  const tagsPath = path.join(memoriaDir, "tags.json");
+  const tagsPath = path.join(mnemeDir, "tags.json");
   const tagsData = safeReadJson<{ tags: Tag[] }>(tagsPath, { tags: [] });
   const expandedQueries = expandAliases(query, tagsData.tags);
 
   // セッション検索
   if (targets.includes("sessions")) {
-    const sessionsDir = path.join(memoriaDir, "sessions");
+    const sessionsDir = path.join(mnemeDir, "sessions");
     if (fs.existsSync(sessionsDir)) {
       const files = findJsonFiles(sessionsDir);
       for (const file of files) {
@@ -146,7 +146,7 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 
   // 決定検索
   if (targets.includes("decisions")) {
-    const decisionsDir = path.join(memoriaDir, "decisions");
+    const decisionsDir = path.join(mnemeDir, "decisions");
     if (fs.existsSync(decisionsDir)) {
       const files = findJsonFiles(decisionsDir);
       for (const file of files) {
@@ -174,7 +174,7 @@ export async function search(options: SearchOptions): Promise<SearchResult[]> {
 
   // パターン検索
   if (targets.includes("patterns")) {
-    const patternsDir = path.join(memoriaDir, "patterns");
+    const patternsDir = path.join(mnemeDir, "patterns");
     if (fs.existsSync(patternsDir)) {
       const files = findJsonFiles(patternsDir);
       for (const file of files) {
@@ -246,14 +246,14 @@ if (isMain && process.argv.length > 2) {
   const args = process.argv.slice(2);
   const queryIndex = args.indexOf("--query");
   const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
-  const memoriaDir = `${process.cwd()}/.memoria`;
+  const mnemeDir = `${process.cwd()}/.mneme`;
 
   if (!query) {
     console.error(JSON.stringify({ success: false, error: "Missing --query" }));
     process.exit(0);
   }
 
-  search({ query, memoriaDir })
+  search({ query, mnemeDir })
     .then((results) => {
       console.log(JSON.stringify({ success: true, results }));
     })

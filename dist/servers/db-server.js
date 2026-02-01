@@ -29941,10 +29941,10 @@ process.emit = (event, ...args) => {
 };
 var { DatabaseSync } = await import("node:sqlite");
 function getProjectPath() {
-  return process.env.MEMORIA_PROJECT_PATH || process.cwd();
+  return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 function getLocalDbPath() {
-  return path.join(getProjectPath(), ".memoria", "local.db");
+  return path.join(getProjectPath(), ".mneme", "local.db");
 }
 var db = null;
 function getDb() {
@@ -30287,7 +30287,7 @@ async function parseTranscript(transcriptPath) {
     }
   };
 }
-async function saveInteractions(claudeSessionId, memoriaSessionId) {
+async function saveInteractions(claudeSessionId, mnemeSessionId) {
   const transcriptPath = getTranscriptPath(claudeSessionId);
   if (!transcriptPath) {
     return {
@@ -30307,7 +30307,7 @@ async function saveInteractions(claudeSessionId, memoriaSessionId) {
     };
   }
   const projectPath = getProjectPath();
-  const sessionId = memoriaSessionId || claudeSessionId.slice(0, 8);
+  const sessionId = mnemeSessionId || claudeSessionId.slice(0, 8);
   let owner = "unknown";
   try {
     const { execSync } = await import("node:child_process");
@@ -30428,13 +30428,13 @@ async function saveInteractions(claudeSessionId, memoriaSessionId) {
   };
 }
 var server = new McpServer({
-  name: "memoria-db",
+  name: "mneme-db",
   version: "0.1.0"
 });
 server.registerTool(
-  "memoria_list_projects",
+  "mneme_list_projects",
   {
-    description: "List all projects tracked in memoria's local database with session counts and last activity",
+    description: "List all projects tracked in mneme's local database with session counts and last activity",
     inputSchema: {}
   },
   async () => {
@@ -30445,7 +30445,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_list_sessions",
+  "mneme_list_sessions",
   {
     description: "List sessions, optionally filtered by project or repository",
     inputSchema: {
@@ -30462,7 +30462,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_get_interactions",
+  "mneme_get_interactions",
   {
     description: "Get conversation interactions for a specific session",
     inputSchema: {
@@ -30489,7 +30489,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_stats",
+  "mneme_stats",
   {
     description: "Get statistics across all projects: total counts, per-project breakdown, recent activity",
     inputSchema: {}
@@ -30508,7 +30508,7 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_cross_project_search",
+  "mneme_cross_project_search",
   {
     description: "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
     inputSchema: {
@@ -30524,18 +30524,18 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "memoria_save_interactions",
+  "mneme_save_interactions",
   {
-    description: "Save conversation interactions from Claude Code transcript to SQLite. Use this during /memoria:save to persist the conversation history. Reads the transcript file directly and extracts user/assistant messages.",
+    description: "Save conversation interactions from Claude Code transcript to SQLite. Use this during /mneme:save to persist the conversation history. Reads the transcript file directly and extracts user/assistant messages.",
     inputSchema: {
       claudeSessionId: external_exports3.string().describe("Full Claude Code session UUID (36 chars)"),
-      memoriaSessionId: external_exports3.string().optional().describe(
-        "Memoria session ID (8 chars). If not provided, uses first 8 chars of claudeSessionId"
+      mnemeSessionId: external_exports3.string().optional().describe(
+        "Mneme session ID (8 chars). If not provided, uses first 8 chars of claudeSessionId"
       )
     }
   },
-  async ({ claudeSessionId, memoriaSessionId }) => {
-    const result = await saveInteractions(claudeSessionId, memoriaSessionId);
+  async ({ claudeSessionId, mnemeSessionId }) => {
+    const result = await saveInteractions(claudeSessionId, mnemeSessionId);
     return {
       content: [
         {
@@ -30550,7 +30550,7 @@ server.registerTool(
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("memoria-db MCP server running");
+  console.error("mneme-db MCP server running");
 }
 main().catch((error48) => {
   console.error("Server error:", error48);

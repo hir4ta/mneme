@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 
-const STORAGE_KEY = "memoria-lang";
+const STORAGE_KEY = "mneme-lang";
 type Language = "en" | "ja";
 
 export function LanguageSwitcher() {

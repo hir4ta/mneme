@@ -6,6 +6,7 @@ import enCommon from "./locales/en/common.json";
 import enDecisions from "./locales/en/decisions.json";
 import enErrors from "./locales/en/errors.json";
 import enGraph from "./locales/en/graph.json";
+import enGuide from "./locales/en/guide.json";
 import enLayout from "./locales/en/layout.json";
 import enPatterns from "./locales/en/patterns.json";
 import enRules from "./locales/en/rules.json";
@@ -17,6 +18,7 @@ import jaCommon from "./locales/ja/common.json";
 import jaDecisions from "./locales/ja/decisions.json";
 import jaErrors from "./locales/ja/errors.json";
 import jaGraph from "./locales/ja/graph.json";
+import jaGuide from "./locales/ja/guide.json";
 import jaLayout from "./locales/ja/layout.json";
 import jaPatterns from "./locales/ja/patterns.json";
 import jaRules from "./locales/ja/rules.json";
@@ -34,6 +36,7 @@ const resources = {
     stats: enStats,
     graph: enGraph,
     errors: enErrors,
+    guide: enGuide,
   },
   ja: {
     common: jaCommon,
@@ -45,11 +48,12 @@ const resources = {
     stats: jaStats,
     graph: jaGraph,
     errors: jaErrors,
+    guide: jaGuide,
   },
 };
 
 // Get initial language from localStorage
-const STORAGE_KEY = "memoria-lang";
+const STORAGE_KEY = "mneme-lang";
 const getInitialLanguage = (): string => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "ja" || stored === "en") {
@@ -73,6 +77,7 @@ i18n.use(initReactI18next).init({
     "stats",
     "graph",
     "errors",
+    "guide",
   ],
   interpolation: {
     escapeValue: false,

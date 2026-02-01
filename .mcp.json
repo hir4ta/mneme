@@ -1,17 +1,17 @@
 {
   "mcpServers": {
-    "memoria-search": {
+    "mneme-search": {
       "command": "node",
       "args": ["./dist/servers/search-server.js"],
       "env": {
-        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}"
+        "MNEME_DATA_DIR": "${MNEME_DATA_DIR:-}"
       }
     },
-    "memoria-db": {
+    "mneme-db": {
       "command": "node",
       "args": ["./dist/servers/db-server.js"],
       "env": {
-        "MEMORIA_DATA_DIR": "${MEMORIA_DATA_DIR:-}"
+        "MNEME_DATA_DIR": "${MNEME_DATA_DIR:-}"
       }
     }
   }

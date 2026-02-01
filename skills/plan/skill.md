@@ -7,34 +7,54 @@ description: |
 argument-hint: "[topic]"
 ---
 
-# /memoria:plan
+# /mneme:plan
 
-Memory-informed design and implementation planning.
+Memory-informed design and implementation planning that combines Claude Code's native plan mode UI, Socratic questioning, and mneme's knowledge base.
 
 ## Invocation
 
 ```
-/memoria:plan                  # Plan for current task
-/memoria:plan "feature"        # Plan for specific feature
+/mneme:plan                  # Plan for current task
+/mneme:plan "feature"        # Plan for specific feature
 ```
 
 ## Workflow Overview
 
 ```
+Phase 0: Enter Plan Mode    → Activate Claude Code native UI
 Phase 1: Memory Search      → Find relevant past knowledge
-Phase 2: Socratic Questions → Clarify requirements (1 question at a time)
-Phase 3: Design Decision    → Present approaches with tradeoffs
-Phase 4: Task Breakdown     → Create actionable task list
+Phase 2: Explore Codebase   → Read-only investigation
+Phase 3: Clarify            → Socratic questions (1 at a time)
+Phase 4: Design             → Present in sections, validate each
+Phase 5: Exit Plan Mode     → Approve and prepare execution
 ```
+
+---
+
+## Phase 0: Enter Plan Mode
+
+**Use Claude Code's native plan mode for proper UI integration.**
+
+```
+Action: Call EnterPlanMode tool
+Result: Terminal shows "⏸ plan mode on" indicator
+```
+
+This enables:
+- Read-only exploration (no accidental changes)
+- Clear visual indication of planning state
+- Native approval workflow via ExitPlanMode
+
+**Skip this phase if already in plan mode.**
 
 ---
 
 ## Phase 1: Memory Search
 
-Search memoria for relevant context before design work. This surfaces past decisions
+Search mneme for relevant context before design work. This surfaces past decisions
 and patterns that inform the current task.
 
-**Example benefit:**
+**Why this matters:**
 ```
 Found: Previous JWT implementation used RS256
 → Saves time by not re-discussing algorithm choice
@@ -42,29 +62,19 @@ Found: Previous JWT implementation used RS256
 
 ### Search Procedure
 
+Use MCP tools or file search:
+
 1. **Search sessions** for similar implementations:
    ```
-   Glob: .memoria/sessions/**/*.json
-   Look for: title, tags, summary, discussions, errors
-   Match: keywords from user request
+   Tool: mcp__mneme-search__mneme_search
+   Query: keywords from user request
+   Types: ["session", "decision", "pattern"]
    ```
 
-2. **Search decisions** for related architectural choices:
+2. **Check rules** for constraints:
    ```
-   Glob: .memoria/decisions/**/*.json
-   Look for: title, decision, reasoning, tags
-   ```
-
-3. **Search patterns** for relevant good/bad/error patterns:
-   ```
-   Glob: .memoria/patterns/*.json
-   Look for: type, errorPattern, solution
-   ```
-
-4. **Check rules** for constraints:
-   ```
-   Read: .memoria/rules/dev-rules.json
-   Read: .memoria/rules/review-guidelines.json
+   Read: .mneme/rules/dev-rules.json
+   Read: .mneme/rules/review-guidelines.json
    Look for: rules that apply to this feature
    ```
 
@@ -73,7 +83,7 @@ Found: Previous JWT implementation used RS256
 **Always present findings before asking questions:**
 
 ```markdown
-## Past Context Found
+## 📚 Past Context Found
 
 **Similar implementation (2026-01-15):**
 > Previously implemented [feature X] using [approach Y].
@@ -81,18 +91,14 @@ Found: Previous JWT implementation used RS256
 > Outcome: [what happened]
 
 **Related decisions:**
-- [decision-id] [title]: [summary] (status: active)
+- `dec-abc123` [title]: [summary] (status: active)
 
 **Relevant patterns:**
-- Good: [pattern description]
-- Error-solution: [error] → [solution]
+- ✅ Good: [pattern description]
+- ⚠️ Error-solution: [error] → [solution]
 
 **Applicable rules:**
 - [rule content]
-
----
-
-Based on this context, let me ask some questions...
 ```
 
 **If no relevant memories found:**
@@ -102,204 +108,315 @@ No directly relevant past sessions found. Starting fresh design.
 
 ---
 
-## Phase 2: Socratic Questions
+## Phase 2: Explore Codebase
 
-Ask one question per message. Wait for response before next question.
+**Investigate the current state before asking questions.**
 
-**Example flow:**
+In plan mode, use read-only tools:
+- `Read` - View file contents
+- `Glob` - Find files by pattern
+- `Grep` - Search code content
+- `Task` with `subagent_type: Explore` - Deep exploration
+
+### What to Explore
+
+1. **Existing implementation** - Related code that already exists
+2. **Patterns in use** - How similar features are built
+3. **Dependencies** - What libraries/modules are available
+4. **Tests** - How similar features are tested
+
+### Present Findings
+
+```markdown
+## 🔍 Codebase Context
+
+**Related files:**
+- `src/components/Auth.tsx` - Current auth UI
+- `src/lib/api.ts` - API client
+
+**Patterns observed:**
+- React Query for data fetching
+- Zod for validation
+
+**Available utilities:**
+- `useAuth` hook exists
+- `api.post()` method available
 ```
-Q1: What scenario should this support? → User answers
-Q2: What's the success criteria? → User answers
-Q3: Any constraints? → User answers
+
+---
+
+## Phase 3: Clarify (Socratic Questions)
+
+**Ask one question per message. Wait for response before next question.**
+
+### Question Rules
+
+- **ONE question per message** - Never ask multiple questions
+- **Multiple choice preferred** - Easier to answer
+- **Reference past decisions** - "Based on the previous JWT decision..."
+- **Skip obvious questions** - Don't ask what's already clear
+- **3-5 questions max** - Don't over-question
+- **YAGNI ruthlessly** - Remove unnecessary features from consideration
+
+### Question Format
+
+Use the `AskUserQuestion` tool for structured questions:
+
+```typescript
+AskUserQuestion({
+  questions: [{
+    question: "How should authentication be handled?",
+    header: "Auth method",
+    options: [
+      { label: "JWT tokens (Recommended)", description: "Consistent with existing API" },
+      { label: "Session cookies", description: "Simpler but requires server state" },
+      { label: "OAuth only", description: "Delegate to third party" }
+    ],
+    multiSelect: false
+  }]
+})
 ```
 
 ### Core Questions (adapt as needed)
 
 1. **Use case clarification**
-   ```
-   What specific scenario should this feature support?
-
-   Options:
-   a) [Scenario A based on memory]
-   b) [Scenario B]
-   c) [Scenario C]
-   d) Other: [describe]
-   ```
+   - What specific scenario should this feature support?
+   - Options based on memory search results
 
 2. **Success criteria**
-   ```
-   How will we know this is successful?
-
-   Consider:
-   - Functional requirements (must work)
-   - Quality requirements (tests, performance)
-   ```
+   - How will we know this is successful?
+   - Functional vs quality requirements
 
 3. **Constraints**
-   ```
-   Any constraints to consider?
+   - Technology constraints from past decisions
+   - Compatibility requirements
 
-   From past decisions:
-   - [relevant constraint from decisions/rules]
-
-   Other possible constraints:
-   a) Technology: [must use X]
-   b) Compatibility: [must work with Y]
-   c) Other: [specify]
-   ```
-
-4. **Integration points**
-   ```
-   How does this integrate with existing code?
-
-   - Which files need modification?
-   - What interfaces must be maintained?
-   ```
-
-### Question Rules
-
-- **ONE question per message**
-- **Offer multiple choice** when possible
-- **Reference past decisions** - "Based on the previous JWT decision..."
-- **Skip obvious questions** - Don't ask what's already clear
-- **3-5 questions max** - Don't over-question
+4. **Scope boundaries**
+   - What's explicitly OUT of scope?
+   - YAGNI: What features can we defer?
 
 ---
 
-## Phase 3: Design Decision
+## Phase 4: Design
 
-**Present 2-3 approaches with clear tradeoffs.**
+**Present the design in sections of 200-300 words. Validate each section before continuing.**
+
+### Section Order
+
+1. **Overview** - What we're building (1-2 sentences)
+2. **Architecture** - How components fit together
+3. **Data flow** - How data moves through the system
+4. **API/Interface** - Public contract
+5. **Error handling** - Edge cases and failures
+6. **Testing strategy** - How to verify it works
+
+### Present Each Section
 
 ```markdown
-## Approaches
+## 📐 Design: [Feature Name]
 
-### Approach A: [Name] (Recommended)
+### Overview
 
-**Summary**: [1-2 sentences]
-
-**Pros**:
-- [Advantage]
-
-**Cons**:
-- [Disadvantage]
-
-**Consistency**: [How this aligns with past decisions]
+[200-300 words describing this section]
 
 ---
 
-### Approach B: [Name]
-
-**Summary**: [1-2 sentences]
-
-**Pros/Cons**: [brief]
-
----
-
-Which approach? (A/B/modify)
+Does this section look right? Any adjustments needed?
 ```
 
-### Decision Rules
+**Wait for confirmation before presenting the next section.**
 
-- **Recommend one** - Put recommended first
-- **Check consistency** - Align with existing decisions
-- **Keep simple** - Prefer simpler approaches (YAGNI)
+### After All Sections Approved
 
----
-
-## Phase 4: Task Breakdown
-
-**After approach is selected, create actionable tasks.**
-
-### Task Format
+Write the complete design to file:
 
 ```markdown
-# [Feature] Implementation Plan
+## Design Document
 
-## Goal
+Saved to: `docs/plans/YYYY-MM-DD-[topic]-design.md`
 
-[One sentence]
-
-## Tasks
-
-### Task 1: [What to do]
-
-**Files**: `path/to/file.ts`
-
-**Steps**:
-1. [Step 1]
-2. [Step 2]
-
-**Verification**: [How to verify it works]
-
----
-
-### Task 2: [What to do]
-
-**Depends on**: Task 1
-
-[...]
+The document includes:
+- Overview and goals
+- Architecture decisions
+- Implementation approach
+- Testing strategy
 ```
 
-### Task Guidelines
+### Document Format
 
-- **Keep tasks small** - Each should be completable independently
-- **Include verification** - How to know it's done
-- **Note dependencies** - If Task B needs Task A first
-- **Be specific** - File paths, function names, etc.
+```markdown
+# [Feature] Design
+
+**Date**: YYYY-MM-DD
+**Status**: Approved
+
+## Overview
+
+[What we're building and why]
+
+## Architecture
+
+[How it fits together]
+
+## Key Decisions
+
+| Decision | Choice | Reasoning |
+|----------|--------|-----------|
+| [Topic] | [Choice] | [Why] |
+
+## Implementation Tasks
+
+### Task 1: [Title]
+- **Files**: `path/to/file.ts`
+- **Steps**: [What to do]
+- **Verification**: [How to test]
+
+### Task 2: [Title]
+- **Depends on**: Task 1
+- [...]
+
+## Testing Strategy
+
+[How to verify the implementation]
+
+## Out of Scope
+
+[What we're explicitly NOT doing (YAGNI)]
+```
 
 ---
 
-## Output Locations
+## Phase 5: Exit Plan Mode
+
+**Use ExitPlanMode to request user approval and prepare for execution.**
+
+```
+Action: Call ExitPlanMode tool
+Result: User reviews plan and approves/rejects
+```
+
+### Before Exiting
+
+Ensure the plan document:
+1. Is saved to `docs/plans/`
+2. Contains all approved design sections
+3. Has clear implementation tasks
+4. Includes verification steps
+
+### Exit Message
+
+```markdown
+## 📋 Plan Ready for Approval
+
+**Document**: `docs/plans/2026-02-01-feature-design.md`
+**Tasks**: 5 implementation steps
+**Key decisions**: [summary]
+
+The plan is ready for your review. You can:
+- Press `Ctrl+G` to open in your editor
+- Approve to begin implementation
+- Request changes
+
+After implementation, run `/mneme:save` to capture decisions and patterns.
+```
+
+---
+
+## Quick Reference
+
+### Tools Used
+
+| Phase | Tools |
+|-------|-------|
+| 0 | `EnterPlanMode` |
+| 1 | `mcp__mneme-search__mneme_search`, `Read` |
+| 2 | `Read`, `Glob`, `Grep`, `Task` (Explore) |
+| 3 | `AskUserQuestion` |
+| 4 | `Write` (design doc) |
+| 5 | `ExitPlanMode` |
+
+### Key Principles
+
+- **Memory first** - Always check past knowledge before designing
+- **One question at a time** - Never overwhelm with multiple questions
+- **Incremental validation** - Present design in sections, validate each
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Native UI** - Use Claude Code's plan mode for proper integration
+
+### Output Location
 
 | Output | Location |
 |--------|----------|
-| Plan document | `docs/plans/YYYY-MM-DD-[topic]-plan.md` |
-| Session reference | Updated via `/memoria:save` |
+| Design document | `docs/plans/YYYY-MM-DD-[topic]-design.md` |
 
 ---
 
-## Quick Example
+## Example Session
 
 ```
-User: /memoria:plan "add dark mode"
+User: /mneme:plan "add user preferences"
 
-Claude:
-## Past Context Found
+Claude: [Enters plan mode]
 
-**Similar implementation (2026-01-10):**
-> Added theme system using CSS variables and Tailwind.
-> Key decision: CSS variables over Tailwind's dark: prefix
-> Outcome: Easy to extend, good performance
+## 📚 Past Context Found
+
+**Related decision (2026-01-20):**
+> User data stored in PostgreSQL with Prisma ORM.
+> Key decision: All user-related data in `users` table with JSONB for flexible fields.
 
 **Applicable rules:**
-- [code-style] Use Tailwind for all styling
+- [data-privacy] User preferences must be exportable
 
 ---
 
-Let me ask one question:
+Let me explore the codebase first...
 
-How should the theme be persisted?
+## 🔍 Codebase Context
 
-a) localStorage (simple, client-only)
-b) User preferences API (synced across devices)
-c) System preference only (no persistence)
-```
+**Related files:**
+- `src/lib/prisma.ts` - Database client
+- `src/types/user.ts` - User type definitions
+- `prisma/schema.prisma` - Database schema
+
+**Pattern observed:**
+- JSONB field `metadata` already exists on User model
 
 ---
 
-## Completion
+Claude: [Uses AskUserQuestion]
 
-After plan approval:
+Question: What preferences should users be able to set?
 
-```markdown
-## Plan Ready
+a) Theme only (dark/light)
+b) Theme + language
+c) Theme + language + notifications (Recommended)
+d) Other
 
-Saved to: `docs/plans/2026-01-27-dark-mode-plan.md`
+User: c
 
-**Tasks**: 5
-**Key decision**: CSS variables approach
+Claude: [Presents design section by section, validates each]
 
-Ready to start implementation?
+## 📐 Design: User Preferences
 
-When done, run `/memoria:save` to capture decisions and patterns.
+### Overview
+
+Add a preferences system allowing users to customize theme, language,
+and notification settings. Preferences stored in existing JSONB `metadata`
+field for flexibility...
+
+Does this section look right?
+
+User: Yes
+
+[Continues with Architecture, Data flow, etc.]
+
+Claude: [Writes design document, calls ExitPlanMode]
+
+## 📋 Plan Ready for Approval
+
+**Document**: `docs/plans/2026-02-01-user-preferences-design.md`
+**Tasks**: 4 implementation steps
+**Key decisions**: Use existing JSONB field, add type-safe accessor
+
+Ready to begin implementation?
 ```

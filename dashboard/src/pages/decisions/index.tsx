@@ -97,83 +97,88 @@ function DecisionDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-2xl max-h-[80vh] overflow-y-auto"
+        aria-describedby={undefined}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            {loading ? (
+              <Skeleton className="h-6 w-3/4" />
+            ) : (
+              decision?.title || tc("loading")
+            )}
+          </DialogTitle>
+        </DialogHeader>
         {loading ? (
           <div className="space-y-4">
-            <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
         ) : decision ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>{decision.title}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {/* Decision - main content */}
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                  {t("detail.decision")}
-                </span>
-                <div className="bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded px-4 py-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {decision.decision}
-                  </p>
-                </div>
+          <div className="space-y-4">
+            {/* Decision - main content */}
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+                {t("detail.decision")}
+              </span>
+              <div className="bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-600 rounded px-4 py-3">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  {decision.decision}
+                </p>
               </div>
-
-              {/* Reasoning */}
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                  {t("detail.reasoning")}
-                </span>
-                <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 rounded px-4 py-3">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-amber-900 dark:text-amber-100">
-                    {decision.reasoning}
-                  </p>
-                </div>
-              </div>
-
-              {/* Alternatives */}
-              {decision.alternatives?.length > 0 && (
-                <div className="space-y-1">
-                  <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
-                    {t("detail.alternatives")}
-                  </span>
-                  <div className="space-y-2">
-                    {decision.alternatives.map((alt) => {
-                      // Support both 'name' (schema) and 'option' (legacy JSON)
-                      const altName =
-                        alt.name || (alt as { option?: string }).option;
-                      return (
-                        <div
-                          key={`${altName}-${alt.reason}`}
-                          className="border border-stone-300 dark:border-stone-600 rounded px-4 py-3"
-                        >
-                          <span className="font-medium text-sm">{altName}</span>
-                          <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
-                            {alt.reason}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Tags */}
-              {decision.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-2">
-                  {decision.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
-          </>
+
+            {/* Reasoning */}
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+                {t("detail.reasoning")}
+              </span>
+              <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 rounded px-4 py-3">
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-amber-900 dark:text-amber-100">
+                  {decision.reasoning}
+                </p>
+              </div>
+            </div>
+
+            {/* Alternatives */}
+            {decision.alternatives?.length > 0 && (
+              <div className="space-y-1">
+                <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+                  {t("detail.alternatives")}
+                </span>
+                <div className="space-y-2">
+                  {decision.alternatives.map((alt) => {
+                    // Support both 'name' (schema) and 'option' (legacy JSON)
+                    const altName =
+                      alt.name || (alt as { option?: string }).option;
+                    return (
+                      <div
+                        key={`${altName}-${alt.reason}`}
+                        className="border border-stone-300 dark:border-stone-600 rounded px-4 py-3"
+                      >
+                        <span className="font-medium text-sm">{altName}</span>
+                        <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
+                          {alt.reason}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tags */}
+            {decision.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-2">
+                {decision.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             {tc("loading")}
