@@ -3181,8 +3181,17 @@ function writeDecisionIndexForMonth(mnemeDir2, year, month, index) {
 }
 function rebuildSessionIndexForMonth(mnemeDir2, year, month) {
   const index = buildSessionIndexForMonth(mnemeDir2, year, month);
+  const indexPath = path2.join(
+    mnemeDir2,
+    INDEXES_DIR,
+    "sessions",
+    year,
+    `${month}.json`
+  );
   if (index.items.length > 0) {
     writeSessionIndexForMonth(mnemeDir2, year, month, index);
+  } else if (fs3.existsSync(indexPath)) {
+    fs3.unlinkSync(indexPath);
   }
   return index;
 }

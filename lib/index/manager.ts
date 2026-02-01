@@ -117,8 +117,19 @@ export function rebuildSessionIndexForMonth(
   month: string,
 ): SessionIndex {
   const index = buildSessionIndexForMonth(mnemeDir, year, month);
+  const indexPath = path.join(
+    mnemeDir,
+    INDEXES_DIR,
+    "sessions",
+    year,
+    `${month}.json`,
+  );
+
   if (index.items.length > 0) {
     writeSessionIndexForMonth(mnemeDir, year, month, index);
+  } else if (fs.existsSync(indexPath)) {
+    // Delete empty index file to prevent stale data
+    fs.unlinkSync(indexPath);
   }
   return index;
 }
