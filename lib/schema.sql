@@ -1,6 +1,6 @@
--- memoria SQLite Schema (v3)
+-- mneme SQLite Schema (v3)
 -- Project-local database for private interactions
--- Location: .memoria/local.db
+-- Location: .mneme/local.db
 
 -- interactions: 会話履歴（プライベート、プロジェクトローカル）
 CREATE TABLE IF NOT EXISTS interactions (
