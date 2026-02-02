@@ -212,50 +212,7 @@ mnemeはMCPサーバーを提供し、Claude Codeから直接呼び出せる検�
 
 ## 仕組み
 
-```mermaid
-flowchart TB
-    subgraph autosave [会話の自動保存]
-        A[セッション終了] --> B[SessionEndフック]
-        B --> C[jqでトランスクリプトから抽出]
-        C --> D[interactions + files + metrics]
-    end
-
-    subgraph autosearch [自動記憶検索]
-        E[ユーザープロンプト] --> F[UserPromptSubmitフック]
-        F --> G[sessions/decisions/patternsを検索]
-        G --> H[関連コンテキストを注入]
-    end
-
-    subgraph backup [PreCompactバックアップ]
-        I[コンテキスト95%] --> J[PreCompactフック]
-        J --> K[interactionsをpreCompactBackupsに保存]
-    end
-
-    subgraph manual [手動操作]
-        L["mneme:save"] --> M[判断 + パターン + ルールを抽出]
-        N["mneme:plan"] --> O[記憶参照 + 設計 + タスク分割]
-    end
-
-    subgraph resume [セッション再開]
-        P["mneme:resume"] --> Q[一覧から選択]
-        Q --> R[過去の文脈を復元 + resumedFrom設定]
-    end
-
-    subgraph review [レビュー]
-        S["mneme:review"] --> T[ルールに基づく指摘]
-        T --> U[レビュー結果を保存]
-    end
-
-    subgraph dashboard [ダッシュボード]
-        V["npx @hir4ta/mneme -d"] --> W[ブラウザで表示]
-        W --> X[全データを閲覧]
-    end
-
-    D --> P
-    H --> L
-    M --> V
-    U --> V
-```
+![mneme ワークフロー](docs/mneme-flow-ja.svg)
 
 ## データ保存
 
