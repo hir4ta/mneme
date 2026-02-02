@@ -212,7 +212,7 @@ mnemeはMCPサーバーを提供し、Claude Codeから直接呼び出せる検�
 
 ## 仕組み
 
-![mneme ワークフロー](docs/mneme-flow-ja.svg)
+![mneme ワークフロー](docs/mneme-flow-ja.png)
 
 ## データ保存
 
