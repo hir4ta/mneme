@@ -7,17 +7,6 @@ Claude Codeの長期記憶を実現するプラグイン
 
 セッションの自動保存、インテリジェントな記憶検索、Webダッシュボードでの管理を提供します。
 
-> [!IMPORTANT]
-> **破壊的変更 (v0.17.0)**: `memoria` から `mneme` に名称変更しました。
->
-> `@hir4ta/memoria` からアップグレードする場合は、Claude Code内で再インストール：
-> ```
-> /plugin marketplace add hir4ta/mneme-marketplace
-> /plugin install mneme@mneme-marketplace
-> ```
-> データディレクトリも変更: `.memoria/` → `.mneme/`
-> 手動でリネーム: `mv .memoria .mneme`
-
 ## 機能
 
 ### コア機能
@@ -398,6 +387,24 @@ mnemeは**ハイブリッドストレージ**方式でプライバシーと共�
 - **ai**: llm, ai-agent, mcp, rag, vector-db, embedding
 - **cloud**: serverless, microservices, edge, wasm
 - その他...
+
+## セキュリティとプライバシー
+
+mnemeは**完全にローカルで動作**し、外部サーバーへのデータ送信は一切ありません。
+
+| 項目 | 説明 |
+|------|------|
+| **外部通信** | なし - curl/fetch/HTTP リクエスト等は一切使用していません |
+| **データ保存** | すべてプロジェクト内の `.mneme/` ディレクトリに保存 |
+| **会話履歴** | `local.db` に保存され、自動的にgitignore（Git共有されません） |
+| **使用ツール** | bash, jq, sqlite3, Node.js標準ライブラリのみ |
+| **コード** | オープンソース - すべてのコードは監査可能です |
+
+### プライバシー設計
+
+- **会話内容（interactions）はローカル専用**: SQLite（`local.db`）に保存され、`.gitignore`に自動追加
+- **メタデータのみGit共有可能**: セッション要約、決定、パターンなどはJSONでチーム共有可能
+- **テレメトリなし**: 使用状況の追跡や外部送信は行いません
 
 ## ライセンス
 

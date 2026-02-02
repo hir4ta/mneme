@@ -7,17 +7,6 @@ Long-term memory plugin for Claude Code
 
 Provides automatic session saving, intelligent memory search, and web dashboard management.
 
-> [!IMPORTANT]
-> **Breaking Change (v0.17.0)**: Renamed from `memoria` to `mneme`.
->
-> If upgrading from `@hir4ta/memoria`, please reinstall in Claude Code:
-> ```
-> /plugin marketplace add hir4ta/mneme-marketplace
-> /plugin install mneme@mneme-marketplace
-> ```
-> Data directory changed: `.memoria/` → `.mneme/`
-> Rename manually: `mv .memoria .mneme`
-
 ## Features
 
 ### Core Features
@@ -408,6 +397,24 @@ This project follows [Semantic Versioning](https://semver.org/).
 If you encounter issues after an update:
 1. Check the [releases](https://github.com/hir4ta/mneme/releases) for migration notes
 2. Re-initialize with `npx @hir4ta/mneme --init` if needed
+
+## Security and Privacy
+
+mneme operates **entirely locally** with no data sent to external servers.
+
+| Item | Description |
+|------|-------------|
+| **External Communication** | None - no curl/fetch/HTTP requests are made |
+| **Data Storage** | All data stored in project's `.mneme/` directory |
+| **Conversation History** | Stored in `local.db`, automatically gitignored (not shared via Git) |
+| **Tools Used** | bash, jq, sqlite3, Node.js standard libraries only |
+| **Code** | Open source - all code is auditable |
+
+### Privacy by Design
+
+- **Conversations (interactions) are local-only**: Stored in SQLite (`local.db`), auto-added to `.gitignore`
+- **Only metadata is Git-shareable**: Session summaries, decisions, patterns can be shared with team via JSON
+- **No telemetry**: No usage tracking or external data transmission
 
 ## License
 
