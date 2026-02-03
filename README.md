@@ -49,6 +49,15 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 
 ### Prerequisites
 
+> **⚠️ IMPORTANT: Node.js >= 22.5.0 Required**
+>
+> mneme uses the built-in `node:sqlite` module, which was introduced in **Node.js 22.5.0**.
+> The dashboard will NOT work on Node.js 20 or earlier versions.
+>
+> Check your version: `node --version`
+>
+> Node.js 20 LTS ends April 2026. Please upgrade to Node.js 22 or later.
+
 - **jq**: Used for JSON processing in hooks
 
 ```bash
