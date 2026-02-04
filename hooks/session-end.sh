@@ -130,7 +130,21 @@ if [ -n "$session_file" ] && [ -f "$session_file" ]; then
                 echo "[mneme] Session ended without /mneme:save - cleaned up ${deleted_count} interactions" >&2
             fi
         fi
-        echo "[mneme] Session completed (not saved): ${session_file}" >&2
+
+        # Also delete the empty session JSON file (no summary = not saved)
+        if [ -f "$session_file" ]; then
+            rm -f "$session_file"
+            echo "[mneme] Deleted empty session file: ${session_file}" >&2
+        fi
+
+        # Delete session-link file if exists
+        link_file="${session_links_dir}/${session_short_id}.json"
+        if [ -f "$link_file" ]; then
+            rm -f "$link_file"
+            echo "[mneme] Deleted session-link file: ${link_file}" >&2
+        fi
+
+        echo "[mneme] Session completed (not saved, cleaned up)" >&2
     else
         echo "[mneme] Session completed: ${session_file}" >&2
     fi

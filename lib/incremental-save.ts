@@ -56,6 +56,7 @@ interface TranscriptEntry {
           thinking?: string;
           text?: string;
           name?: string;
+          id?: string; // tool_use id
           input?: { file_path?: string; command?: string; pattern?: string };
           tool_use_id?: string;
           content?: string;
@@ -74,6 +75,7 @@ interface TranscriptEntry {
 
 interface ToolResultMeta {
   toolUseId: string;
+  toolName?: string;
   success: boolean;
   contentLength?: number;
   filePath?: string;
@@ -366,6 +368,7 @@ function extractToolResultMeta(
     content?: string | unknown;
     is_error?: boolean;
   }>,
+  toolUseIdToName: Map<string, string>,
 ): ToolResultMeta[] {
   return content
     .filter((c) => c.type === "tool_result" && c.tool_use_id)
@@ -382,8 +385,10 @@ function extractToolResultMeta(
       const filePathMatch = contentStr.match(
         /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/,
       );
+      const toolUseId = c.tool_use_id || "";
       return {
-        toolUseId: c.tool_use_id || "",
+        toolUseId,
+        toolName: toolUseIdToName.get(toolUseId),
         success: !c.is_error,
         contentLength: contentStr.length,
         lineCount: lineCount > 1 ? lineCount : undefined,
@@ -495,6 +500,18 @@ async function parseTranscriptIncremental(
       };
     });
 
+  // Build toolUseId to tool name mapping from assistant messages
+  const toolUseIdToName: Map<string, string> = new Map();
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use" && c.id && c.name) {
+          toolUseIdToName.set(c.id, c.name);
+        }
+      }
+    }
+  }
+
   // Extract tool results metadata from user messages (tool_result type)
   const toolResultsByTimestamp: Map<string, ToolResultMeta[]> = new Map();
   for (const entry of entries) {
@@ -506,6 +523,7 @@ async function parseTranscriptIncremental(
           content?: string;
           is_error?: boolean;
         }>,
+        toolUseIdToName,
       );
       if (results.length > 0) {
         const key = entry.timestamp.slice(0, 16);

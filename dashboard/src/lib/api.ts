@@ -177,6 +177,7 @@ export interface ToolDetail {
 // Tool result metadata (without full content)
 export interface ToolResultMeta {
   toolUseId: string;
+  toolName?: string;
   success: boolean;
   contentLength?: number;
   lineCount?: number;

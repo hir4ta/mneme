@@ -373,10 +373,17 @@ function InteractionCard({
                       ) : (
                         <XCircle className="w-3 h-3 text-red-600 dark:text-red-400 shrink-0" />
                       )}
+                      {result.toolName && (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {result.toolName}
+                        </span>
+                      )}
                       <span className="text-emerald-700 dark:text-emerald-300">
                         {result.filePath
                           ? result.filePath.split("/").pop()
-                          : result.toolUseId.slice(0, 12)}
+                          : !result.toolName
+                            ? result.toolUseId.slice(0, 12)
+                            : null}
                       </span>
                       {result.lineCount && result.lineCount > 1 && (
                         <span className="text-emerald-600 dark:text-emerald-500">
@@ -428,10 +435,14 @@ function InteractionCard({
                           ? "Hook"
                           : event.type === "mcp_progress"
                             ? "MCP"
-                            : event.type}
+                            : event.type === "agent_progress"
+                              ? "Agent"
+                              : event.type}
                       </span>
                       <span className="text-purple-700 dark:text-purple-300">
-                        {event.hookName || event.toolName || event.hookEvent}
+                        {event.hookEvent && event.hookName
+                          ? `${event.hookEvent}:${event.hookName}`
+                          : event.hookName || event.toolName || event.hookEvent || ""}
                       </span>
                     </div>
                   ))}

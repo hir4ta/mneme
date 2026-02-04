@@ -520,10 +520,12 @@ async function parseTranscript(
     }
   }
 
-  // Extract user messages (text only, exclude tool results and local command outputs)
+  // Extract user messages (text only, exclude tool results, local command outputs, and skill expansions)
   const userMessages = entries
     .filter((e) => {
       if (e.type !== "user" || e.message?.role !== "user") return false;
+      // Skip skill expansions (isMeta: true) to avoid duplicates
+      if ((e as { isMeta?: boolean }).isMeta === true) return false;
       const content = e.message?.content;
       if (typeof content !== "string") return false;
       if (content.startsWith("<local-command-stdout>")) return false;

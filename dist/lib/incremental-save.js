@@ -197,15 +197,17 @@ function extractSlashCommand(content) {
   const match = content.match(/<command-name>([^<]+)<\/command-name>/);
   return match ? match[1] : void 0;
 }
-function extractToolResultMeta(content) {
+function extractToolResultMeta(content, toolUseIdToName) {
   return content.filter((c) => c.type === "tool_result" && c.tool_use_id).map((c) => {
     const contentStr = typeof c.content === "string" ? c.content : c.content ? JSON.stringify(c.content) : "";
     const lineCount = contentStr.split("\n").length;
     const filePathMatch = contentStr.match(
       /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/
     );
+    const toolUseId = c.tool_use_id || "";
     return {
-      toolUseId: c.tool_use_id || "",
+      toolUseId,
+      toolName: toolUseIdToName.get(toolUseId),
       success: !c.is_error,
       contentLength: contentStr.length,
       lineCount: lineCount > 1 ? lineCount : void 0,
@@ -290,11 +292,22 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
       slashCommand: extractSlashCommand(content)
     };
   });
+  const toolUseIdToName = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use" && c.id && c.name) {
+          toolUseIdToName.set(c.id, c.name);
+        }
+      }
+    }
+  }
   const toolResultsByTimestamp = /* @__PURE__ */ new Map();
   for (const entry of entries) {
     if (entry.type === "user" && Array.isArray(entry.message?.content)) {
       const results = extractToolResultMeta(
-        entry.message.content
+        entry.message.content,
+        toolUseIdToName
       );
       if (results.length > 0) {
         const key = entry.timestamp.slice(0, 16);

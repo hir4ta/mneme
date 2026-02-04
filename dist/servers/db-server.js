@@ -30210,6 +30210,7 @@ async function parseTranscript(transcriptPath) {
   }
   const userMessages = entries.filter((e) => {
     if (e.type !== "user" || e.message?.role !== "user") return false;
+    if (e.isMeta === true) return false;
     const content = e.message?.content;
     if (typeof content !== "string") return false;
     if (content.startsWith("<local-command-stdout>")) return false;
