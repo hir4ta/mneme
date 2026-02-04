@@ -1,4 +1,16 @@
-import { Bot, Brain, Link2, Search, Trash2, Wrench, Zap } from "lucide-react";
+import {
+  Bot,
+  Brain,
+  CheckCircle,
+  FileText,
+  Link2,
+  Play,
+  Search,
+  Trash2,
+  Wrench,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router";
@@ -130,13 +142,21 @@ function InteractionCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showThinking, setShowThinking] = useState(false);
   const [showToolDetails, setShowToolDetails] = useState(false);
+  const [showToolResults, setShowToolResults] = useState(false);
+  const [showProgressEvents, setShowProgressEvents] = useState(false);
 
   const timestamp = formatTimestamp(interaction.timestamp);
   const hasThinking =
     interaction.thinking && interaction.thinking.trim() !== "";
   const hasToolDetails =
     interaction.toolDetails && interaction.toolDetails.length > 0;
+  const hasToolResults =
+    interaction.toolResults && interaction.toolResults.length > 0;
+  const hasProgressEvents =
+    interaction.progressEvents && interaction.progressEvents.length > 0;
   const isSubagent = !!interaction.agentId;
+  // Support both legacy hasPlanMode and new inPlanMode
+  const isInPlanMode = interaction.inPlanMode || interaction.hasPlanMode;
 
   // Check if user message is a command
   const parsedCommand = parseCommandMessage(interaction.user);
@@ -184,7 +204,7 @@ function InteractionCard({
       </div>
 
       {/* Plan mode indicator */}
-      {interaction.hasPlanMode && (
+      {isInPlanMode && (
         <div className="flex justify-center">
           <div className="text-xs text-violet-700 dark:text-violet-400 bg-violet-100 dark:bg-violet-950/40 border border-violet-300 dark:border-violet-800 px-3 py-1.5 rounded-full flex items-center gap-2">
             <Search className="w-3 h-3" />
@@ -195,7 +215,7 @@ function InteractionCard({
                 <span className="text-violet-600 dark:text-violet-500">
                   {interaction.planTools
                     .slice(0, 3)
-                    .map((t) => `${t.name}×${t.count}`)
+                    .map((pt) => `${pt.name}×${pt.count}`)
                     .join(", ")}
                   {interaction.planTools.length > 3 && "..."}
                 </span>
@@ -206,7 +226,7 @@ function InteractionCard({
       )}
 
       {/* Tools used indicator (when not plan mode) */}
-      {!interaction.hasPlanMode &&
+      {!isInPlanMode &&
         interaction.toolsUsed &&
         interaction.toolsUsed.length > 0 && (
           <div className="flex justify-center">
@@ -312,6 +332,106 @@ function InteractionCard({
                           : tool.detail
                             ? JSON.stringify(tool.detail)
                             : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tool Results (expandable) */}
+      {hasToolResults && (
+        <div className="flex justify-start">
+          <div className="max-w-[85%]">
+            <button
+              type="button"
+              onClick={() => setShowToolResults(!showToolResults)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 mb-1"
+            >
+              <FileText className="w-3 h-3 text-emerald-500" />
+              {showToolResults
+                ? t("interaction.hideToolResults")
+                : t("interaction.showToolResults")}
+              <span className="text-stone-400">
+                ({interaction.toolResults?.length})
+              </span>
+            </button>
+
+            {showToolResults && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2">
+                <div className="space-y-1 font-mono text-xs">
+                  {interaction.toolResults?.map((result, idx) => (
+                    <div
+                      key={`${result.toolUseId}-${idx}`}
+                      className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200"
+                    >
+                      {result.success ? (
+                        <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      ) : (
+                        <XCircle className="w-3 h-3 text-red-600 dark:text-red-400 shrink-0" />
+                      )}
+                      <span className="text-emerald-700 dark:text-emerald-300">
+                        {result.filePath
+                          ? result.filePath.split("/").pop()
+                          : result.toolUseId.slice(0, 12)}
+                      </span>
+                      {result.lineCount && result.lineCount > 1 && (
+                        <span className="text-emerald-600 dark:text-emerald-500">
+                          {result.lineCount} lines
+                        </span>
+                      )}
+                      {result.contentLength && (
+                        <span className="text-emerald-500 dark:text-emerald-600">
+                          ({Math.round(result.contentLength / 1024)}KB)
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Progress Events (expandable) */}
+      {hasProgressEvents && (
+        <div className="flex justify-start">
+          <div className="max-w-[85%]">
+            <button
+              type="button"
+              onClick={() => setShowProgressEvents(!showProgressEvents)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1 mb-1"
+            >
+              <Play className="w-3 h-3 text-purple-500" />
+              {showProgressEvents
+                ? t("interaction.hideProgressEvents")
+                : t("interaction.showProgressEvents")}
+              <span className="text-stone-400">
+                ({interaction.progressEvents?.length})
+              </span>
+            </button>
+
+            {showProgressEvents && (
+              <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl px-3 py-2">
+                <div className="space-y-1 font-mono text-xs">
+                  {interaction.progressEvents?.map((event, idx) => (
+                    <div
+                      key={`${event.timestamp}-${idx}`}
+                      className="flex items-center gap-2 text-purple-800 dark:text-purple-200"
+                    >
+                      <span className="text-purple-600 dark:text-purple-400 font-semibold shrink-0">
+                        {event.type === "hook_progress"
+                          ? "Hook"
+                          : event.type === "mcp_progress"
+                            ? "MCP"
+                            : event.type}
+                      </span>
+                      <span className="text-purple-700 dark:text-purple-300">
+                        {event.hookName || event.toolName || event.hookEvent}
                       </span>
                     </div>
                   ))}

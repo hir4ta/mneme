@@ -40,7 +40,11 @@
     "summaryFromPreviousContext": "Summary from previous context",
     "planMode": "Plan Mode",
     "showToolDetails": "Show tool calls",
-    "hideToolDetails": "Hide tool calls"
+    "hideToolDetails": "Hide tool calls",
+    "showToolResults": "Show tool results",
+    "hideToolResults": "Hide tool results",
+    "showProgressEvents": "Show progress events",
+    "hideProgressEvents": "Hide progress events"
   },
   "types": {
     "decision": "Decision",

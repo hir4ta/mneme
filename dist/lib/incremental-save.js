@@ -193,6 +193,26 @@ function updateSaveState(db, claudeSessionId, lastSavedTimestamp, lastSavedLine)
   `);
   stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
 }
+function extractSlashCommand(content) {
+  const match = content.match(/<command-name>([^<]+)<\/command-name>/);
+  return match ? match[1] : void 0;
+}
+function extractToolResultMeta(content) {
+  return content.filter((c) => c.type === "tool_result" && c.tool_use_id).map((c) => {
+    const contentStr = typeof c.content === "string" ? c.content : c.content ? JSON.stringify(c.content) : "";
+    const lineCount = contentStr.split("\n").length;
+    const filePathMatch = contentStr.match(
+      /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/
+    );
+    return {
+      toolUseId: c.tool_use_id || "",
+      success: !c.is_error,
+      contentLength: contentStr.length,
+      lineCount: lineCount > 1 ? lineCount : void 0,
+      filePath: filePathMatch ? filePathMatch[1] : void 0
+    };
+  });
+}
 async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
   const fileStream = fs.createReadStream(transcriptPath);
   const rl = readline.createInterface({
@@ -211,18 +231,78 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
       }
     }
   }
+  const planModeEvents = [];
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use") {
+          if (c.name === "EnterPlanMode") {
+            planModeEvents.push({ timestamp: entry.timestamp, entering: true });
+          } else if (c.name === "ExitPlanMode") {
+            planModeEvents.push({
+              timestamp: entry.timestamp,
+              entering: false
+            });
+          }
+        }
+      }
+    }
+  }
+  function isInPlanMode(timestamp) {
+    let inPlanMode = false;
+    for (const event of planModeEvents) {
+      if (event.timestamp > timestamp) break;
+      inPlanMode = event.entering;
+    }
+    return inPlanMode;
+  }
+  const progressEvents = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "progress" && entry.data?.type) {
+      const event = {
+        type: entry.data.type,
+        timestamp: entry.timestamp,
+        hookEvent: entry.data.hookEvent,
+        hookName: entry.data.hookName,
+        toolName: entry.data.toolName
+      };
+      const key = entry.timestamp.slice(0, 16);
+      if (!progressEvents.has(key)) {
+        progressEvents.set(key, []);
+      }
+      progressEvents.get(key)?.push(event);
+    }
+  }
   const userMessages = entries.filter((e) => {
     if (e.type !== "user" || e.message?.role !== "user") return false;
+    if (e.isMeta === true) return false;
     const content = e.message?.content;
     if (typeof content !== "string") return false;
     if (content.startsWith("<local-command-stdout>")) return false;
     if (content.startsWith("<local-command-caveat>")) return false;
     return true;
-  }).map((e) => ({
-    timestamp: e.timestamp,
-    content: e.message?.content,
-    isCompactSummary: e.isCompactSummary || false
-  }));
+  }).map((e) => {
+    const content = e.message?.content;
+    return {
+      timestamp: e.timestamp,
+      content,
+      isCompactSummary: e.isCompactSummary || false,
+      slashCommand: extractSlashCommand(content)
+    };
+  });
+  const toolResultsByTimestamp = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
+      const results = extractToolResultMeta(
+        entry.message.content
+      );
+      if (results.length > 0) {
+        const key = entry.timestamp.slice(0, 16);
+        const existing = toolResultsByTimestamp.get(key) || [];
+        toolResultsByTimestamp.set(key, [...existing, ...results]);
+      }
+    }
+  }
   const assistantMessages = entries.filter((e) => e.type === "assistant").map((e) => {
     const contentArray = e.message?.content;
     if (!Array.isArray(contentArray)) return null;
@@ -249,6 +329,7 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     );
     if (turnResponses.length > 0) {
       const allToolDetails = turnResponses.flatMap((r) => r.toolDetails);
+      const timeKey = user.timestamp.slice(0, 16);
       interactions.push({
         timestamp: user.timestamp,
         user: user.content,
@@ -256,7 +337,12 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
         assistant: turnResponses.filter((r) => r.text).map((r) => r.text).join("\n"),
         isCompactSummary: user.isCompactSummary,
         toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
-        toolDetails: allToolDetails
+        toolDetails: allToolDetails,
+        // New metadata
+        inPlanMode: isInPlanMode(user.timestamp) || void 0,
+        slashCommand: user.slashCommand,
+        toolResults: toolResultsByTimestamp.get(timeKey),
+        progressEvents: progressEvents.get(timeKey)
       });
     }
   }
@@ -366,7 +452,18 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
     try {
       const metadata = JSON.stringify({
         toolsUsed: interaction.toolsUsed,
-        toolDetails: interaction.toolDetails
+        toolDetails: interaction.toolDetails,
+        // New metadata fields
+        ...interaction.inPlanMode && { inPlanMode: true },
+        ...interaction.slashCommand && {
+          slashCommand: interaction.slashCommand
+        },
+        ...interaction.toolResults && interaction.toolResults.length > 0 && {
+          toolResults: interaction.toolResults
+        },
+        ...interaction.progressEvents && interaction.progressEvents.length > 0 && {
+          progressEvents: interaction.progressEvents
+        }
       });
       insertStmt.run(
         mnemeSessionId,
@@ -385,6 +482,17 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       );
       insertedCount++;
       if (interaction.assistant) {
+        const assistantMetadata = JSON.stringify({
+          toolsUsed: interaction.toolsUsed,
+          toolDetails: interaction.toolDetails,
+          ...interaction.inPlanMode && { inPlanMode: true },
+          ...interaction.toolResults && interaction.toolResults.length > 0 && {
+            toolResults: interaction.toolResults
+          },
+          ...interaction.progressEvents && interaction.progressEvents.length > 0 && {
+            progressEvents: interaction.progressEvents
+          }
+        });
         insertStmt.run(
           mnemeSessionId,
           claudeSessionId,
@@ -396,7 +504,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
           "assistant",
           interaction.assistant,
           interaction.thinking || null,
-          null,
+          assistantMetadata,
           interaction.timestamp,
           0
         );

@@ -702,6 +702,24 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       detail: string | { type: string; prompt: string } | null;
     };
 
+    // Tool result metadata type
+    type ToolResultMeta = {
+      toolUseId: string;
+      success: boolean;
+      contentLength?: number;
+      lineCount?: number;
+      filePath?: string;
+    };
+
+    // Progress event type
+    type ProgressEvent = {
+      type: string;
+      timestamp: string;
+      hookEvent?: string;
+      hookName?: string;
+      toolName?: string;
+    };
+
     // Group by user/assistant pairs for better display
     const groupedInteractions: Array<{
       id: string;
@@ -716,6 +734,11 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       toolDetails?: ToolDetail[];
       agentId?: string | null;
       agentType?: string | null;
+      // New metadata fields
+      inPlanMode?: boolean;
+      slashCommand?: string;
+      toolResults?: ToolResultMeta[];
+      progressEvents?: ProgressEvent[];
     }> = [];
 
     let currentInteraction: {
@@ -731,6 +754,11 @@ app.get("/api/sessions/:id/interactions", async (c) => {
       toolDetails?: ToolDetail[];
       agentId?: string | null;
       agentType?: string | null;
+      // New metadata fields
+      inPlanMode?: boolean;
+      slashCommand?: string;
+      toolResults?: ToolResultMeta[];
+      progressEvents?: ProgressEvent[];
     } | null = null;
 
     for (const interaction of interactions) {
@@ -745,13 +773,23 @@ app.get("/api/sessions/:id/interactions", async (c) => {
         let planTools: Array<{ name: string; count: number }> | undefined;
         let toolsUsed: string[] | undefined;
         let toolDetails: ToolDetail[] | undefined;
+        // New metadata fields
+        let inPlanMode: boolean | undefined;
+        let slashCommand: string | undefined;
+        let toolResults: ToolResultMeta[] | undefined;
+        let progressEvents: ProgressEvent[] | undefined;
 
         if (interaction.tool_calls) {
           try {
             const metadata = JSON.parse(interaction.tool_calls);
+            // Legacy plan mode support
             if (metadata.hasPlanMode) {
               hasPlanMode = true;
               planTools = metadata.planTools || [];
+            }
+            // New plan mode flag
+            if (metadata.inPlanMode) {
+              inPlanMode = true;
             }
             if (
               metadata.toolsUsed &&
@@ -766,6 +804,24 @@ app.get("/api/sessions/:id/interactions", async (c) => {
               metadata.toolDetails.length > 0
             ) {
               toolDetails = metadata.toolDetails;
+            }
+            // New metadata fields
+            if (metadata.slashCommand) {
+              slashCommand = metadata.slashCommand;
+            }
+            if (
+              metadata.toolResults &&
+              Array.isArray(metadata.toolResults) &&
+              metadata.toolResults.length > 0
+            ) {
+              toolResults = metadata.toolResults;
+            }
+            if (
+              metadata.progressEvents &&
+              Array.isArray(metadata.progressEvents) &&
+              metadata.progressEvents.length > 0
+            ) {
+              progressEvents = metadata.progressEvents;
             }
           } catch {
             // Invalid JSON, skip metadata
@@ -787,6 +843,13 @@ app.get("/api/sessions/:id/interactions", async (c) => {
             toolDetails.length > 0 && { toolDetails }),
           ...(interaction.agent_id && { agentId: interaction.agent_id }),
           ...(interaction.agent_type && { agentType: interaction.agent_type }),
+          // New metadata fields
+          ...(inPlanMode && { inPlanMode }),
+          ...(slashCommand && { slashCommand }),
+          ...(toolResults !== undefined &&
+            toolResults.length > 0 && { toolResults }),
+          ...(progressEvents !== undefined &&
+            progressEvents.length > 0 && { progressEvents }),
         };
       } else if (interaction.role === "assistant" && currentInteraction) {
         currentInteraction.assistant = interaction.content;

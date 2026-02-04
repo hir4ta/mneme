@@ -3827,6 +3827,10 @@ app.get("/api/sessions/:id/interactions", async (c) => {
         let planTools;
         let toolsUsed;
         let toolDetails;
+        let inPlanMode;
+        let slashCommand;
+        let toolResults;
+        let progressEvents;
         if (interaction.tool_calls) {
           try {
             const metadata = JSON.parse(interaction.tool_calls);
@@ -3834,11 +3838,23 @@ app.get("/api/sessions/:id/interactions", async (c) => {
               hasPlanMode = true;
               planTools = metadata.planTools || [];
             }
+            if (metadata.inPlanMode) {
+              inPlanMode = true;
+            }
             if (metadata.toolsUsed && Array.isArray(metadata.toolsUsed) && metadata.toolsUsed.length > 0) {
               toolsUsed = metadata.toolsUsed;
             }
             if (metadata.toolDetails && Array.isArray(metadata.toolDetails) && metadata.toolDetails.length > 0) {
               toolDetails = metadata.toolDetails;
+            }
+            if (metadata.slashCommand) {
+              slashCommand = metadata.slashCommand;
+            }
+            if (metadata.toolResults && Array.isArray(metadata.toolResults) && metadata.toolResults.length > 0) {
+              toolResults = metadata.toolResults;
+            }
+            if (metadata.progressEvents && Array.isArray(metadata.progressEvents) && metadata.progressEvents.length > 0) {
+              progressEvents = metadata.progressEvents;
             }
           } catch {
           }
@@ -3855,7 +3871,12 @@ app.get("/api/sessions/:id/interactions", async (c) => {
           ...toolsUsed !== void 0 && toolsUsed.length > 0 && { toolsUsed },
           ...toolDetails !== void 0 && toolDetails.length > 0 && { toolDetails },
           ...interaction.agent_id && { agentId: interaction.agent_id },
-          ...interaction.agent_type && { agentType: interaction.agent_type }
+          ...interaction.agent_type && { agentType: interaction.agent_type },
+          // New metadata fields
+          ...inPlanMode && { inPlanMode },
+          ...slashCommand && { slashCommand },
+          ...toolResults !== void 0 && toolResults.length > 0 && { toolResults },
+          ...progressEvents !== void 0 && progressEvents.length > 0 && { progressEvents }
         };
       } else if (interaction.role === "assistant" && currentInteraction) {
         currentInteraction.assistant = interaction.content;

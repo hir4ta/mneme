@@ -174,6 +174,24 @@ export interface ToolDetail {
   detail: string | { type: string; prompt: string } | null;
 }
 
+// Tool result metadata (without full content)
+export interface ToolResultMeta {
+  toolUseId: string;
+  success: boolean;
+  contentLength?: number;
+  lineCount?: number;
+  filePath?: string;
+}
+
+// Progress event (hooks, MCP, etc.)
+export interface ProgressEvent {
+  type: string;
+  timestamp: string;
+  hookEvent?: string;
+  hookName?: string;
+  toolName?: string;
+}
+
 // Session Interactions (from SQLite, owner-restricted)
 export interface InteractionFromSQLite {
   id: string;
@@ -188,6 +206,11 @@ export interface InteractionFromSQLite {
   toolDetails?: ToolDetail[];
   agentId?: string | null;
   agentType?: string | null;
+  // New metadata fields
+  inPlanMode?: boolean;
+  slashCommand?: string;
+  toolResults?: ToolResultMeta[];
+  progressEvents?: ProgressEvent[];
 }
 
 export interface SessionInteractionsResponse {

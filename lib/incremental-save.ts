@@ -44,6 +44,9 @@ type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
 interface TranscriptEntry {
   type: string;
   timestamp: string;
+  uuid?: string;
+  parentUuid?: string;
+  isMeta?: boolean; // true for skill expansions
   message?: {
     role?: string;
     content?:
@@ -54,9 +57,35 @@ interface TranscriptEntry {
           text?: string;
           name?: string;
           input?: { file_path?: string; command?: string; pattern?: string };
+          tool_use_id?: string;
+          content?: string;
+          is_error?: boolean;
         }>;
   };
   isCompactSummary?: boolean;
+  data?: {
+    type?: string;
+    hookEvent?: string;
+    hookName?: string;
+    status?: string;
+    toolName?: string;
+  };
+}
+
+interface ToolResultMeta {
+  toolUseId: string;
+  success: boolean;
+  contentLength?: number;
+  filePath?: string;
+  lineCount?: number;
+}
+
+interface ProgressEvent {
+  type: string;
+  timestamp: string;
+  hookEvent?: string;
+  hookName?: string;
+  toolName?: string;
 }
 
 interface ParsedInteraction {
@@ -67,6 +96,11 @@ interface ParsedInteraction {
   isCompactSummary: boolean;
   toolsUsed: string[];
   toolDetails: Array<{ name: string; detail: unknown }>;
+  // New metadata
+  inPlanMode?: boolean;
+  slashCommand?: string;
+  toolResults?: ToolResultMeta[];
+  progressEvents?: ProgressEvent[];
 }
 
 interface SaveState {
@@ -318,6 +352,46 @@ function updateSaveState(
   stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
 }
 
+// Extract slash command from content (e.g., <command-name>/save</command-name>)
+function extractSlashCommand(content: string): string | undefined {
+  const match = content.match(/<command-name>([^<]+)<\/command-name>/);
+  return match ? match[1] : undefined;
+}
+
+// Extract tool result metadata (without full content)
+function extractToolResultMeta(
+  content: Array<{
+    type: string;
+    tool_use_id?: string;
+    content?: string | unknown;
+    is_error?: boolean;
+  }>,
+): ToolResultMeta[] {
+  return content
+    .filter((c) => c.type === "tool_result" && c.tool_use_id)
+    .map((c) => {
+      // Handle content that may be string, object, or undefined
+      const contentStr =
+        typeof c.content === "string"
+          ? c.content
+          : c.content
+            ? JSON.stringify(c.content)
+            : "";
+      const lineCount = contentStr.split("\n").length;
+      // Try to extract file path from content
+      const filePathMatch = contentStr.match(
+        /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/,
+      );
+      return {
+        toolUseId: c.tool_use_id || "",
+        success: !c.is_error,
+        contentLength: contentStr.length,
+        lineCount: lineCount > 1 ? lineCount : undefined,
+        filePath: filePathMatch ? filePathMatch[1] : undefined,
+      };
+    });
+}
+
 // Parse transcript and extract new interactions (streaming)
 async function parseTranscriptIncremental(
   transcriptPath: string,
@@ -345,21 +419,101 @@ async function parseTranscriptIncremental(
     }
   }
 
-  // Extract user messages (text only, exclude tool results and local command outputs)
+  // Track plan mode state based on EnterPlanMode/ExitPlanMode tool calls
+  const planModeEvents: Array<{
+    timestamp: string;
+    entering: boolean;
+  }> = [];
+
+  // First pass: collect plan mode events from assistant messages
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use") {
+          if (c.name === "EnterPlanMode") {
+            planModeEvents.push({ timestamp: entry.timestamp, entering: true });
+          } else if (c.name === "ExitPlanMode") {
+            planModeEvents.push({
+              timestamp: entry.timestamp,
+              entering: false,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Helper to check if a timestamp is within plan mode
+  function isInPlanMode(timestamp: string): boolean {
+    let inPlanMode = false;
+    for (const event of planModeEvents) {
+      if (event.timestamp > timestamp) break;
+      inPlanMode = event.entering;
+    }
+    return inPlanMode;
+  }
+
+  // Extract progress events (hooks, MCP, etc.)
+  const progressEvents: Map<string, ProgressEvent[]> = new Map();
+  for (const entry of entries) {
+    if (entry.type === "progress" && entry.data?.type) {
+      const event: ProgressEvent = {
+        type: entry.data.type,
+        timestamp: entry.timestamp,
+        hookEvent: entry.data.hookEvent,
+        hookName: entry.data.hookName,
+        toolName: entry.data.toolName,
+      };
+      // Group by parent timestamp (approximate)
+      const key = entry.timestamp.slice(0, 16); // Group by minute
+      if (!progressEvents.has(key)) {
+        progressEvents.set(key, []);
+      }
+      progressEvents.get(key)?.push(event);
+    }
+  }
+
+  // Extract user messages (text only, exclude tool results, local command outputs, and skill expansions)
   const userMessages = entries
     .filter((e) => {
       if (e.type !== "user" || e.message?.role !== "user") return false;
+      // Skip skill expansions (isMeta: true) to avoid duplicates
+      if (e.isMeta === true) return false;
       const content = e.message?.content;
       if (typeof content !== "string") return false;
       if (content.startsWith("<local-command-stdout>")) return false;
       if (content.startsWith("<local-command-caveat>")) return false;
       return true;
     })
-    .map((e) => ({
-      timestamp: e.timestamp,
-      content: e.message?.content as string,
-      isCompactSummary: e.isCompactSummary || false,
-    }));
+    .map((e) => {
+      const content = e.message?.content as string;
+      return {
+        timestamp: e.timestamp,
+        content,
+        isCompactSummary: e.isCompactSummary || false,
+        slashCommand: extractSlashCommand(content),
+      };
+    });
+
+  // Extract tool results metadata from user messages (tool_result type)
+  const toolResultsByTimestamp: Map<string, ToolResultMeta[]> = new Map();
+  for (const entry of entries) {
+    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
+      const results = extractToolResultMeta(
+        entry.message.content as Array<{
+          type: string;
+          tool_use_id?: string;
+          content?: string;
+          is_error?: boolean;
+        }>,
+      );
+      if (results.length > 0) {
+        const key = entry.timestamp.slice(0, 16);
+        const existing = toolResultsByTimestamp.get(key) || [];
+        toolResultsByTimestamp.set(key, [...existing, ...results]);
+      }
+    }
+  }
 
   // Extract assistant messages with thinking and text
   const assistantMessages = entries
@@ -420,6 +574,8 @@ async function parseTranscriptIncremental(
 
     if (turnResponses.length > 0) {
       const allToolDetails = turnResponses.flatMap((r) => r.toolDetails);
+      const timeKey = user.timestamp.slice(0, 16);
+
       interactions.push({
         timestamp: user.timestamp,
         user: user.content,
@@ -434,6 +590,11 @@ async function parseTranscriptIncremental(
         isCompactSummary: user.isCompactSummary,
         toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
         toolDetails: allToolDetails,
+        // New metadata
+        inPlanMode: isInPlanMode(user.timestamp) || undefined,
+        slashCommand: user.slashCommand,
+        toolResults: toolResultsByTimestamp.get(timeKey),
+        progressEvents: progressEvents.get(timeKey),
       });
     }
   }
@@ -592,10 +753,23 @@ export async function incrementalSave(
 
   for (const interaction of interactions) {
     try {
-      // Create metadata JSON
+      // Create metadata JSON with all available info
       const metadata = JSON.stringify({
         toolsUsed: interaction.toolsUsed,
         toolDetails: interaction.toolDetails,
+        // New metadata fields
+        ...(interaction.inPlanMode && { inPlanMode: true }),
+        ...(interaction.slashCommand && {
+          slashCommand: interaction.slashCommand,
+        }),
+        ...(interaction.toolResults &&
+          interaction.toolResults.length > 0 && {
+            toolResults: interaction.toolResults,
+          }),
+        ...(interaction.progressEvents &&
+          interaction.progressEvents.length > 0 && {
+            progressEvents: interaction.progressEvents,
+          }),
       });
 
       // Insert user message
@@ -618,6 +792,21 @@ export async function incrementalSave(
 
       // Insert assistant response
       if (interaction.assistant) {
+        // Assistant also gets the same metadata for context
+        const assistantMetadata = JSON.stringify({
+          toolsUsed: interaction.toolsUsed,
+          toolDetails: interaction.toolDetails,
+          ...(interaction.inPlanMode && { inPlanMode: true }),
+          ...(interaction.toolResults &&
+            interaction.toolResults.length > 0 && {
+              toolResults: interaction.toolResults,
+            }),
+          ...(interaction.progressEvents &&
+            interaction.progressEvents.length > 0 && {
+              progressEvents: interaction.progressEvents,
+            }),
+        });
+
         insertStmt.run(
           mnemeSessionId,
           claudeSessionId,
@@ -629,7 +818,7 @@ export async function incrementalSave(
           "assistant",
           interaction.assistant,
           interaction.thinking || null,
-          null,
+          assistantMetadata,
           interaction.timestamp,
           0,
         );

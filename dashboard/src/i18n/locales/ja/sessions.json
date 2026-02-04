@@ -38,7 +38,11 @@
     "summaryFromPreviousContext": "前のコンテキストからの要約",
     "planMode": "計画モード",
     "showToolDetails": "ツール実行を表示",
-    "hideToolDetails": "ツール実行を非表示"
+    "hideToolDetails": "ツール実行を非表示",
+    "showToolResults": "ツール結果を表示",
+    "hideToolResults": "ツール結果を非表示",
+    "showProgressEvents": "進捗イベントを表示",
+    "hideProgressEvents": "進捗イベントを非表示"
   },
   "types": {
     "decision": "意思決定",
