@@ -479,6 +479,7 @@ interface ParsedTranscript {
     assistantResponses: number;
     thinkingBlocks: number;
   };
+  totalLines: number;
 }
 
 async function parseTranscript(
@@ -509,8 +510,10 @@ async function parseTranscript(
   }
 
   const entries: TranscriptEntry[] = [];
+  let totalLines = 0;
 
   for await (const line of rl) {
+    totalLines++;
     if (line.trim()) {
       try {
         entries.push(JSON.parse(line));
@@ -643,6 +646,7 @@ async function parseTranscript(
       assistantResponses: assistantMessages.length,
       thinkingBlocks: assistantMessages.filter((a) => a.thinking).length,
     },
+    totalLines,
   };
 }
 
@@ -827,6 +831,43 @@ async function saveInteractions(
     clearBackupStmt.run(sessionId);
   } catch {
     // Ignore
+  }
+
+  // Update session_save_state to prevent incremental-save from re-inserting
+  // This is critical to avoid duplicate interactions
+  try {
+    const lastTimestamp =
+      finalInteractions.length > 0
+        ? finalInteractions[finalInteractions.length - 1].timestamp
+        : null;
+
+    const checkStmt = database.prepare(
+      "SELECT 1 FROM session_save_state WHERE claude_session_id = ?",
+    );
+    const exists = checkStmt.get(claudeSessionId);
+
+    if (exists) {
+      const updateStmt = database.prepare(`
+        UPDATE session_save_state
+        SET last_saved_line = ?, last_saved_timestamp = ?, updated_at = datetime('now')
+        WHERE claude_session_id = ?
+      `);
+      updateStmt.run(parsed.totalLines, lastTimestamp, claudeSessionId);
+    } else {
+      const insertStmt = database.prepare(`
+        INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, last_saved_line, last_saved_timestamp)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      insertStmt.run(
+        claudeSessionId,
+        sessionId,
+        projectPath,
+        parsed.totalLines,
+        lastTimestamp,
+      );
+    }
+  } catch {
+    // Ignore session_save_state errors
   }
 
   return {

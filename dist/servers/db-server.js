@@ -30200,7 +30200,9 @@ async function parseTranscript(transcriptPath) {
     crlfDelay: Number.POSITIVE_INFINITY
   });
   const entries = [];
+  let totalLines = 0;
   for await (const line of rl) {
+    totalLines++;
     if (line.trim()) {
       try {
         entries.push(JSON.parse(line));
@@ -30287,7 +30289,8 @@ async function parseTranscript(transcriptPath) {
       userMessages: userMessages.length,
       assistantResponses: assistantMessages.length,
       thinkingBlocks: assistantMessages.filter((a) => a.thinking).length
-    }
+    },
+    totalLines
   };
 }
 async function saveInteractions(claudeSessionId, mnemeSessionId) {
@@ -30423,6 +30426,34 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
       "DELETE FROM pre_compact_backups WHERE session_id = ?"
     );
     clearBackupStmt.run(sessionId);
+  } catch {
+  }
+  try {
+    const lastTimestamp = finalInteractions.length > 0 ? finalInteractions[finalInteractions.length - 1].timestamp : null;
+    const checkStmt = database.prepare(
+      "SELECT 1 FROM session_save_state WHERE claude_session_id = ?"
+    );
+    const exists = checkStmt.get(claudeSessionId);
+    if (exists) {
+      const updateStmt = database.prepare(`
+        UPDATE session_save_state
+        SET last_saved_line = ?, last_saved_timestamp = ?, updated_at = datetime('now')
+        WHERE claude_session_id = ?
+      `);
+      updateStmt.run(parsed.totalLines, lastTimestamp, claudeSessionId);
+    } else {
+      const insertStmt2 = database.prepare(`
+        INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, last_saved_line, last_saved_timestamp)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+      insertStmt2.run(
+        claudeSessionId,
+        sessionId,
+        projectPath,
+        parsed.totalLines,
+        lastTimestamp
+      );
+    }
   } catch {
   }
   return {

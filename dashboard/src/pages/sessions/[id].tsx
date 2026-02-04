@@ -442,7 +442,10 @@ function InteractionCard({
                       <span className="text-purple-700 dark:text-purple-300">
                         {event.hookEvent && event.hookName
                           ? `${event.hookEvent}:${event.hookName}`
-                          : event.hookName || event.toolName || event.hookEvent || ""}
+                          : event.hookName ||
+                            event.toolName ||
+                            event.hookEvent ||
+                            ""}
                       </span>
                     </div>
                   ))}
