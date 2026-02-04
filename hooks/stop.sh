@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 #
-# pre-compact.sh - PreCompact hook for mneme plugin
+# stop.sh - Stop hook for mneme plugin (incremental save)
 #
-# Saves interactions before Auto-Compact using incremental save.
-# This ensures no conversations are lost when context is compressed.
+# Saves new interactions to SQLite on each assistant response completion.
+# Uses Node.js for efficient streaming processing of large transcripts.
 #
-# Input (stdin): JSON with session_id, transcript_path, cwd, trigger
+# Input (stdin): JSON with session_id, transcript_path, cwd
 # Output (stdout): JSON with {"continue": true}
-# Exit codes: 0 = success (non-blocking, always continues)
+# Exit codes: 0 = success (non-blocking)
 #
 # Dependencies: Node.js
 
@@ -16,30 +16,28 @@ set -euo pipefail
 # Read stdin
 input_json=$(cat)
 
-# Extract fields
+# Extract fields using bash string manipulation (faster than jq for simple cases)
 session_id=$(echo "$input_json" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4 || echo "")
 transcript_path=$(echo "$input_json" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4 || echo "")
 cwd=$(echo "$input_json" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4 || echo "")
+
+# If no session_id or transcript, just continue
+if [ -z "$session_id" ] || [ -z "$transcript_path" ]; then
+    echo '{"continue": true}'
+    exit 0
+fi
 
 # If no cwd, use PWD
 if [ -z "$cwd" ]; then
     cwd="${PWD}"
 fi
 
-# If no session_id, just continue
-if [ -z "$session_id" ]; then
-    echo '{"continue": true}'
-    exit 0
-fi
-
-# Check if .mneme directory exists
+# Check if .mneme directory exists (project initialized)
 mneme_dir="${cwd}/.mneme"
 if [ ! -d "$mneme_dir" ]; then
     echo '{"continue": true}'
     exit 0
 fi
-
-echo "[mneme] PreCompact: Saving interactions before Auto-Compact..." >&2
 
 # Get plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
@@ -54,32 +52,29 @@ elif [ -f "${PLUGIN_ROOT}/lib/incremental-save.ts" ]; then
     incremental_save_script="${PLUGIN_ROOT}/lib/incremental-save.ts"
 fi
 
-if [ -z "$incremental_save_script" ] || [ -z "$transcript_path" ]; then
-    echo "[mneme] PreCompact: Skipped (no script or transcript)" >&2
+if [ -z "$incremental_save_script" ]; then
     echo '{"continue": true}'
     exit 0
 fi
 
-# Run incremental save
+# Run incremental save (non-blocking, errors are logged but don't fail)
 if [[ "$incremental_save_script" == *.ts ]]; then
+    # Development mode
     result=$(npx tsx "$incremental_save_script" save \
         --session "$session_id" \
         --transcript "$transcript_path" \
         --project "$cwd" 2>&1) || true
 else
+    # Production mode
     result=$(node "$incremental_save_script" save \
         --session "$session_id" \
         --transcript "$transcript_path" \
         --project "$cwd" 2>&1) || true
 fi
 
-# Log result
-if echo "$result" | grep -q '"success":true'; then
-    saved_count=$(echo "$result" | grep -o '"savedCount":[0-9]*' | cut -d':' -f2 || echo "0")
-    echo "[mneme] PreCompact: Saved ${saved_count} messages before Auto-Compact" >&2
-else
-    echo "[mneme] PreCompact: Save result: ${result}" >&2
+# Log result if successful save occurred
+if echo "$result" | grep -q '"savedCount":[1-9]'; then
+    echo "[mneme] Incremental save: ${result}" >&2
 fi
 
-# Continue with compaction (non-blocking)
 echo '{"continue": true}'

@@ -2,18 +2,17 @@
 #
 # session-end.sh - SessionEnd hook for mneme plugin
 #
-# Auto-save session by extracting interactions from transcript using jq.
-# Interactions are stored in project-local SQLite (.mneme/local.db).
-# JSON file contains only metadata (no interactions).
+# Lightweight session finalization:
+# 1. Update session JSON status to "complete"
+# 2. Clean up uncommitted sessions (delete interactions if not saved with /mneme:save)
 #
-# IMPORTANT: This script merges pre_compact_backups from SQLite with
-# newly extracted interactions to preserve conversations from before auto-compact.
+# Heavy processing (interaction extraction) is now done incrementally by Stop hook.
 #
 # Input (stdin): JSON with session_id, transcript_path, cwd
 # Output (stderr): Log messages
 # Exit codes: 0 = success (SessionEnd cannot be blocked)
 #
-# Dependencies: jq, sqlite3
+# Dependencies: jq, Node.js
 
 set -euo pipefail
 
@@ -40,8 +39,10 @@ mneme_dir="${cwd}/.mneme"
 sessions_dir="${mneme_dir}/sessions"
 session_links_dir="${mneme_dir}/session-links"
 
-# Local database path (project-local)
-db_path="${mneme_dir}/local.db"
+# Check if .mneme directory exists
+if [ ! -d "$mneme_dir" ]; then
+    exit 0
+fi
 
 # Find session file
 session_short_id="${session_id:0:8}"
@@ -61,484 +62,83 @@ if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
             session_file=$(find "$sessions_dir" -type f -name "${master_session_id}.json" 2>/dev/null | head -1)
             if [ -n "$session_file" ] && [ -f "$session_file" ]; then
                 mneme_session_id="$master_session_id"
-                echo "[mneme] Using master session via session-link: ${master_session_id}" >&2
             fi
         fi
     fi
 fi
 
-# If still not found, exit (no auto-linking to avoid confusion)
-if [ -z "$session_file" ] || [ ! -f "$session_file" ]; then
-    exit 0
-fi
-
-# Get git user for owner field
-owner=$(git -C "$cwd" config user.name 2>/dev/null || whoami || echo "unknown")
-
-# Get repository info
-repository=""
-repository_url=""
-repository_root=""
-if git -C "$cwd" rev-parse --git-dir &> /dev/null 2>&1; then
-    repository_root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "")
-    repository_url=$(git -C "$cwd" remote get-url origin 2>/dev/null || echo "")
-    if [ -n "$repository_url" ]; then
-        # Extract owner/repo from URL
-        repository=$(echo "$repository_url" | sed -E 's|.*[:/]([^/]+/[^/]+)(\.git)?$|\1|' | sed 's/\.git$//')
-    fi
-fi
-
-# Escape for SQL
-project_path_escaped="${cwd//\'/\'\'}"
-repository_escaped="${repository//\'/\'\'}"
-repository_url_escaped="${repository_url//\'/\'\'}"
-repository_root_escaped="${repository_root//\'/\'\'}"
-
-# Determine plugin root directory for schema
+# Get plugin root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-schema_path="${PLUGIN_ROOT}/lib/schema.sql"
 
-# Initialize local SQLite database if not exists
-init_database() {
-    if [ ! -d "$mneme_dir" ]; then
-        mkdir -p "$mneme_dir"
-    fi
-    if [ ! -f "$db_path" ]; then
-        if [ -f "$schema_path" ]; then
-            sqlite3 "$db_path" < "$schema_path"
-            echo "[mneme] Local SQLite database initialized: ${db_path}" >&2
-        else
-            # Minimal schema if schema.sql not found
-            sqlite3 "$db_path" <<'SQLEOF'
-CREATE TABLE IF NOT EXISTS interactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
-    project_path TEXT NOT NULL,
-    repository TEXT,
-    repository_url TEXT,
-    repository_root TEXT,
-    owner TEXT NOT NULL,
-    role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    thinking TEXT,
-    tool_calls TEXT,
-    timestamp TEXT NOT NULL,
-    is_compact_summary INTEGER DEFAULT 0,
-    agent_id TEXT,
-    agent_type TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
-CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
-CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
-CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
-CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);
+# Final incremental save (catch any remaining interactions)
+incremental_save_script=""
+if [ -f "${PLUGIN_ROOT}/dist/lib/incremental-save.js" ]; then
+    incremental_save_script="${PLUGIN_ROOT}/dist/lib/incremental-save.js"
+elif [ -f "${PLUGIN_ROOT}/lib/incremental-save.ts" ]; then
+    incremental_save_script="${PLUGIN_ROOT}/lib/incremental-save.ts"
+fi
 
-CREATE TABLE IF NOT EXISTS pre_compact_backups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
-    project_path TEXT NOT NULL,
-    owner TEXT NOT NULL,
-    interactions TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_backups_session ON pre_compact_backups(session_id);
-CREATE INDEX IF NOT EXISTS idx_backups_project ON pre_compact_backups(project_path);
-
-CREATE TABLE IF NOT EXISTS migrations (
-    project_path TEXT PRIMARY KEY,
-    migrated_at TEXT DEFAULT (datetime('now'))
-);
-SQLEOF
-        fi
+if [ -n "$incremental_save_script" ] && [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+    if [[ "$incremental_save_script" == *.ts ]]; then
+        npx tsx "$incremental_save_script" save \
+            --session "$session_id" \
+            --transcript "$transcript_path" \
+            --project "$cwd" >/dev/null 2>&1 || true
     else
-        # Migrate existing database: add agent_id and agent_type columns if not exist
-        has_agent_id=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM pragma_table_info('interactions') WHERE name='agent_id';" 2>/dev/null || echo "0")
-        if [ "$has_agent_id" = "0" ]; then
-            sqlite3 "$db_path" "ALTER TABLE interactions ADD COLUMN agent_id TEXT;" 2>/dev/null || true
-            sqlite3 "$db_path" "ALTER TABLE interactions ADD COLUMN agent_type TEXT;" 2>/dev/null || true
-            sqlite3 "$db_path" "CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);" 2>/dev/null || true
-            echo "[mneme] Database migrated: added agent_id, agent_type columns" >&2
-        fi
+        node "$incremental_save_script" save \
+            --session "$session_id" \
+            --transcript "$transcript_path" \
+            --project "$cwd" >/dev/null 2>&1 || true
     fi
-    # Configure pragmas
-    sqlite3 "$db_path" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;" 2>/dev/null || true
-}
+fi
 
-# Extract interactions from transcript if available
-if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
-    # Initialize database
-    init_database
+# Update session JSON status
+now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Extract interactions using jq
-    interactions_json=$(cat "$transcript_path" | jq -s '
-        # User messages (text only, exclude tool results and local command outputs)
-        # Include isCompactSummary flag for auto-compact summaries
-        [.[] | select(
-            .type == "user" and
-            .message.role == "user" and
-            (.message.content | type) == "string" and
-            (.message.content | startswith("<local-command-stdout>") | not) and
-            (.message.content | startswith("<local-command-caveat>") | not)
-        ) | {
-            timestamp: .timestamp,
-            content: .message.content,
-            isCompactSummary: (.isCompactSummary // false)
-        }] as $user_messages |
+if [ -n "$session_file" ] && [ -f "$session_file" ]; then
+    # Check if session has summary (was saved with /mneme:save)
+    has_summary=$(jq -r 'if .summary then "true" else "false" end' "$session_file" 2>/dev/null || echo "false")
 
-        # Get user message timestamps for grouping
-        ($user_messages | map(.timestamp)) as $user_timestamps |
-
-        # All assistant messages with thinking or text
-        [.[] | select(.type == "assistant") | . as $msg |
-            ($msg.message.content // []) |
-            {
-                timestamp: $msg.timestamp,
-                thinking: ([.[] | select(.type == "thinking") | .thinking] | join("\n")),
-                text: ([.[] | select(.type == "text") | .text] | join("\n"))
-            } | select(.thinking != "" or .text != "")
-        ] as $all_assistant |
-
-        # Detect plan mode: find EnterPlanMode and ExitPlanMode tool calls
-        [.[] | select(.type == "assistant") | . as $msg |
-            ($msg.message.content // []) | .[] |
-            select(.type == "tool_use" and (.name == "EnterPlanMode" or .name == "ExitPlanMode")) |
-            {timestamp: $msg.timestamp, tool: .name}
-        ] as $plan_events |
-
-        # Tool usage during plan mode (between EnterPlanMode and ExitPlanMode)
-        (if ($plan_events | length) >= 2 then
-            ($plan_events | map(select(.tool == "EnterPlanMode")) | .[0].timestamp // null) as $plan_start |
-            ($plan_events | map(select(.tool == "ExitPlanMode")) | .[0].timestamp // null) as $plan_end |
-            if $plan_start and $plan_end then
-                [.[] | select(.type == "assistant" and .timestamp > $plan_start and .timestamp < $plan_end) |
-                    .message.content[]? | select(.type == "tool_use") |
-                    {name: .name, input_keys: (.input | keys)}
-                ] | group_by(.name) | map({name: .[0].name, count: length}) | sort_by(-.count)
-            else [] end
-        else [] end) as $plan_tools |
-
-        # Tool usage summary
-        [.[] | select(.type == "assistant") | .message.content[]? | select(.type == "tool_use") | .name] |
-        group_by(.) | map({name: .[0], count: length}) | sort_by(-.count) as $tool_usage |
-
-        # Build interactions by grouping all assistant responses between user messages
-        [range(0; $user_messages | length) | . as $i |
-            $user_messages[$i] as $user |
-            # Get next user message timestamp (or far future if last)
-            (if $i + 1 < ($user_messages | length) then $user_messages[$i + 1].timestamp else "9999-12-31T23:59:59Z" end) as $next_user_ts |
-            # Collect all assistant responses between this user message and next
-            [$all_assistant[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] as $turn_responses |
-
-            # Check if this turn includes plan mode
-            ([$plan_events[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] | length > 0) as $has_plan |
-
-            # Collect tool details used in this turn
-            ([.[] | select(.type == "assistant" and .timestamp > $user.timestamp and .timestamp < $next_user_ts) |
-                .message.content[]? | select(.type == "tool_use") |
-                {
-                    name: .name,
-                    detail: (
-                        if .name == "Bash" then (.input.command // null)
-                        elif .name == "Read" then (.input.file_path // null)
-                        elif .name == "Edit" then (.input.file_path // null)
-                        elif .name == "Write" then (.input.file_path // null)
-                        elif .name == "Glob" then (.input.pattern // null)
-                        elif .name == "Grep" then (.input.pattern // null)
-                        elif .name == "Task" then {type: (.input.subagent_type // null), prompt: ((.input.prompt // "")[:50])}
-                        elif .name == "WebSearch" then (.input.query // null)
-                        elif .name == "WebFetch" then (.input.url // null)
-                        else null
-                        end
-                    )
-                }
-            ]) as $tool_details |
-
-            # Collect tool names used in this turn (for backwards compatibility)
-            ($tool_details | map(.name) | unique) as $tools_used |
-
-            if ($turn_responses | length) > 0 then (
-                {
-                    id: ("int-" + (($i + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end)),
-                    timestamp: $user.timestamp,
-                    user: $user.content,
-                    thinking: ([$turn_responses[].thinking | select(. != "")] | join("\n")),
-                    assistant: ([$turn_responses[].text | select(. != "")] | join("\n"))
-                }
-                + (if $user.isCompactSummary then {isCompactSummary: true} else {} end)
-                + (if $has_plan then {hasPlanMode: true, planTools: $plan_tools} else {} end)
-                + (if ($tools_used | length) > 0 then {toolsUsed: $tools_used} else {} end)
-                + (if ($tool_details | length) > 0 then {toolDetails: $tool_details} else {} end)
-            ) else empty end
-        ] as $interactions |
-
-        # File changes from tool usage
-        [.[] | select(.type == "assistant") | .message.content[]? |
-            select(.type == "tool_use" and (.name == "Edit" or .name == "Write")) |
-            {
-                path: .input.file_path,
-                action: (if .name == "Write" then "create" else "edit" end)
-            }
-        ] | unique_by(.path) as $files |
-
-        {
-            interactions: $interactions,
-            toolUsage: $tool_usage,
-            files: $files,
-            metrics: {
-                userMessages: ($user_messages | length),
-                assistantResponses: ($all_assistant | length),
-                thinkingBlocks: ([$all_assistant[].thinking | select(. != "")] | length)
-            }
-        }
-    ' 2>/dev/null || echo '{"interactions":[],"toolUsage":[],"files":[],"metrics":{}}')
-
-    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-    # Get latest backup from SQLite (if any) - check both session IDs and project path
-    backup_json=$(sqlite3 "$db_path" "SELECT interactions FROM pre_compact_backups WHERE session_id IN ('${mneme_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || echo "[]")
-    if [ -z "$backup_json" ] || [ "$backup_json" = "" ]; then
-        backup_json="[]"
-    fi
-
-    # Also check existing interactions in SQLite - check both session IDs
-    existing_count=$(sqlite3 "$db_path" "SELECT COUNT(*) FROM interactions WHERE session_id IN ('${mneme_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || echo "0")
-
-    # Merge backup with extracted interactions
-    merged_json=$(echo "$interactions_json" | jq --argjson backup "$backup_json" '
-        # Merge preCompactBackups with extracted interactions
-        ($backup | if type == "array" then . else [] end) as $backup_arr |
-        (.interactions // []) as $new_arr |
-
-        # Get the last timestamp from backup (or epoch if empty)
-        ($backup_arr | if length > 0 then .[-1].timestamp else "1970-01-01T00:00:00Z" end) as $last_backup_ts |
-
-        # Filter new interactions that are after backup
-        [$new_arr[] | select(.timestamp > $last_backup_ts)] as $truly_new |
-
-        # Merge: backup + truly new interactions
-        ($backup_arr + $truly_new) as $merged |
-
-        # Re-number IDs sequentially
-        [$merged | to_entries[] | .value + {id: ("int-" + ((.key + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end))}]
-    ')
-
-    # Count merged interactions
-    merged_count=$(echo "$merged_json" | jq 'length')
-    backup_count=$(echo "$backup_json" | jq 'if type == "array" then length else 0 end')
-
-    # Insert merged interactions into SQLite (using mneme_session_id for consistency)
-    # Only delete and replace if we have new data - prevents data loss when extraction fails
-    if [ "$merged_count" -gt 0 ]; then
-        # Clear existing interactions for this session (will be replaced)
-        sqlite3 "$db_path" "DELETE FROM interactions WHERE session_id IN ('${mneme_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
-        echo "$merged_json" | jq -c '.[]' | while read -r interaction; do
-            timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
-            user_content=$(echo "$interaction" | jq -r '.user // ""')
-            thinking=$(echo "$interaction" | jq -r '.thinking // ""')
-            assistant_content=$(echo "$interaction" | jq -r '.assistant // ""')
-            is_compact=$(echo "$interaction" | jq -r 'if .isCompactSummary then 1 else 0 end')
-
-            # Create metadata JSON for tool_calls column (includes planMode info and tool details)
-            metadata_json=$(echo "$interaction" | jq -c '{hasPlanMode: (.hasPlanMode // false), planTools: (.planTools // []), toolsUsed: (.toolsUsed // []), toolDetails: (.toolDetails // [])}')
-            metadata_escaped="${metadata_json//\'/\'\'}"
-
-            # Escape single quotes for SQL
-            user_content_escaped="${user_content//\'/\'\'}"
-            thinking_escaped="${thinking//\'/\'\'}"
-            assistant_escaped="${assistant_content//\'/\'\'}"
-
-            # Insert user message with project/repository info and metadata
-            sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary) VALUES ('${mneme_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${metadata_escaped}', '${timestamp}', ${is_compact});" 2>/dev/null || true
-
-            # Insert assistant response with project/repository info
-            if [ -n "$assistant_content" ]; then
-                sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary) VALUES ('${mneme_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0);" 2>/dev/null || true
-            fi
-        done
-    fi
-
-    # Clear pre_compact_backups for this session (merged into interactions) - delete both session IDs
-    sqlite3 "$db_path" "DELETE FROM pre_compact_backups WHERE session_id IN ('${mneme_session_id}', '${session_short_id}') AND project_path = '${project_path_escaped}';" 2>/dev/null || true
-
-    # Update JSON file (without interactions and preCompactBackups)
-    jq --argjson extracted "$interactions_json" \
-       --arg status "complete" \
+    # Update status and timestamps
+    jq --arg status "complete" \
        --arg endedAt "$now" \
-       --arg updatedAt "$now" \
-       --argjson interactionCount "$merged_count" '
-        # Update files
-        .files = ((.files // []) + ($extracted.files // []) | unique_by(.path)) |
-        # Update metrics
-        .metrics = (.metrics // {}) + {
-            userMessages: $interactionCount,
-            assistantResponses: $interactionCount,
-            thinkingBlocks: ($extracted.metrics.thinkingBlocks // 0),
-            toolUsage: ($extracted.toolUsage // [])
-        } |
-        # Remove interactions and preCompactBackups (now in SQLite)
-        del(.interactions) |
-        del(.preCompactBackups) |
-        # Set status and timestamps
+       --arg updatedAt "$now" '
         .status = $status |
         .endedAt = $endedAt |
-        .updatedAt = $updatedAt
+        .updatedAt = $updatedAt |
+        del(.interactions) |
+        del(.preCompactBackups)
     ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
 
-    echo "[mneme] Session auto-saved with ${merged_count} interactions to local DB (${backup_count} from backup): ${session_file}" >&2
-else
-    # No transcript, just update status
-    now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    jq --arg status "complete" --arg endedAt "$now" --arg updatedAt "$now" '
-        .status = $status | .endedAt = $endedAt | .updatedAt = $updatedAt |
-        del(.interactions) | del(.preCompactBackups)
-    ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
-
-    echo "[mneme] Session completed (no transcript): ${session_file}" >&2
-fi
-
-# ============================================
-# Process subagent transcripts
-# ============================================
-if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
-    transcript_dir=$(dirname "$transcript_path")
-    subagents_dir="${transcript_dir}/subagents"
-
-    if [ -d "$subagents_dir" ]; then
-        subagent_count=0
-        for subagent_file in "$subagents_dir"/agent-*.jsonl; do
-            [ -f "$subagent_file" ] || continue
-
-            # Extract agent ID from filename (agent-a61bd5d.jsonl -> a61bd5d)
-            agent_filename=$(basename "$subagent_file")
-            agent_id="${agent_filename#agent-}"
-            agent_id="${agent_id%.jsonl}"
-
-            # Extract agent type from the first user message (Task prompt)
-            agent_type=$(jq -r '[.[] | select(.type == "user" and (.message.content | type) == "string")] | .[0].message.content // ""' "$subagent_file" 2>/dev/null | head -c 50)
-
-            # Determine agent type from the parent's Task tool call if possible
-            detected_type=$(jq -r --arg aid "$agent_id" '
-                [.[] | select(.type == "assistant") | .message.content[]? |
-                    select(.type == "tool_use" and .name == "Task") |
-                    select(.id | contains($aid) or (.input.description // "") | contains($aid)) |
-                    .input.subagent_type // "unknown"
-                ] | .[0] // "unknown"
-            ' "$transcript_path" 2>/dev/null || echo "unknown")
-
-            if [ "$detected_type" = "unknown" ] || [ "$detected_type" = "null" ]; then
-                # Try to detect from subagent filename patterns
-                case "$agent_filename" in
-                    *explore*|*Explore*) detected_type="Explore" ;;
-                    *plan*|*Plan*) detected_type="Plan" ;;
-                    *bash*|*Bash*) detected_type="Bash" ;;
-                    *compact*) detected_type="compact" ;;
-                    *) detected_type="general" ;;
-                esac
+    # Cleanup uncommitted sessions
+    if [ "$has_summary" = "false" ]; then
+        # Session was not saved with /mneme:save
+        if [ -n "$incremental_save_script" ]; then
+            if [[ "$incremental_save_script" == *.ts ]]; then
+                cleanup_result=$(npx tsx "$incremental_save_script" cleanup \
+                    --session "$session_id" \
+                    --project "$cwd" 2>/dev/null) || cleanup_result='{"deleted":false}'
+            else
+                cleanup_result=$(node "$incremental_save_script" cleanup \
+                    --session "$session_id" \
+                    --project "$cwd" 2>/dev/null) || cleanup_result='{"deleted":false}'
             fi
 
-            # Extract interactions from subagent transcript
-            subagent_json=$(cat "$subagent_file" | jq -s '
-                # User messages (first one is the task prompt)
-                [.[] | select(
-                    .type == "user" and
-                    .message.role == "user" and
-                    (.message.content | type) == "string"
-                ) | {
-                    timestamp: .timestamp,
-                    content: .message.content
-                }] as $user_messages |
-
-                # All assistant messages with thinking or text
-                [.[] | select(.type == "assistant") | . as $msg |
-                    ($msg.message.content // []) |
-                    {
-                        timestamp: $msg.timestamp,
-                        thinking: ([.[] | select(.type == "thinking") | .thinking] | join("\n")),
-                        text: ([.[] | select(.type == "text") | .text] | join("\n"))
-                    } | select(.thinking != "" or .text != "")
-                ] as $all_assistant |
-
-                # Build interactions
-                [range(0; $user_messages | length) | . as $i |
-                    $user_messages[$i] as $user |
-                    (if $i + 1 < ($user_messages | length) then $user_messages[$i + 1].timestamp else "9999-12-31T23:59:59Z" end) as $next_user_ts |
-                    [$all_assistant[] | select(.timestamp > $user.timestamp and .timestamp < $next_user_ts)] as $turn_responses |
-
-                    # Collect tool details
-                    ([.[] | select(.type == "assistant" and .timestamp > $user.timestamp and .timestamp < $next_user_ts) |
-                        .message.content[]? | select(.type == "tool_use") |
-                        {
-                            name: .name,
-                            detail: (
-                                if .name == "Bash" then (.input.command // null)
-                                elif .name == "Read" then (.input.file_path // null)
-                                elif .name == "Edit" then (.input.file_path // null)
-                                elif .name == "Write" then (.input.file_path // null)
-                                elif .name == "Glob" then (.input.pattern // null)
-                                elif .name == "Grep" then (.input.pattern // null)
-                                else null
-                                end
-                            )
-                        }
-                    ]) as $tool_details |
-
-                    if ($turn_responses | length) > 0 then (
-                        {
-                            id: ("sub-" + (($i + 1) | tostring | if length < 3 then "00"[0:(3-length)] + . else . end)),
-                            timestamp: $user.timestamp,
-                            user: $user.content,
-                            thinking: ([$turn_responses[].thinking | select(. != "")] | join("\n")),
-                            assistant: ([$turn_responses[].text | select(. != "")] | join("\n")),
-                            toolsUsed: ($tool_details | map(.name) | unique),
-                            toolDetails: $tool_details
-                        }
-                    ) else empty end
-                ]
-            ' 2>/dev/null || echo '[]')
-
-            # Insert subagent interactions into SQLite
-            subagent_interaction_count=$(echo "$subagent_json" | jq 'length')
-            if [ "$subagent_interaction_count" -gt 0 ]; then
-                echo "$subagent_json" | jq -c '.[]' | while read -r interaction; do
-                    timestamp=$(echo "$interaction" | jq -r '.timestamp // ""')
-                    user_content=$(echo "$interaction" | jq -r '.user // ""')
-                    thinking=$(echo "$interaction" | jq -r '.thinking // ""')
-                    assistant_content=$(echo "$interaction" | jq -r '.assistant // ""')
-
-                    # Create metadata JSON
-                    metadata_json=$(echo "$interaction" | jq -c '{toolsUsed: (.toolsUsed // []), toolDetails: (.toolDetails // [])}')
-                    metadata_escaped="${metadata_json//\'/\'\'}"
-
-                    # Escape single quotes
-                    user_content_escaped="${user_content//\'/\'\'}"
-                    thinking_escaped="${thinking//\'/\'\'}"
-                    assistant_escaped="${assistant_content//\'/\'\'}"
-                    agent_id_escaped="${agent_id//\'/\'\'}"
-                    detected_type_escaped="${detected_type//\'/\'\'}"
-
-                    # Insert user message with agent info
-                    sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary, agent_id, agent_type) VALUES ('${mneme_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'user', '${user_content_escaped}', NULL, '${metadata_escaped}', '${timestamp}', 0, '${agent_id_escaped}', '${detected_type_escaped}');" 2>/dev/null || true
-
-                    # Insert assistant response with agent info
-                    if [ -n "$assistant_content" ]; then
-                        sqlite3 "$db_path" "INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, timestamp, is_compact_summary, agent_id, agent_type) VALUES ('${mneme_session_id}', '${project_path_escaped}', '${repository_escaped}', '${repository_url_escaped}', '${repository_root_escaped}', '${owner}', 'assistant', '${assistant_escaped}', '${thinking_escaped}', '${timestamp}', 0, '${agent_id_escaped}', '${detected_type_escaped}');" 2>/dev/null || true
-                    fi
-                done
-                subagent_count=$((subagent_count + 1))
+            if echo "$cleanup_result" | grep -q '"deleted":true'; then
+                deleted_count=$(echo "$cleanup_result" | grep -o '"count":[0-9]*' | cut -d':' -f2 || echo "0")
+                echo "[mneme] Session ended without /mneme:save - cleaned up ${deleted_count} interactions" >&2
             fi
-        done
-
-        if [ "$subagent_count" -gt 0 ]; then
-            echo "[mneme] Processed ${subagent_count} subagent(s) for session: ${mneme_session_id}" >&2
         fi
+        echo "[mneme] Session completed (not saved): ${session_file}" >&2
+    else
+        echo "[mneme] Session completed: ${session_file}" >&2
     fi
+else
+    echo "[mneme] Session completed (no session file found)" >&2
 fi
 
-# ============================================
 # Update master session workPeriods.endedAt (if linked)
-# ============================================
 session_link_file="${session_links_dir}/${session_short_id}.json"
 if [ -f "$session_link_file" ]; then
     master_session_id=$(jq -r '.masterSessionId // empty' "$session_link_file" 2>/dev/null || echo "")
@@ -559,7 +159,6 @@ if [ -f "$session_link_file" ]; then
                 .updatedAt = $endedAt
             ' "$master_session_path" > "${master_session_path}.tmp" \
                 && mv "${master_session_path}.tmp" "$master_session_path"
-            echo "[mneme] Master session workPeriods.endedAt updated: ${master_session_path}" >&2
         fi
     fi
 fi

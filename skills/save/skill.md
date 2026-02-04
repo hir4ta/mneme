@@ -159,8 +159,22 @@ Do NOT skip this step or delegate to SessionEnd hook.
 
    If `success` is `false`, check the `message` for error details.
 
-6. **Update session JSON** with files and metrics
-7. Set `updatedAt` to current timestamp
+6. **Mark session as committed:**
+   Call the `mneme_mark_session_committed` MCP tool with:
+   - `claudeSessionId`: The full Claude Code session UUID (36 chars)
+
+   Example:
+   ```
+   mcp__mneme-db__mneme_mark_session_committed({
+     claudeSessionId: "86ea2268-ae4d-4f5c-bb38-424d3716061f"
+   })
+   ```
+
+   This prevents the interactions from being deleted when the session ends.
+   If you don't call this, SessionEnd will clean up the interactions as "uncommitted".
+
+7. **Update session JSON** with files and metrics
+8. Set `updatedAt` to current timestamp
 
 **Verification:** Report the savedCount from the MCP tool response to the user.
 

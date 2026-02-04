@@ -10,9 +10,9 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 ## Features
 
 ### Core Features
-- **Auto-save interactions**: Conversations auto-saved at session end (jq-based, reliable)
+- **Incremental save**: Save only new interactions on each turn completion (Node.js, fast)
 - **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
-- **Backup on PreCompact**: Interactions backed up before Auto-Compact (context 95% full)
+- **PreCompact support**: Catch up unsaved interactions before Auto-Compact (context 95% full)
 - **Full data extraction**: Save summary, decisions, patterns, and rules with `/mneme:save`
 - **Memory-informed planning**: Design and plan with past knowledge via `/mneme:plan`
 - **Session Resume**: Resume past sessions with `/mneme:resume` (with chain tracking)
@@ -119,11 +119,15 @@ This will auto-update on Claude Code startup.
 
 ## Usage
 
-### Session Auto-Save
+### Incremental Save
 
-**Interactions are auto-saved** at session end using jq (no Claude dependency). No configuration needed.
+**Conversation logs are auto-saved on each turn completion** (Node.js streaming). No configuration needed.
 
-**PreCompact** backs up interactions to `preCompactBackups` before Auto-Compact (context 95% full). Summary is NOT auto-created.
+- **Stop hook**: Saves only new interactions on each assistant response completion
+- **PreCompact hook**: Catches up unsaved interactions before Auto-Compact
+- **SessionEnd hook**: Lightweight cleanup only (no heavy processing)
+
+**If you don't run `/mneme:save`, conversation history is deleted at session end** (prevents garbage data).
 
 ### Auto Memory Search
 
@@ -223,10 +227,10 @@ mneme provides MCP servers with search and database tools callable directly from
 
 ```mermaid
 flowchart TB
-    subgraph autosave [Auto-Save Interactions]
-        A[Session End] --> B[SessionEnd Hook]
-        B --> C[jq extracts from transcript]
-        C --> D[interactions + files + metrics]
+    subgraph incremental [Incremental Save]
+        A[Each Turn] --> B[Stop Hook]
+        B --> C[Node.js streaming]
+        C --> D[Save only new interactions]
     end
 
     subgraph autosearch [Auto Memory Search]
@@ -235,35 +239,43 @@ flowchart TB
         G --> H[Inject relevant context]
     end
 
-    subgraph backup [PreCompact Backup]
+    subgraph precompact [PreCompact Catch-up]
         I[Context 95% Full] --> J[PreCompact Hook]
-        J --> K[Backup interactions to preCompactBackups]
+        J --> K[Catch up missed interactions]
+    end
+
+    subgraph sessionend [Session End]
+        L[Exit] --> M[SessionEnd Hook]
+        M --> N{Committed?}
+        N -->|Yes| O[Keep interactions]
+        N -->|No| P[Delete interactions]
     end
 
     subgraph manual [Manual Actions]
-        L["mneme:save"] --> M[Extract decisions + patterns + rules]
-        N["mneme:plan"] --> O[Memory-informed design + tasks]
+        Q["mneme:save"] --> R[Extract decisions + patterns + rules]
+        R --> S[Mark session committed]
+        T["mneme:plan"] --> U[Memory-informed design + tasks]
     end
 
     subgraph resume [Session Resume]
-        P["mneme:resume"] --> Q[Select from list]
-        Q --> R[Restore past context + set resumedFrom]
+        V["mneme:resume"] --> W[Select from list]
+        W --> X[Restore past context + set resumedFrom]
     end
 
     subgraph review [Review]
-        S["mneme:review"] --> T[Rule-based findings]
-        T --> U[Save review results]
+        Y["mneme:review"] --> Z[Rule-based findings]
+        Z --> AA[Save review results]
     end
 
     subgraph dashboard [Dashboard]
-        V["npx @hir4ta/mneme -d"] --> W[Open in browser]
-        W --> X[View all data]
+        AB["npx @hir4ta/mneme -d"] --> AC[Open in browser]
+        AC --> AD[View all data]
     end
 
-    D --> P
-    H --> L
-    M --> V
-    U --> V
+    D --> Q
+    H --> Q
+    S --> AB
+    AA --> AB
 ```
 
 ## Data Storage
@@ -397,16 +409,6 @@ Tags are selected from `.mneme/tags.json` to prevent notation variations (e.g., 
 - **cloud**: serverless, microservices, edge, wasm
 - And more...
 
-## Versioning
-
-This project follows [Semantic Versioning](https://semver.org/).
-
-**⚠️ While in 0.x (pre-1.0), breaking changes may occur between minor versions.**
-
-If you encounter issues after an update:
-1. Check the [releases](https://github.com/hir4ta/mneme/releases) for migration notes
-2. Re-initialize with `npx @hir4ta/mneme --init` if needed
-
 ## Security and Privacy
 
 mneme operates **entirely locally** with no data sent to external servers.
@@ -416,7 +418,7 @@ mneme operates **entirely locally** with no data sent to external servers.
 | **External Communication** | None - no curl/fetch/HTTP requests are made |
 | **Data Storage** | All data stored in project's `.mneme/` directory |
 | **Conversation History** | Stored in `local.db`, automatically gitignored (not shared via Git) |
-| **Tools Used** | bash, jq, sqlite3, Node.js standard libraries only |
+| **Tools Used** | bash, Node.js, jq, sqlite3 (no external dependencies) |
 | **Code** | Open source - all code is auditable |
 
 ### Privacy by Design

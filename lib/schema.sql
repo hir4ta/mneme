@@ -1,11 +1,12 @@
--- mneme SQLite Schema (v3)
+-- mneme SQLite Schema (v4)
 -- Project-local database for private interactions
 -- Location: .mneme/local.db
 
 -- interactions: 会話履歴（プライベート、プロジェクトローカル）
 CREATE TABLE IF NOT EXISTS interactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,                -- mnemeセッションID（先頭8文字）
+    claude_session_id TEXT,                  -- Claude CodeセッションID（フルUUID）
     project_path TEXT NOT NULL,              -- プロジェクトの絶対パス
     repository TEXT,                         -- 表示用: owner/repo
     repository_url TEXT,                     -- 正規化した remote origin URL
@@ -23,13 +24,29 @@ CREATE TABLE IF NOT EXISTS interactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_claude_session ON interactions(claude_session_id);
 CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
 CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp);
 CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
 CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
 CREATE INDEX IF NOT EXISTS idx_interactions_agent ON interactions(agent_id);
 
--- pre_compact_backups: Auto-Compact前のバックアップ
+-- session_save_state: インクリメンタル保存の状態追跡
+CREATE TABLE IF NOT EXISTS session_save_state (
+    claude_session_id TEXT PRIMARY KEY,      -- Claude CodeセッションID（フルUUID）
+    mneme_session_id TEXT NOT NULL,          -- mnemeセッションID（先頭8文字）
+    project_path TEXT NOT NULL,              -- プロジェクトの絶対パス
+    last_saved_timestamp TEXT,               -- 最後に保存したinteractionのtimestamp
+    last_saved_line INTEGER DEFAULT 0,       -- トランスクリプトの最後に処理した行数
+    is_committed INTEGER DEFAULT 0,          -- /mneme:save で確定済みか
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_save_state_mneme_session ON session_save_state(mneme_session_id);
+CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
+
+-- pre_compact_backups: Auto-Compact前のバックアップ（レガシー、後方互換用）
 CREATE TABLE IF NOT EXISTS pre_compact_backups (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id TEXT NOT NULL,
@@ -84,5 +101,5 @@ CREATE TABLE IF NOT EXISTS schema_version (
     applied_at TEXT DEFAULT (datetime('now'))
 );
 
--- スキーマバージョン 3（サブエージェント・ツール詳細対応）
-INSERT OR IGNORE INTO schema_version (version) VALUES (3);
+-- スキーマバージョン 4（インクリメンタル保存対応）
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);

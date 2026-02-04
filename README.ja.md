@@ -10,9 +10,9 @@ Claude Codeの長期記憶を実現するプラグイン
 ## 機能
 
 ### コア機能
-- **会話の自動保存**: セッション終了時にjqで自動保存（確実・高速）
+- **インクリメンタル保存**: 各ターン完了時に差分のみをSQLiteに保存（Node.js、高速）
 - **自動記憶検索**: プロンプトごとに関連する過去のセッション・判断を自動で注入
-- **PreCompactバックアップ**: Auto-Compact前にinteractionsをバックアップ（コンテキスト95%で発動）
+- **PreCompact対応**: Auto-Compact前に未保存分をキャッチアップ（コンテキスト95%で発動）
 - **フルデータ抽出**: `/mneme:save` で要約・判断・パターン・ルールを一括保存
 - **記憶参照プランニング**: `/mneme:plan` で過去の知見を活用した設計・計画
 - **セッション再開**: `/mneme:resume` で過去のセッションを再開（チェーン追跡付き）
@@ -119,11 +119,15 @@ Claude Codeを再起動
 
 ## 使い方
 
-### セッション自動保存
+### インクリメンタル保存
 
-**会話ログは自動保存**されます（セッション終了時にjqで抽出）。設定不要。
+**会話ログは各ターン完了時に自動保存**されます（Node.jsでストリーミング処理）。設定不要。
 
-**PreCompact**ではinteractionsを`preCompactBackups`にバックアップします（コンテキスト95%で発動）。要約は自動作成されません。
+- **Stop hook**: 各アシスタント応答完了時に差分のみを保存
+- **PreCompact hook**: Auto-Compact前に未保存分をキャッチアップ
+- **SessionEnd hook**: 軽量な終了処理のみ（重い処理なし）
+
+**`/mneme:save`を実行しないと、セッション終了時に会話履歴は削除されます**（ゴミデータ防止）。
 
 ### 自動記憶検索
 
@@ -221,7 +225,58 @@ mnemeはMCPサーバーを提供し、Claude Codeから直接呼び出せる検�
 
 ## 仕組み
 
-![mneme ワークフロー](docs/mneme-flow-ja.png)
+```mermaid
+flowchart TB
+    subgraph incremental [インクリメンタル保存]
+        A[各ターン] --> B[Stop Hook]
+        B --> C[Node.js ストリーミング]
+        C --> D[差分のみ保存]
+    end
+
+    subgraph autosearch [自動記憶検索]
+        E[ユーザープロンプト] --> F[UserPromptSubmit Hook]
+        F --> G[sessions/decisions/patterns検索]
+        G --> H[関連コンテキスト注入]
+    end
+
+    subgraph precompact [PreCompact キャッチアップ]
+        I[コンテキスト95%] --> J[PreCompact Hook]
+        J --> K[未保存分をキャッチアップ]
+    end
+
+    subgraph sessionend [セッション終了]
+        L[終了] --> M[SessionEnd Hook]
+        M --> N{コミット済み?}
+        N -->|Yes| O[interactions保持]
+        N -->|No| P[interactions削除]
+    end
+
+    subgraph manual [手動アクション]
+        Q["mneme:save"] --> R[decisions + patterns + rules抽出]
+        R --> S[セッションをコミット済みに]
+        T["mneme:plan"] --> U[記憶参照 + タスク分割]
+    end
+
+    subgraph resume [セッション再開]
+        V["mneme:resume"] --> W[一覧から選択]
+        W --> X[コンテキスト復元 + resumedFrom設定]
+    end
+
+    subgraph review [レビュー]
+        Y["mneme:review"] --> Z[ルールベース指摘]
+        Z --> AA[レビュー結果保存]
+    end
+
+    subgraph dashboard [ダッシュボード]
+        AB["npx @hir4ta/mneme -d"] --> AC[ブラウザで開く]
+        AC --> AD[全データ閲覧]
+    end
+
+    D --> Q
+    H --> Q
+    S --> AB
+    AA --> AB
+```
 
 ## データ保存
 
@@ -363,7 +418,7 @@ mnemeは**完全にローカルで動作**し、外部サーバーへのデー�
 | **外部通信** | なし - curl/fetch/HTTP リクエスト等は一切使用していません |
 | **データ保存** | すべてプロジェクト内の `.mneme/` ディレクトリに保存 |
 | **会話履歴** | `local.db` に保存され、自動的にgitignore（Git共有されません） |
-| **使用ツール** | bash, jq, sqlite3, Node.js標準ライブラリのみ |
+| **使用ツール** | bash, Node.js, jq, sqlite3（外部依存なし） |
 | **コード** | オープンソース - すべてのコードは監査可能です |
 
 ### プライバシー設計

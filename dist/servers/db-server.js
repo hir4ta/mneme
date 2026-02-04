@@ -30044,6 +30044,7 @@ function getInteractions(sessionId, options = {}) {
       SELECT
         id,
         session_id,
+        claude_session_id,
         project_path,
         owner,
         role,
@@ -30060,6 +30061,7 @@ function getInteractions(sessionId, options = {}) {
     return rows.map((row) => ({
       id: row.id,
       sessionId: row.session_id,
+      claudeSessionId: row.claude_session_id,
       projectPath: row.project_path,
       owner: row.owner,
       role: row.role,
@@ -30373,15 +30375,16 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
   }
   const insertStmt = database.prepare(`
     INSERT INTO interactions (
-      session_id, project_path, repository, repository_url, repository_root,
+      session_id, claude_session_id, project_path, repository, repository_url, repository_root,
       owner, role, content, thinking, timestamp, is_compact_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   let insertedCount = 0;
   for (const interaction of finalInteractions) {
     try {
       insertStmt.run(
         sessionId,
+        claudeSessionId,
         projectPath,
         repository,
         repositoryUrl,
@@ -30397,6 +30400,7 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
       if (interaction.assistant) {
         insertStmt.run(
           sessionId,
+          claudeSessionId,
           projectPath,
           repository,
           repositoryUrl,
@@ -30426,6 +30430,35 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
     mergedFromBackup: backupInteractions.length,
     message: `Saved ${insertedCount} interactions (${finalInteractions.length} turns, ${backupInteractions.length} from backup)`
   };
+}
+function markSessionCommitted(claudeSessionId) {
+  const database = getDb();
+  if (!database) return false;
+  try {
+    const checkStmt = database.prepare(
+      "SELECT 1 FROM session_save_state WHERE claude_session_id = ?"
+    );
+    const exists = checkStmt.get(claudeSessionId);
+    if (exists) {
+      const stmt = database.prepare(`
+        UPDATE session_save_state
+        SET is_committed = 1, updated_at = datetime('now')
+        WHERE claude_session_id = ?
+      `);
+      stmt.run(claudeSessionId);
+    } else {
+      const projectPath = getProjectPath();
+      const sessionId = claudeSessionId.slice(0, 8);
+      const insertStmt = database.prepare(`
+        INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, is_committed)
+        VALUES (?, ?, ?, 1)
+      `);
+      insertStmt.run(claudeSessionId, sessionId, projectPath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 var server = new McpServer({
   name: "mneme-db",
@@ -30544,6 +30577,27 @@ server.registerTool(
         }
       ],
       isError: !result.success
+    };
+  }
+);
+server.registerTool(
+  "mneme_mark_session_committed",
+  {
+    description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",
+    inputSchema: {
+      claudeSessionId: external_exports3.string().describe("Full Claude Code session UUID (36 chars)")
+    }
+  },
+  async ({ claudeSessionId }) => {
+    const success2 = markSessionCommitted(claudeSessionId);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ success: success2, claudeSessionId }, null, 2)
+        }
+      ],
+      isError: !success2
     };
   }
 );

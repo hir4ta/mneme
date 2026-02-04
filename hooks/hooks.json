@@ -1,5 +1,5 @@
 {
-  "description": "mneme plugin hooks for session management, auto-save, and memory search",
+  "description": "mneme plugin hooks for session management, incremental save, and memory search",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -23,6 +23,17 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "hooks": [
@@ -40,7 +51,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-end.sh",
-            "timeout": 30
+            "timeout": 15
           }
         ]
       }

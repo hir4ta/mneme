@@ -55,22 +55,19 @@ export function useInvalidateSessions() {
       queryClient.setQueriesData<{
         data: { id: string }[];
         pagination?: { total: number };
-      }>(
-        { queryKey: ["sessions"] },
-        (oldData) => {
-          if (!oldData?.data) return oldData;
-          return {
-            ...oldData,
-            data: oldData.data.filter((s) => s.id !== deletedSessionId),
-            pagination: oldData.pagination
-              ? {
-                  ...oldData.pagination,
-                  total: Math.max(0, oldData.pagination.total - 1),
-                }
-              : undefined,
-          };
-        }
-      );
+      }>({ queryKey: ["sessions"] }, (oldData) => {
+        if (!oldData?.data) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.filter((s) => s.id !== deletedSessionId),
+          pagination: oldData.pagination
+            ? {
+                ...oldData.pagination,
+                total: Math.max(0, oldData.pagination.total - 1),
+              }
+            : undefined,
+        };
+      });
     }
     // Also invalidate to ensure fresh data on next fetch
     return queryClient.invalidateQueries({

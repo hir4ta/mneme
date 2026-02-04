@@ -63,6 +63,7 @@ interface SessionInfo {
 interface Interaction {
   id: number;
   sessionId: string;
+  claudeSessionId: string | null;
   projectPath: string;
   owner: string;
   role: string;
@@ -238,6 +239,7 @@ function getInteractions(
       SELECT
         id,
         session_id,
+        claude_session_id,
         project_path,
         owner,
         role,
@@ -254,6 +256,7 @@ function getInteractions(
     const rows = stmt.all(sessionId, limit, offset) as Array<{
       id: number;
       session_id: string;
+      claude_session_id: string | null;
       project_path: string;
       owner: string;
       role: string;
@@ -266,6 +269,7 @@ function getInteractions(
     return rows.map((row) => ({
       id: row.id,
       sessionId: row.session_id,
+      claudeSessionId: row.claude_session_id,
       projectPath: row.project_path,
       owner: row.owner,
       role: row.role,
@@ -765,9 +769,9 @@ async function saveInteractions(
   // Insert interactions
   const insertStmt = database.prepare(`
     INSERT INTO interactions (
-      session_id, project_path, repository, repository_url, repository_root,
+      session_id, claude_session_id, project_path, repository, repository_url, repository_root,
       owner, role, content, thinking, timestamp, is_compact_summary
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   let insertedCount = 0;
@@ -776,6 +780,7 @@ async function saveInteractions(
       // Insert user message
       insertStmt.run(
         sessionId,
+        claudeSessionId,
         projectPath,
         repository,
         repositoryUrl,
@@ -793,6 +798,7 @@ async function saveInteractions(
       if (interaction.assistant) {
         insertStmt.run(
           sessionId,
+          claudeSessionId,
           projectPath,
           repository,
           repositoryUrl,
@@ -827,6 +833,41 @@ async function saveInteractions(
     mergedFromBackup: backupInteractions.length,
     message: `Saved ${insertedCount} interactions (${finalInteractions.length} turns, ${backupInteractions.length} from backup)`,
   };
+}
+
+// Mark session as committed (called by /mneme:save)
+function markSessionCommitted(claudeSessionId: string): boolean {
+  const database = getDb();
+  if (!database) return false;
+
+  try {
+    // Check if session_save_state table exists and has the session
+    const checkStmt = database.prepare(
+      "SELECT 1 FROM session_save_state WHERE claude_session_id = ?",
+    );
+    const exists = checkStmt.get(claudeSessionId);
+
+    if (exists) {
+      const stmt = database.prepare(`
+        UPDATE session_save_state
+        SET is_committed = 1, updated_at = datetime('now')
+        WHERE claude_session_id = ?
+      `);
+      stmt.run(claudeSessionId);
+    } else {
+      // Create entry if it doesn't exist (legacy support)
+      const projectPath = getProjectPath();
+      const sessionId = claudeSessionId.slice(0, 8);
+      const insertStmt = database.prepare(`
+        INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, is_committed)
+        VALUES (?, ?, ?, 1)
+      `);
+      insertStmt.run(claudeSessionId, sessionId, projectPath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // MCP Server setup
@@ -976,6 +1017,34 @@ server.registerTool(
         },
       ],
       isError: !result.success,
+    };
+  },
+);
+
+// Tool: mneme_mark_session_committed
+server.registerTool(
+  "mneme_mark_session_committed",
+  {
+    description:
+      "Mark a session as committed (saved with /mneme:save). " +
+      "This prevents the session's interactions from being deleted on SessionEnd. " +
+      "Call this after successfully saving session data.",
+    inputSchema: {
+      claudeSessionId: z
+        .string()
+        .describe("Full Claude Code session UUID (36 chars)"),
+    },
+  },
+  async ({ claudeSessionId }) => {
+    const success = markSessionCommitted(claudeSessionId);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ success, claudeSessionId }, null, 2),
+        },
+      ],
+      isError: !success,
     };
   },
 );
