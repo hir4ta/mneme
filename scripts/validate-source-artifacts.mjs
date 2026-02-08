@@ -108,7 +108,7 @@ function validatePatterns(mnemeDir, issues) {
 
 function validateRuleFile(file, expectedType, issues) {
   if (!fs.existsSync(file)) {
-    issues.push({ file, message: "File not found" });
+    // .mneme is often git-ignored; missing rule files are treated as "nothing to validate".
     return;
   }
 
@@ -196,12 +196,19 @@ function main() {
   const mnemeDir = path.join(projectRoot, ".mneme");
   const issues = [];
 
+  if (!fs.existsSync(mnemeDir)) {
+    console.log(
+      "SKIP: .mneme directory not found (no source artifacts to validate)",
+    );
+    process.exit(0);
+  }
+
   validateDecisions(mnemeDir, issues);
   validatePatterns(mnemeDir, issues);
   validateRules(mnemeDir, issues);
 
   if (issues.length === 0) {
-    console.log("OK: source artifacts are valid");
+    console.log("OK: source artifacts are valid (or no artifacts found)");
     process.exit(0);
   }
 

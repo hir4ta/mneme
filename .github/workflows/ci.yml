@@ -30,6 +30,7 @@ jobs:
         run: npm run test
 
       - name: Validate Source Artifacts
+        if: ${{ hashFiles('.mneme/**') != '' }}
         run: npm run validate:sources
 
       - name: Build
