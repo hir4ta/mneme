@@ -140,8 +140,13 @@ export async function getDecision(id: string): Promise<Decision> {
   return res.json();
 }
 
-// Note: createDecision, updateDecision, deleteDecision removed - dashboard is read-only
-// Decisions are created via /mneme:save command
+export async function deleteDecision(
+  id: string,
+): Promise<{ deleted: number; id: string }> {
+  const res = await fetch(`${API_BASE}/decisions/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete decision");
+  return res.json();
+}
 
 // Project info
 export async function getProjectInfo(): Promise<{
@@ -158,6 +163,29 @@ export async function getProjectInfo(): Promise<{
 export async function getTags(): Promise<TagsFile> {
   const res = await fetch(`${API_BASE}/tags`);
   if (!res.ok) throw new Error("Failed to fetch tags");
+  return res.json();
+}
+
+export async function deletePattern(
+  id: string,
+  sourceFile: string,
+): Promise<{ deleted: number; id: string; sourceFile: string }> {
+  const params = new URLSearchParams({ source: sourceFile });
+  const res = await fetch(`${API_BASE}/patterns/${id}?${params}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete pattern");
+  return res.json();
+}
+
+export async function deleteRule(
+  ruleType: "dev-rules" | "review-guidelines",
+  ruleId: string,
+): Promise<{ deleted: number; id: string; ruleType: string }> {
+  const res = await fetch(`${API_BASE}/rules/${ruleType}/${ruleId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete rule");
   return res.json();
 }
 
@@ -217,6 +245,106 @@ export interface InteractionFromSQLite {
 export interface SessionInteractionsResponse {
   interactions: InteractionFromSQLite[];
   count: number;
+}
+
+export interface Unit {
+  id: string;
+  type: "decision" | "pattern" | "rule";
+  kind: "policy" | "pitfall" | "playbook";
+  title: string;
+  summary: string;
+  tags: string[];
+  sourceId: string;
+  sourceType: "decision" | "pattern" | "rule";
+  sourceRefs: Array<{
+    type: "decision" | "pattern" | "rule";
+    id: string;
+  }>;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+export interface UnitsResponse {
+  schemaVersion: number;
+  updatedAt: string;
+  items: Unit[];
+}
+
+export interface ApprovalQueueResponse {
+  pending: Unit[];
+  totalPending: number;
+  byType: Record<string, number>;
+}
+
+export async function getUnits(
+  status?: "pending" | "approved" | "rejected",
+): Promise<UnitsResponse> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  const query = params.toString();
+  const res = await fetch(`${API_BASE}/units${query ? `?${query}` : ""}`);
+  if (!res.ok) throw new Error("Failed to fetch units");
+  return res.json();
+}
+
+export async function getUnitById(id: string): Promise<Unit> {
+  const res = await fetch(`${API_BASE}/units/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch unit");
+  return res.json();
+}
+
+export async function generateUnits(): Promise<{
+  generated: number;
+  pending: number;
+  updatedAt: string;
+}> {
+  const res = await fetch(`${API_BASE}/units/generate`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Failed to generate units");
+  return res.json();
+}
+
+export async function updateUnitStatus(
+  id: string,
+  status: "pending" | "approved" | "rejected",
+): Promise<Unit> {
+  const res = await fetch(`${API_BASE}/units/${id}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error("Failed to update unit status");
+  return res.json();
+}
+
+export async function deleteUnit(
+  id: string,
+): Promise<{ deleted: number; id: string }> {
+  const res = await fetch(`${API_BASE}/units/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to delete unit");
+  return res.json();
+}
+
+export async function getApprovalQueue(): Promise<ApprovalQueueResponse> {
+  const res = await fetch(`${API_BASE}/approval-queue`);
+  if (!res.ok) throw new Error("Failed to fetch approval queue");
+  return res.json();
+}
+
+export async function getRuleDocument(
+  ruleType: "dev-rules" | "review-guidelines",
+): Promise<{
+  items: unknown[];
+}> {
+  const res = await fetch(`${API_BASE}/rules/${ruleType}`);
+  if (!res.ok) throw new Error("Failed to fetch rules");
+  return res.json();
 }
 
 export async function getSessionInteractions(

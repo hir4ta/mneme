@@ -361,7 +361,8 @@ if [ "$needs_summary" = true ]; then
 **Note:** This session was resumed but has no summary yet.
 When you have enough context, consider creating a summary with \`/mneme:save\` to capture:
 - What was accomplished in the previous session
-- Key decisions made
+- Key source knowledge (decision/pattern/rule)
+- Unit regeneration needs (what should become approved units)
 - Any ongoing work or next steps"
 fi
 

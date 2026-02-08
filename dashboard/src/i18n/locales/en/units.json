@@ -1,0 +1,49 @@
+{
+  "title": "Units",
+  "subtitle": "Unified units with human approval workflow.",
+  "concepts": {
+    "title": "Concept Model",
+    "decision": "Decision: records what option was chosen and why.",
+    "pattern": "Pattern: records what repeatedly works or fails.",
+    "rule": "Rule: records what should be enforced in future work."
+  },
+  "requiresRules": "Create at least one rule before generating units.",
+  "searchPlaceholder": "Search units...",
+  "loading": "Loading units...",
+  "noCards": "No units yet. Generate from existing decisions/patterns/rules.",
+  "actions": {
+    "generate": "Generate Units",
+    "approve": "Approve",
+    "pending": "Set Pending",
+    "reject": "Reject",
+    "delete": "Delete"
+  },
+  "stats": {
+    "total": "Total Units",
+    "pending": "Pending Queue",
+    "approved": "Approved"
+  },
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "type": {
+    "decision": "Decision",
+    "pattern": "Pattern",
+    "rule": "Rule"
+  },
+  "kind": {
+    "policy": "policy",
+    "pitfall": "pitfall",
+    "playbook": "playbook"
+  },
+  "sourceType": {
+    "decision": "decision",
+    "pattern": "pattern",
+    "rule": "rule"
+  },
+  "errors": {
+    "failedToLoad": "Failed to load units"
+  }
+}

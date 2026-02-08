@@ -15,6 +15,7 @@ import * as readline from "node:readline";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { searchKnowledge } from "../lib/search-core.js";
 
 // Suppress Node.js SQLite experimental warning
 const originalEmit = process.emit;
@@ -91,6 +92,70 @@ interface Stats {
   }>;
 }
 
+const LIST_LIMIT_MIN = 1;
+const LIST_LIMIT_MAX = 200;
+const INTERACTION_OFFSET_MIN = 0;
+const QUERY_MAX_LENGTH = 500;
+const UNIT_LIMIT_MAX = 500;
+const SEARCH_EVAL_DEFAULT_LIMIT = 5;
+
+type UnitStatus = "pending" | "approved" | "rejected";
+type UnitType = "decision" | "pattern" | "rule";
+type RuleKind = "policy" | "pitfall" | "playbook";
+
+interface Unit {
+  id: string;
+  type: UnitType;
+  kind: RuleKind;
+  title: string;
+  summary: string;
+  tags: string[];
+  sourceId: string;
+  sourceType: UnitType;
+  sourceRefs: Array<{ type: UnitType; id: string }>;
+  status: UnitStatus;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+interface UnitsFile {
+  schemaVersion: number;
+  updatedAt: string;
+  items: Unit[];
+}
+
+interface AuditEntry {
+  timestamp: string;
+  actor?: string;
+  entity: "session" | "decision" | "pattern" | "rule" | "unit";
+  action: "create" | "update" | "delete";
+  targetId: string;
+  detail?: Record<string, unknown>;
+}
+
+interface RuleDoc {
+  items?: Array<Record<string, unknown>>;
+  rules?: Array<Record<string, unknown>>;
+}
+
+interface BenchmarkQuery {
+  query: string;
+  expectedTerms: string[];
+}
+
+function ok(text: string) {
+  return { content: [{ type: "text" as const, text }] };
+}
+
+function fail(message: string) {
+  return {
+    content: [{ type: "text" as const, text: message }],
+    isError: true as const,
+  };
+}
+
 // Get project path from env or current working directory
 function getProjectPath(): string {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
@@ -98,6 +163,208 @@ function getProjectPath(): string {
 
 function getLocalDbPath(): string {
   return path.join(getProjectPath(), ".mneme", "local.db");
+}
+
+function getMnemeDir(): string {
+  return path.join(getProjectPath(), ".mneme");
+}
+
+function readJsonFile<T>(filePath: string): T | null {
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+function listJsonFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return listJsonFiles(fullPath);
+    }
+    return entry.isFile() && entry.name.endsWith(".json") ? [fullPath] : [];
+  });
+}
+
+function readUnits(): UnitsFile {
+  const unitsPath = path.join(getMnemeDir(), "units", "units.json");
+  const parsed = readJsonFile<UnitsFile>(unitsPath);
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: new Date().toISOString(),
+      items: [],
+    };
+  }
+  return parsed;
+}
+
+function writeUnits(doc: UnitsFile): void {
+  const unitsPath = path.join(getMnemeDir(), "units", "units.json");
+  fs.mkdirSync(path.dirname(unitsPath), { recursive: true });
+  fs.writeFileSync(unitsPath, JSON.stringify(doc, null, 2));
+}
+
+function readRuleItems(
+  ruleType: "dev-rules" | "review-guidelines",
+): Array<Record<string, unknown>> {
+  const filePath = path.join(getMnemeDir(), "rules", `${ruleType}.json`);
+  const parsed = readJsonFile<RuleDoc>(filePath);
+  const items = parsed?.items ?? parsed?.rules;
+  return Array.isArray(items) ? items : [];
+}
+
+function readAuditEntries(
+  options: { from?: string; to?: string; entity?: string } = {},
+): AuditEntry[] {
+  const auditDir = path.join(getMnemeDir(), "audit");
+  if (!fs.existsSync(auditDir)) return [];
+
+  const files = fs
+    .readdirSync(auditDir)
+    .filter((name) => name.endsWith(".jsonl"))
+    .sort();
+  const fromTime = options.from ? new Date(options.from).getTime() : null;
+  const toTime = options.to ? new Date(options.to).getTime() : null;
+
+  const entries: AuditEntry[] = [];
+  for (const name of files) {
+    const fullPath = path.join(auditDir, name);
+    const lines = fs.readFileSync(fullPath, "utf-8").split("\n");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line) as AuditEntry;
+        const ts = new Date(parsed.timestamp).getTime();
+        if (fromTime !== null && ts < fromTime) continue;
+        if (toTime !== null && ts > toTime) continue;
+        if (options.entity && parsed.entity !== options.entity) continue;
+        entries.push(parsed);
+      } catch {
+        // skip malformed lines
+      }
+    }
+  }
+  return entries.sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+}
+
+function readSessionsById(): Map<string, Record<string, unknown>> {
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
+  const map = new Map<string, Record<string, unknown>>();
+  for (const filePath of listJsonFiles(sessionsDir)) {
+    const parsed = readJsonFile<Record<string, unknown>>(filePath);
+    const id = typeof parsed?.id === "string" ? parsed.id : "";
+    if (!id) continue;
+    map.set(id, parsed);
+  }
+  return map;
+}
+
+function inferUnitPriority(unit: Unit): "p0" | "p1" | "p2" {
+  if (unit.sourceType === "rule") {
+    const [ruleFile, ruleId] = unit.sourceId.split(":", 2);
+    if (
+      (ruleFile === "dev-rules" || ruleFile === "review-guidelines") &&
+      ruleId
+    ) {
+      const rule = readRuleItems(ruleFile).find((item) => item.id === ruleId);
+      const priority =
+        typeof rule?.priority === "string" ? rule.priority.toLowerCase() : "";
+      if (priority === "p0" || priority === "p1" || priority === "p2") {
+        return priority;
+      }
+    }
+  }
+  const text =
+    `${unit.title} ${unit.summary} ${unit.tags.join(" ")}`.toLowerCase();
+  if (
+    /(security|auth|token|secret|password|injection|xss|csrf|compliance|outage|data[- ]?loss)/.test(
+      text,
+    )
+  ) {
+    return "p0";
+  }
+  if (/(crash|error|correct|reliab|timeout|retry|integrity)/.test(text)) {
+    return "p1";
+  }
+  return "p2";
+}
+
+function extractChangedFilesFromDiff(diffText: string): string[] {
+  const files = new Set<string>();
+  const lines = diffText.split("\n");
+  for (const line of lines) {
+    if (!line.startsWith("diff --git ")) continue;
+    const parts = line.split(" ");
+    if (parts.length >= 4) {
+      const bPath = parts[3].replace(/^b\//, "");
+      if (bPath) files.add(bPath);
+    }
+  }
+  return Array.from(files);
+}
+
+function scoreUnitAgainstDiff(
+  unit: Unit,
+  diffText: string,
+  changedFiles: string[],
+): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+  const corpus = `${unit.title} ${unit.summary}`.toLowerCase();
+  const diffLower = diffText.toLowerCase();
+
+  for (const tag of unit.tags) {
+    if (!tag) continue;
+    const tagLower = tag.toLowerCase();
+    if (diffLower.includes(tagLower)) {
+      score += 3;
+      reasons.push(`tag:${tag}`);
+    }
+  }
+
+  const keywords = corpus
+    .split(/[^a-zA-Z0-9_-]+/)
+    .filter((token) => token.length >= 5)
+    .slice(0, 20);
+  for (const token of keywords) {
+    if (diffLower.includes(token)) {
+      score += 1;
+      reasons.push(`keyword:${token}`);
+    }
+  }
+
+  for (const filePath of changedFiles) {
+    const lower = filePath.toLowerCase();
+    if (corpus.includes("test") && lower.includes("test")) {
+      score += 1;
+      reasons.push("path:test");
+    }
+    if (
+      (corpus.includes("api") || unit.tags.includes("api")) &&
+      (lower.includes("api") || lower.includes("route"))
+    ) {
+      score += 1;
+      reasons.push("path:api");
+    }
+    if (
+      (corpus.includes("db") || corpus.includes("sql")) &&
+      (lower.includes("db") ||
+        lower.includes("prisma") ||
+        lower.includes("migration"))
+    ) {
+      score += 1;
+      reasons.push("path:db");
+    }
+  }
+
+  return { score, reasons: Array.from(new Set(reasons)) };
 }
 
 // Database connection (lazy initialization)
@@ -913,6 +1180,93 @@ function markSessionCommitted(claudeSessionId: string): boolean {
   }
 }
 
+function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT): {
+  queryCount: number;
+  hits: number;
+  recall: number;
+  details: Array<{
+    query: string;
+    matched: boolean;
+    topResult: string;
+    resultCount: number;
+  }>;
+} {
+  const queryPath = path.join(
+    getProjectPath(),
+    "scripts",
+    "search-benchmark.queries.json",
+  );
+  const queryDoc = readJsonFile<{ queries?: BenchmarkQuery[] }>(queryPath);
+  const queries = Array.isArray(queryDoc?.queries) ? queryDoc.queries : [];
+  const details: Array<{
+    query: string;
+    matched: boolean;
+    topResult: string;
+    resultCount: number;
+  }> = [];
+  if (queries.length === 0) {
+    return { queryCount: 0, hits: 0, recall: 0, details };
+  }
+
+  const mnemeDir = getMnemeDir();
+  const database = getDb();
+  let hits = 0;
+
+  for (const item of queries) {
+    const results = searchKnowledge({
+      query: item.query,
+      mnemeDir,
+      projectPath: getProjectPath(),
+      database,
+      limit,
+    });
+    const corpus = results
+      .map(
+        (result) =>
+          `${result.title} ${result.snippet} ${result.matchedFields.join(" ")}`,
+      )
+      .join(" ")
+      .toLowerCase();
+    const matched = item.expectedTerms.some((term) =>
+      corpus.includes(String(term).toLowerCase()),
+    );
+    if (matched) hits += 1;
+    details.push({
+      query: item.query,
+      matched,
+      topResult: results[0] ? `${results[0].type}:${results[0].id}` : "none",
+      resultCount: results.length,
+    });
+  }
+
+  return {
+    queryCount: queries.length,
+    hits,
+    recall: queries.length > 0 ? hits / queries.length : 0,
+    details,
+  };
+}
+
+function buildUnitGraph(units: Unit[]) {
+  const approved = units.filter((unit) => unit.status === "approved");
+  const edges: Array<{ source: string; target: string; weight: number }> = [];
+  for (let i = 0; i < approved.length; i++) {
+    for (let j = i + 1; j < approved.length; j++) {
+      const shared = approved[i].tags.filter((tag) =>
+        approved[j].tags.includes(tag),
+      );
+      if (shared.length > 0) {
+        edges.push({
+          source: approved[i].id,
+          target: approved[j].id,
+          weight: shared.length,
+        });
+      }
+    }
+  }
+  return { nodes: approved, edges };
+}
+
 // MCP Server setup
 const server = new McpServer({
   name: "mneme-db",
@@ -928,10 +1282,11 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const projects = listProjects();
-    return {
-      content: [{ type: "text", text: JSON.stringify(projects, null, 2) }],
-    };
+    return ok(JSON.stringify(projects, null, 2));
   },
 );
 
@@ -946,14 +1301,23 @@ server.registerTool(
         .string()
         .optional()
         .describe("Filter by repository (owner/repo)"),
-      limit: z.number().optional().describe("Maximum results (default: 20)"),
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(LIST_LIMIT_MAX)
+        .optional()
+        .describe(
+          `Maximum results (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 20)`,
+        ),
     },
   },
   async ({ projectPath, repository, limit }) => {
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const sessions = listSessions({ projectPath, repository, limit });
-    return {
-      content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }],
-    };
+    return ok(JSON.stringify(sessions, null, 2));
   },
 );
 
@@ -964,28 +1328,35 @@ server.registerTool(
     description: "Get conversation interactions for a specific session",
     inputSchema: {
       sessionId: z.string().describe("Session ID (full UUID or short form)"),
-      limit: z.number().optional().describe("Maximum messages (default: 50)"),
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(LIST_LIMIT_MAX)
+        .optional()
+        .describe(
+          `Maximum messages (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 50)`,
+        ),
       offset: z
         .number()
+        .int()
+        .min(INTERACTION_OFFSET_MIN)
         .optional()
         .describe("Offset for pagination (default: 0)"),
     },
   },
   async ({ sessionId, limit, offset }) => {
+    if (!sessionId.trim()) {
+      return fail("sessionId must not be empty.");
+    }
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const interactions = getInteractions(sessionId, { limit, offset });
     if (interactions.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `No interactions found for session: ${sessionId}`,
-          },
-        ],
-      };
+      return fail(`No interactions found for session: ${sessionId}`);
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(interactions, null, 2) }],
-    };
+    return ok(JSON.stringify(interactions, null, 2));
   },
 );
 
@@ -1000,14 +1371,9 @@ server.registerTool(
   async () => {
     const stats = getStats();
     if (!stats) {
-      return {
-        content: [{ type: "text", text: "Database not available" }],
-        isError: true,
-      };
+      return fail("Database not available.");
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(stats, null, 2) }],
-    };
+    return ok(JSON.stringify(stats, null, 2));
   },
 );
 
@@ -1018,15 +1384,28 @@ server.registerTool(
     description:
       "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
     inputSchema: {
-      query: z.string().describe("Search query"),
-      limit: z.number().optional().describe("Maximum results (default: 10)"),
+      query: z.string().max(QUERY_MAX_LENGTH).describe("Search query"),
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(LIST_LIMIT_MAX)
+        .optional()
+        .describe(
+          `Maximum results (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 10)`,
+        ),
     },
   },
   async ({ query, limit }) => {
-    const results = crossProjectSearch(query, { limit });
-    return {
-      content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-    };
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return fail("query must not be empty.");
+    }
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
+    const results = crossProjectSearch(trimmedQuery, { limit });
+    return ok(JSON.stringify(results, null, 2));
   },
 );
 
@@ -1041,6 +1420,7 @@ server.registerTool(
     inputSchema: {
       claudeSessionId: z
         .string()
+        .min(8)
         .describe("Full Claude Code session UUID (36 chars)"),
       mnemeSessionId: z
         .string()
@@ -1051,14 +1431,12 @@ server.registerTool(
     },
   },
   async ({ claudeSessionId, mnemeSessionId }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
     const result = await saveInteractions(claudeSessionId, mnemeSessionId);
     return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
+      ...ok(JSON.stringify(result, null, 2)),
       isError: !result.success,
     };
   },
@@ -1075,20 +1453,592 @@ server.registerTool(
     inputSchema: {
       claudeSessionId: z
         .string()
+        .min(8)
         .describe("Full Claude Code session UUID (36 chars)"),
     },
   },
   async ({ claudeSessionId }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
     const success = markSessionCommitted(claudeSessionId);
     return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({ success, claudeSessionId }, null, 2),
-        },
-      ],
+      ...ok(JSON.stringify({ success, claudeSessionId }, null, 2)),
       isError: !success,
     };
+  },
+);
+
+// Tool: mneme_unit_queue_list_pending
+server.registerTool(
+  "mneme_unit_queue_list_pending",
+  {
+    description:
+      "List pending units in the approval queue. Use this in save/review flows to surface actionable approvals.",
+    inputSchema: {
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(UNIT_LIMIT_MAX)
+        .optional()
+        .describe(
+          `Maximum items (${LIST_LIMIT_MIN}-${UNIT_LIMIT_MAX}, default: 100)`,
+        ),
+    },
+  },
+  async ({ limit }) => {
+    const units = readUnits()
+      .items.filter((item) => item.status === "pending")
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )
+      .slice(0, limit ?? 100);
+    return ok(
+      JSON.stringify(
+        {
+          count: units.length,
+          items: units,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_unit_queue_update_status
+server.registerTool(
+  "mneme_unit_queue_update_status",
+  {
+    description:
+      "Update unit status (approve/reject/pending) in bulk or single item.",
+    inputSchema: {
+      unitIds: z.array(z.string().min(1)).min(1).describe("Target unit IDs"),
+      status: z
+        .enum(["pending", "approved", "rejected"])
+        .describe("New status"),
+      reviewedBy: z.string().optional().describe("Reviewer name (optional)"),
+    },
+  },
+  async ({ unitIds, status, reviewedBy }) => {
+    const doc = readUnits();
+    const target = new Set(unitIds);
+    const now = new Date().toISOString();
+    let updated = 0;
+    doc.items = doc.items.map((item) => {
+      if (!target.has(item.id)) return item;
+      updated += 1;
+      return {
+        ...item,
+        status,
+        reviewedAt: now,
+        reviewedBy,
+        updatedAt: now,
+      };
+    });
+    doc.updatedAt = now;
+    writeUnits(doc);
+    return ok(
+      JSON.stringify(
+        { updated, status, requested: unitIds.length, updatedAt: now },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_unit_apply_suggest_for_diff
+server.registerTool(
+  "mneme_unit_apply_suggest_for_diff",
+  {
+    description:
+      "Suggest top approved units for a given git diff text. Intended for automatic review integration.",
+    inputSchema: {
+      diff: z.string().min(1).describe("Unified diff text"),
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(50)
+        .optional()
+        .describe("Maximum suggested units (default: 10)"),
+    },
+  },
+  async ({ diff, limit }) => {
+    const changedFiles = extractChangedFilesFromDiff(diff);
+    const approved = readUnits().items.filter(
+      (item) => item.status === "approved",
+    );
+    const scored = approved
+      .map((unit) => {
+        const { score, reasons } = scoreUnitAgainstDiff(
+          unit,
+          diff,
+          changedFiles,
+        );
+        return { unit, score, reasons };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit ?? 10);
+
+    return ok(
+      JSON.stringify(
+        {
+          changedFiles,
+          suggestions: scored.map((item) => ({
+            id: item.unit.id,
+            title: item.unit.title,
+            score: item.score,
+            reasons: item.reasons,
+            source: `${item.unit.sourceType}:${item.unit.sourceId}`,
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_unit_apply_explain_match
+server.registerTool(
+  "mneme_unit_apply_explain_match",
+  {
+    description: "Explain why a specific unit matches a diff.",
+    inputSchema: {
+      unitId: z.string().min(1).describe("Unit ID"),
+      diff: z.string().min(1).describe("Unified diff text"),
+    },
+  },
+  async ({ unitId, diff }) => {
+    const unit = readUnits().items.find((item) => item.id === unitId);
+    if (!unit) return fail(`Unit not found: ${unitId}`);
+    const changedFiles = extractChangedFilesFromDiff(diff);
+    const scored = scoreUnitAgainstDiff(unit, diff, changedFiles);
+    return ok(
+      JSON.stringify(
+        {
+          unitId,
+          title: unit.title,
+          score: scored.score,
+          reasons: scored.reasons,
+          priority: inferUnitPriority(unit),
+          changedFiles,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_session_timeline
+server.registerTool(
+  "mneme_session_timeline",
+  {
+    description:
+      "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
+    inputSchema: {
+      sessionId: z.string().min(1).describe("Session ID (short or full)"),
+      includeChain: z
+        .boolean()
+        .optional()
+        .describe("Include resumedFrom chain and workPeriods (default: true)"),
+    },
+  },
+  async ({ sessionId, includeChain }) => {
+    const sessions = readSessionsById();
+    const shortId = sessionId.slice(0, 8);
+    const root = sessions.get(shortId);
+    if (!root) return fail(`Session not found: ${shortId}`);
+
+    const chain: string[] = [shortId];
+    if (includeChain !== false) {
+      let current = root;
+      let guard = 0;
+      while (
+        current &&
+        typeof current.resumedFrom === "string" &&
+        current.resumedFrom &&
+        guard < 30
+      ) {
+        chain.push(current.resumedFrom);
+        current = sessions.get(current.resumedFrom);
+        guard += 1;
+      }
+    }
+
+    const dbAvailable = !!getDb();
+    const timeline = chain.map((id) => {
+      const session = sessions.get(id) || {};
+      let interactionCount = 0;
+      if (dbAvailable) {
+        interactionCount = getInteractions(id, {
+          limit: 1_000,
+          offset: 0,
+        }).length;
+      }
+      return {
+        id,
+        title: typeof session.title === "string" ? session.title : null,
+        createdAt:
+          typeof session.createdAt === "string" ? session.createdAt : null,
+        endedAt: typeof session.endedAt === "string" ? session.endedAt : null,
+        resumedFrom:
+          typeof session.resumedFrom === "string" ? session.resumedFrom : null,
+        interactionCount,
+      };
+    });
+
+    return ok(
+      JSON.stringify(
+        {
+          rootSessionId: shortId,
+          dbAvailable,
+          chainLength: timeline.length,
+          timeline,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_rule_linter
+server.registerTool(
+  "mneme_rule_linter",
+  {
+    description:
+      "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
+    inputSchema: {
+      ruleType: z
+        .enum(["dev-rules", "review-guidelines", "all"])
+        .optional()
+        .describe("Rule set to lint (default: all)"),
+    },
+  },
+  async ({ ruleType }) => {
+    const targets =
+      ruleType && ruleType !== "all"
+        ? [ruleType]
+        : (["dev-rules", "review-guidelines"] as const);
+    const issues: Array<{
+      ruleType: string;
+      id: string;
+      level: "error" | "warning";
+      message: string;
+    }> = [];
+
+    for (const type of targets) {
+      const items = readRuleItems(type);
+      const seenKeys = new Set<string>();
+      for (const raw of items) {
+        const id = typeof raw.id === "string" ? raw.id : "(unknown)";
+        const text =
+          typeof raw.text === "string"
+            ? raw.text
+            : typeof raw.rule === "string"
+              ? raw.rule
+              : "";
+        const priority =
+          typeof raw.priority === "string" ? raw.priority.toLowerCase() : "";
+        const tags = Array.isArray(raw.tags) ? raw.tags : [];
+        const key = `${type}:${String(raw.key || id)}`;
+
+        if (!raw.id) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing id",
+          });
+        }
+        if (!raw.key) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing key",
+          });
+        }
+        if (!text.trim()) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing text/rule",
+          });
+        }
+        if (!raw.category) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Missing category",
+          });
+        }
+        if (tags.length === 0) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Missing tags",
+          });
+        }
+        if (!["p0", "p1", "p2"].includes(priority)) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Invalid priority (p0|p1|p2 required)",
+          });
+        }
+        if (seenKeys.has(key)) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Duplicate key",
+          });
+        }
+        seenKeys.add(key);
+
+        if (text.trim().length > 180) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Rule text too long (consider splitting)",
+          });
+        }
+      }
+    }
+
+    return ok(
+      JSON.stringify(
+        {
+          checked: targets,
+          totalIssues: issues.length,
+          errors: issues.filter((issue) => issue.level === "error").length,
+          warnings: issues.filter((issue) => issue.level === "warning").length,
+          issues,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_graph_insights
+server.registerTool(
+  "mneme_graph_insights",
+  {
+    description:
+      "Compute graph insights from approved units: central units, tag communities, orphan units.",
+    inputSchema: {
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(100)
+        .optional()
+        .describe("Limit for ranked outputs (default: 10)"),
+    },
+  },
+  async ({ limit }) => {
+    const k = limit ?? 10;
+    const units = readUnits().items.filter(
+      (item) => item.status === "approved",
+    );
+    const graph = buildUnitGraph(units);
+    const degree = new Map<string, number>();
+    for (const unit of graph.nodes) degree.set(unit.id, 0);
+    for (const edge of graph.edges) {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    }
+
+    const topCentral = graph.nodes
+      .map((unit) => ({
+        id: unit.id,
+        title: unit.title,
+        degree: degree.get(unit.id) || 0,
+      }))
+      .sort((a, b) => b.degree - a.degree)
+      .slice(0, k);
+
+    const tagCounts = new Map<string, number>();
+    for (const unit of graph.nodes) {
+      for (const tag of unit.tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+    }
+    const communities = Array.from(tagCounts.entries())
+      .map(([tag, count]) => ({
+        tag,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, k);
+
+    const orphans = graph.nodes
+      .filter((unit) => (degree.get(unit.id) || 0) === 0)
+      .map((unit) => ({
+        id: unit.id,
+        title: unit.title,
+        tags: unit.tags,
+      }))
+      .slice(0, k);
+
+    return ok(
+      JSON.stringify(
+        {
+          approvedUnits: graph.nodes.length,
+          edges: graph.edges.length,
+          topCentral,
+          tagCommunities: communities,
+          orphanUnits: orphans,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
+// Tool: mneme_search_eval
+server.registerTool(
+  "mneme_search_eval",
+  {
+    description:
+      "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
+    inputSchema: {
+      mode: z
+        .enum(["run", "compare", "regression"])
+        .optional()
+        .describe(
+          "run=single, compare=against baseline, regression=threshold check",
+        ),
+      baselineRecall: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe("Baseline recall for compare/regression"),
+      thresholdDrop: z
+        .number()
+        .min(0)
+        .max(1)
+        .optional()
+        .describe("Allowed recall drop for regression (default: 0.05)"),
+      limit: z
+        .number()
+        .int()
+        .min(LIST_LIMIT_MIN)
+        .max(50)
+        .optional()
+        .describe("Top-k results per query (default: 5)"),
+    },
+  },
+  async ({ mode, baselineRecall, thresholdDrop, limit }) => {
+    const run = runSearchBenchmark(limit ?? SEARCH_EVAL_DEFAULT_LIMIT);
+    const payload: Record<string, unknown> = {
+      mode: mode || "run",
+      queryCount: run.queryCount,
+      hits: run.hits,
+      recall: run.recall,
+      details: run.details,
+    };
+
+    if (
+      (mode === "compare" || mode === "regression") &&
+      baselineRecall !== undefined
+    ) {
+      const delta = run.recall - baselineRecall;
+      payload.baselineRecall = baselineRecall;
+      payload.delta = delta;
+      if (mode === "regression") {
+        const allowed = thresholdDrop ?? 0.05;
+        payload.thresholdDrop = allowed;
+        payload.regression = delta < -allowed;
+      }
+    }
+
+    return ok(JSON.stringify(payload, null, 2));
+  },
+);
+
+// Tool: mneme_audit_query
+server.registerTool(
+  "mneme_audit_query",
+  {
+    description: "Query unit-related audit logs and summarize change history.",
+    inputSchema: {
+      from: z.string().optional().describe("Start ISO date/time"),
+      to: z.string().optional().describe("End ISO date/time"),
+      targetId: z.string().optional().describe("Filter by target unit ID"),
+      summaryMode: z
+        .enum(["changes", "actors", "target"])
+        .optional()
+        .describe(
+          "changes=list, actors=aggregate by actor, target=single target history",
+        ),
+    },
+  },
+  async ({ from, to, targetId, summaryMode }) => {
+    const entries = readAuditEntries({ from, to, entity: "unit" }).filter(
+      (entry) => (targetId ? entry.targetId === targetId : true),
+    );
+
+    if ((summaryMode || "changes") === "actors") {
+      const byActor = new Map<string, number>();
+      for (const entry of entries) {
+        const actor = entry.actor || "unknown";
+        byActor.set(actor, (byActor.get(actor) || 0) + 1);
+      }
+      return ok(
+        JSON.stringify(
+          {
+            total: entries.length,
+            actors: Array.from(byActor.entries())
+              .map(([actor, count]) => ({ actor, count }))
+              .sort((a, b) => b.count - a.count),
+          },
+          null,
+          2,
+        ),
+      );
+    }
+
+    if ((summaryMode || "changes") === "target" && targetId) {
+      return ok(
+        JSON.stringify(
+          {
+            targetId,
+            history: entries,
+          },
+          null,
+          2,
+        ),
+      );
+    }
+
+    return ok(
+      JSON.stringify(
+        {
+          total: entries.length,
+          changes: entries,
+        },
+        null,
+        2,
+      ),
+    );
   },
 );
 

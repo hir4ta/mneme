@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/mneme",
-  "version": "0.20.2",
+  "version": "0.21.0",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",
@@ -34,7 +34,10 @@
     "format": "biome format . --write",
     "lint:fix": "biome check . --write",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "benchmark:search": "tsx scripts/search-benchmark.ts",
+    "validate:sources": "node scripts/validate-source-artifacts.mjs",
+    "export:weekly-html": "tsx scripts/export-weekly-knowledge-html.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
@@ -53,7 +56,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.27.3",
     "hono": "^4.6.16",
     "i18next": "^25.8.0",
     "lucide-react": "^0.563.0",

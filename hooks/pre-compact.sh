@@ -13,29 +13,38 @@
 
 set -euo pipefail
 
+continue_json='{"continue": true}'
+
 # Read stdin
 input_json=$(cat)
 
-# Extract fields
-session_id=$(echo "$input_json" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4 || echo "")
-transcript_path=$(echo "$input_json" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4 || echo "")
-cwd=$(echo "$input_json" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4 || echo "")
+if ! command -v jq >/dev/null 2>&1; then
+    echo "[mneme] PreCompact: jq not found, skipping" >&2
+    echo "$continue_json"
+    exit 0
+fi
+
+# Extract fields via jq (avoid regex-based JSON parsing)
+session_id=$(echo "$input_json" | jq -r '.session_id // empty' 2>/dev/null || echo "")
+transcript_path=$(echo "$input_json" | jq -r '.transcript_path // empty' 2>/dev/null || echo "")
+cwd=$(echo "$input_json" | jq -r '.cwd // empty' 2>/dev/null || echo "")
 
 # If no cwd, use PWD
 if [ -z "$cwd" ]; then
     cwd="${PWD}"
 fi
+cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 
 # If no session_id, just continue
 if [ -z "$session_id" ]; then
-    echo '{"continue": true}'
+    echo "$continue_json"
     exit 0
 fi
 
 # Check if .mneme directory exists
 mneme_dir="${cwd}/.mneme"
 if [ ! -d "$mneme_dir" ]; then
-    echo '{"continue": true}'
+    echo "$continue_json"
     exit 0
 fi
 
@@ -56,7 +65,13 @@ fi
 
 if [ -z "$incremental_save_script" ] || [ -z "$transcript_path" ]; then
     echo "[mneme] PreCompact: Skipped (no script or transcript)" >&2
-    echo '{"continue": true}'
+    echo "$continue_json"
+    exit 0
+fi
+
+if [ ! -f "$transcript_path" ]; then
+    echo "[mneme] PreCompact: Transcript not found, skipping" >&2
+    echo "$continue_json"
     exit 0
 fi
 
@@ -82,4 +97,4 @@ else
 fi
 
 # Continue with compaction (non-blocking)
-echo '{"continue": true}'
+echo "$continue_json"

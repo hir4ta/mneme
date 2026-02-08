@@ -10,6 +10,7 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 ## Features
 
 ### Core Features
+
 - **Incremental save**: Save only new interactions on each turn completion (Node.js, fast)
 - **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
 - **PreCompact support**: Catch up unsaved interactions before Auto-Compact (context 95% full)
@@ -17,11 +18,12 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 - **Memory-informed planning**: Design and plan with past knowledge via `/mneme:plan`
 - **Session Resume**: Resume past sessions with `/mneme:resume` (with chain tracking)
 - **Session Suggestion**: Recent 3 sessions shown at session start
-- **Rule-based Review**: Code review based on `dev-rules.json` / `review-guidelines.json`
+- **Unit-based Review**: Code review based on approved units
 - **GitHub PR Review**: Review GitHub PRs with `/mneme:review <PR URL>`
-- **Knowledge Harvesting**: Extract rules and patterns from PR comments with `/mneme:harvest`
-- **Weekly Reports**: Auto-generate Markdown reports aggregating review results
-- **Web Dashboard**: View sessions, decisions, patterns, and rules
+- **Knowledge Harvesting**: Extract decision/pattern/rule sources from PR comments with `/mneme:harvest`
+- **Web Dashboard**: View sessions, source artifacts, and units
+- **Units + Approval Queue**: Generate unified units and review them with approve/reject workflow
+- **Knowledge Graph Layer**: Visualize sessions and approved units as one graph
 
 ## Problems Solved
 
@@ -127,13 +129,14 @@ This will auto-update on Claude Code startup.
 - **PreCompact hook**: Catches up unsaved interactions before Auto-Compact
 - **SessionEnd hook**: Lightweight cleanup only (no heavy processing)
 
-**If you don't run `/mneme:save`, conversation history is deleted at session end** (prevents garbage data).
+If you don't run `/mneme:save`, the session is marked as `uncommitted` and kept temporarily. By default, stale uncommitted sessions are cleaned after a 7-day grace period.
 
 ### Auto Memory Search
 
 **On every prompt**, mneme automatically:
+
 1. Extracts keywords from your message
-2. Searches sessions/decisions/patterns
+2. Searches sessions/approved units
 3. Injects relevant context to Claude
 
 This means past knowledge is always available without manual lookup.
@@ -153,17 +156,16 @@ Continue from a previous session? Use `/mneme:resume <id>`
 
 ### Commands
 
-| Command | Description |
-|---------|-------------|
-| `/init-mneme` | Initialize mneme in current project |
-| `/mneme:save` | Extract all data: summary, decisions, patterns, rules |
-| `/mneme:plan [topic]` | Memory-informed design + Socratic questions + task breakdown |
-| `/mneme:resume [id]` | Resume session (show list if ID omitted) |
-| `/mneme:search "query"` | Search sessions, decisions, and patterns |
-| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | Rule-based code review |
-| `/mneme:review <PR URL>` | Review GitHub PR |
-| `/mneme:harvest <PR URL>` | Extract knowledge from PR review comments |
-| `/mneme:report [--from YYYY-MM-DD --to YYYY-MM-DD]` | Weekly review report |
+| Command                                                  | Description                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
+| `/init-mneme`                                            | Initialize mneme in current project                          |
+| `/mneme:save`                                            | Extract all data: summary, decisions, patterns, rules        |
+| `/mneme:plan [topic]`                                    | Memory-informed design + Socratic questions + task breakdown |
+| `/mneme:resume [id]`                                     | Resume session (show list if ID omitted)                     |
+| `/mneme:search "query"`                                  | Search sessions and approved units                           |
+| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | Unit-based code review                                       |
+| `/mneme:review <PR URL>`                                 | Review GitHub PR                                             |
+| `/mneme:harvest <PR URL>`                                | Extract knowledge from PR review comments                    |
 
 ### Recommended Workflow
 
@@ -173,8 +175,23 @@ plan → implement → save → review
 
 1. **plan**: Design with memory lookup + Socratic questions + task breakdown
 2. **implement**: Follow the plan
-3. **save**: Extract decisions, patterns, rules
-4. **review**: Verify against plan and code quality
+3. **save**: Extract source knowledge and refresh units
+4. **validate**: Run `npm run validate:sources` to enforce required fields/priority/tags
+5. **review**: Verify against plan and approved units
+
+Detailed runtime flow (hooks, uncommitted policy, auto-compact path):
+- `docs/mneme-runtime-flow.md`
+
+### Weekly Knowledge HTML Export
+
+Generate a shareable HTML snapshot for the last 7 days of knowledge activity:
+
+```bash
+npm run export:weekly-html
+```
+
+Output:
+- `.mneme/exports/weekly-knowledge-YYYY-MM-DD.html`
 
 ### Dashboard
 
@@ -200,6 +217,7 @@ npx @hir4ta/mneme --dashboard --port 8080
 - **Patterns**: View learned patterns (good patterns, anti-patterns, error solutions)
 - **Statistics**: View activity charts and session statistics
 - **Graph**: Visualize session connections by shared tags
+- **Units**: Review pending units and approve/reject/delete
 
 #### Language Switching
 
@@ -209,19 +227,31 @@ The dashboard supports English and Japanese. Click the language toggle (EN/JA) i
 
 mneme provides MCP servers with search and database tools callable directly from Claude Code:
 
-| Server | Tool | Description |
-|--------|------|-------------|
-| mneme-search | `mneme_search` | Unified search (FTS5, tag alias resolution) |
-| mneme-search | `mneme_get_session` | Get session details |
-| mneme-search | `mneme_get_decision` | Get decision details |
-| mneme-db | `mneme_list_projects` | List all projects |
-| mneme-db | `mneme_cross_project_search` | Cross-project search |
+| Server       | Tool                                | Description                                      |
+| ------------ | ----------------------------------- | ------------------------------------------------ |
+| mneme-search | `mneme_search`                      | Unified search (FTS5, tag alias resolution)      |
+| mneme-search | `mneme_get_session`                 | Get session details                              |
+| mneme-search | `mneme_get_unit`                    | Get unit details                                 |
+| mneme-db     | `mneme_list_projects`               | List all projects                                |
+| mneme-db     | `mneme_list_sessions`               | List sessions                                    |
+| mneme-db     | `mneme_get_interactions`            | Get interactions for a session                   |
+| mneme-db     | `mneme_stats`                       | Aggregate stats                                  |
+| mneme-db     | `mneme_cross_project_search`        | Cross-project search                             |
+| mneme-db     | `mneme_unit_queue_list_pending`     | List pending unit approvals                      |
+| mneme-db     | `mneme_unit_queue_update_status`    | Approve/reject/pending in bulk                   |
+| mneme-db     | `mneme_unit_apply_suggest_for_diff` | Suggest units for diff review                    |
+| mneme-db     | `mneme_unit_apply_explain_match`    | Explain unit-to-diff match                       |
+| mneme-db     | `mneme_session_timeline`            | Build timeline/session chain context             |
+| mneme-db     | `mneme_rule_linter`                 | Lint rule quality and required fields            |
+| mneme-db     | `mneme_graph_insights`              | Central units, communities, orphan units         |
+| mneme-db     | `mneme_search_eval`                 | Run/compare search benchmark                     |
+| mneme-db     | `mneme_audit_query`                 | Query unit audit history                         |
 
 ### Subagents
 
-| Agent | Description |
-|-------|-------------|
-| `mneme-reviewer` | Rule-based code review (isolated context) |
+| Agent            | Description                               |
+| ---------------- | ----------------------------------------- |
+| `mneme-reviewer` | Unit-based code review (isolated context) |
 
 ## How It Works
 
@@ -235,7 +265,7 @@ flowchart TB
 
     subgraph autosearch [Auto Memory Search]
         E[User Prompt] --> F[UserPromptSubmit Hook]
-        F --> G[Search sessions/decisions/patterns]
+        F --> G[Search sessions/approved units]
         G --> H[Inject relevant context]
     end
 
@@ -248,7 +278,7 @@ flowchart TB
         L[Exit] --> M[SessionEnd Hook]
         M --> N{Committed?}
         N -->|Yes| O[Keep interactions]
-        N -->|No| P[Delete interactions]
+        N -->|No| P[Mark as uncommitted + grace cleanup]
     end
 
     subgraph manual [Manual Actions]
@@ -263,7 +293,7 @@ flowchart TB
     end
 
     subgraph review [Review]
-        Y["mneme:review"] --> Z[Rule-based findings]
+        Y["mneme:review"] --> Z[Unit-based findings]
         Z --> AA[Save review results]
     end
 
@@ -282,12 +312,13 @@ flowchart TB
 
 mneme uses a **hybrid storage** approach for privacy and collaboration:
 
-| Storage | Location | Purpose | Sharing |
-|---------|----------|---------|---------|
-| **JSON** | `.mneme/` | Summaries, decisions, patterns, rules | Git-managed (team shared) |
-| **SQLite** | `.mneme/local.db` | Interactions, backups | Local only (gitignored) |
+| Storage    | Location          | Purpose                               | Sharing                   |
+| ---------- | ----------------- | ------------------------------------- | ------------------------- |
+| **JSON**   | `.mneme/`         | Summaries, decisions, patterns, rules | Git-managed (team shared) |
+| **SQLite** | `.mneme/local.db` | Interactions, backups                 | Local only (gitignored)   |
 
 **Why hybrid?**
+
 - **Privacy**: Conversation history (interactions) stays local (gitignored)
 - **Lightweight**: JSON files reduced from 100KB+ to ~5KB (interactions excluded)
 - **Future-ready**: Embeddings table prepared for semantic search
@@ -295,6 +326,7 @@ mneme uses a **hybrid storage** approach for privacy and collaboration:
 ### Directory Structure
 
 **Project-local (`.mneme/`)**:
+
 ```text
 .mneme/
 ├── local.db          # SQLite with interactions (gitignored)
@@ -309,7 +341,7 @@ mneme uses a **hybrid storage** approach for privacy and collaboration:
 │   └── {user}.json
 ├── rules/            # Dev rules / review guidelines - Git-managed
 ├── reviews/          # Review results (YYYY/MM) - Git-managed
-└── reports/          # Weekly reports (YYYY-MM) - Git-managed
+└── audit/            # Audit logs (JSONL)
 ```
 
 The `local.db` file is automatically added to `.mneme/.gitignore` to keep conversations private.
@@ -335,11 +367,12 @@ Session metadata is stored in JSON (interactions are stored in SQLite for privac
     "userMessages": 5,
     "assistantResponses": 5,
     "thinkingBlocks": 5,
-    "toolUsage": [{"name": "Edit", "count": 3}, {"name": "Write", "count": 2}]
+    "toolUsage": [
+      { "name": "Edit", "count": 3 },
+      { "name": "Write", "count": 2 }
+    ]
   },
-  "files": [
-    { "path": "src/auth/jwt.ts", "action": "create" }
-  ],
+  "files": [{ "path": "src/auth/jwt.ts", "action": "create" }],
   "resumedFrom": "def45678",
   "status": "complete",
 
@@ -352,7 +385,11 @@ Session metadata is stored in JSON (interactions are stored in SQLite for privac
   },
 
   "plan": {
-    "tasks": ["[x] JWT signing method selection", "[x] Middleware implementation", "[ ] Add tests"],
+    "tasks": [
+      "[x] JWT signing method selection",
+      "[x] Middleware implementation",
+      "[ ] Add tests"
+    ],
     "remaining": ["Add tests"]
   },
 
@@ -389,15 +426,15 @@ Session metadata is stored in JSON (interactions are stored in SQLite for privac
 
 The `sessionType` field classifies the session type.
 
-| Type | Description |
-|------|-------------|
-| `decision` | Decision cycle present (design choices, tech selection) |
-| `implementation` | Code changes made |
-| `research` | Research, learning, catchup |
-| `exploration` | Codebase exploration |
-| `discussion` | Discussion, consultation only |
-| `debug` | Debugging, investigation |
-| `review` | Code review |
+| Type             | Description                                             |
+| ---------------- | ------------------------------------------------------- |
+| `decision`       | Decision cycle present (design choices, tech selection) |
+| `implementation` | Code changes made                                       |
+| `research`       | Research, learning, catchup                             |
+| `exploration`    | Codebase exploration                                    |
+| `discussion`     | Discussion, consultation only                           |
+| `debug`          | Debugging, investigation                                |
+| `review`         | Code review                                             |
 
 ### Tags
 
@@ -413,13 +450,13 @@ Tags are selected from `.mneme/tags.json` to prevent notation variations (e.g., 
 
 mneme operates **entirely locally** with no data sent to external servers.
 
-| Item | Description |
-|------|-------------|
-| **External Communication** | None - no curl/fetch/HTTP requests are made |
-| **Data Storage** | All data stored in project's `.mneme/` directory |
-| **Conversation History** | Stored in `local.db`, automatically gitignored (not shared via Git) |
-| **Tools Used** | bash, Node.js, jq, sqlite3 (no external dependencies) |
-| **Code** | Open source - all code is auditable |
+| Item                       | Description                                                         |
+| -------------------------- | ------------------------------------------------------------------- |
+| **External Communication** | None - no curl/fetch/HTTP requests are made                         |
+| **Data Storage**           | All data stored in project's `.mneme/` directory                    |
+| **Conversation History**   | Stored in `local.db`, automatically gitignored (not shared via Git) |
+| **Tools Used**             | bash, Node.js, jq, sqlite3 (no external dependencies)               |
+| **Code**                   | Open source - all code is auditable                                 |
 
 ### Privacy by Design
 

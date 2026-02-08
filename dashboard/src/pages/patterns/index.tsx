@@ -1,8 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { deletePattern } from "@/lib/api";
+import { invalidateDashboardData } from "@/lib/invalidate-dashboard-data";
 
 interface Pattern {
   id: string;
@@ -143,12 +147,16 @@ function PatternDetailDialog({
   pattern,
   open,
   onOpenChange,
+  onDeleted,
 }: {
   pattern: Pattern | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted: (pattern: Pattern) => Promise<void>;
 }) {
   const { t } = useTranslation("patterns");
+  const { t: tc } = useTranslation("common");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   if (!pattern) return null;
 
@@ -249,7 +257,29 @@ function PatternDetailDialog({
               ))}
             </div>
           )}
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
+              size="sm"
+              onClick={() => setConfirmDeleteOpen(true)}
+            >
+              {tc("delete")}
+            </Button>
+          </div>
         </div>
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title={tc("deleteDialog.title")}
+          description={tc("deleteDialog.description")}
+          onConfirm={async () => {
+            if (!pattern.sourceFile) return;
+            await deletePattern(pattern.id, pattern.sourceFile);
+            await onDeleted(pattern);
+            onOpenChange(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -280,9 +310,13 @@ function StatCard({
 
 export function PatternsPage() {
   const { t } = useTranslation("patterns");
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
+  const [deletedPatternIds, setDeletedPatternIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const {
     data: patternsData,
@@ -311,7 +345,9 @@ export function PatternsPage() {
   }
 
   // Filter patterns
-  const patterns = patternsData?.patterns || [];
+  const patterns = (patternsData?.patterns || []).filter(
+    (pattern) => !deletedPatternIds.has(pattern.id),
+  );
   const filteredPatterns = patterns.filter((pattern) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -472,6 +508,15 @@ export function PatternsPage() {
         pattern={selectedPattern}
         open={!!selectedPattern}
         onOpenChange={(open) => !open && setSelectedPattern(null)}
+        onDeleted={async (pattern) => {
+          setDeletedPatternIds((prev) => {
+            const next = new Set(prev);
+            next.add(pattern.id);
+            return next;
+          });
+          setSelectedPattern(null);
+          await invalidateDashboardData(queryClient);
+        }}
       />
     </div>
   );

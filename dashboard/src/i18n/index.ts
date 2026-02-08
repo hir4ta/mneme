@@ -12,6 +12,7 @@ import enPatterns from "./locales/en/patterns.json";
 import enRules from "./locales/en/rules.json";
 import enSessions from "./locales/en/sessions.json";
 import enStats from "./locales/en/stats.json";
+import enUnits from "./locales/en/units.json";
 
 // Japanese translations
 import jaCommon from "./locales/ja/common.json";
@@ -24,11 +25,13 @@ import jaPatterns from "./locales/ja/patterns.json";
 import jaRules from "./locales/ja/rules.json";
 import jaSessions from "./locales/ja/sessions.json";
 import jaStats from "./locales/ja/stats.json";
+import jaUnits from "./locales/ja/units.json";
 
 const resources = {
   en: {
     common: enCommon,
     layout: enLayout,
+    units: enUnits,
     sessions: enSessions,
     decisions: enDecisions,
     rules: enRules,
@@ -41,6 +44,7 @@ const resources = {
   ja: {
     common: jaCommon,
     layout: jaLayout,
+    units: jaUnits,
     sessions: jaSessions,
     decisions: jaDecisions,
     rules: jaRules,
@@ -70,6 +74,7 @@ i18n.use(initReactI18next).init({
   ns: [
     "common",
     "layout",
+    "units",
     "sessions",
     "decisions",
     "rules",

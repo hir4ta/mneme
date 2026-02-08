@@ -1,29 +1,86 @@
 {
-  "title": "セッショングラフ",
-  "subtitle": "共有タグで接続されたセッション",
+  "title": "知識グラフ",
+  "subtitle": "過去のセッションとユニットのつながりを、タグをもとに見える化したマップです",
   "noSessions": "表示するセッションがありません",
   "howToRead": {
     "title": "読み方",
-    "nodes": "セッション（タイプ別に色分け）",
-    "lines": "セッション間の共有タグ（太い = より多く共有）",
-    "clickHint": "ノードをクリックしてセッション詳細を表示。ホバーすると下のパネルに情報が表示されます。"
+    "nodes": "知識エンティティ（タイプ別に色分け）",
+    "lines": "エンティティ間の共有タグ（太い = より多く共有）",
+    "clickHint": "ノードをクリックしてダイアログで詳細を確認できます。ホバーで概要を確認できます。"
   },
-  "sessionTypes": "セッションタイプ",
+  "sessionTypes": "エンティティタイプ",
   "selectedSession": "選択されたセッション",
   "clickToViewDetails": "クリックして詳細を表示",
   "graphStats": {
     "title": "グラフ統計",
     "nodes": "ノード",
-    "connections": "接続"
+    "connections": "接続",
+    "avgDegree": "平均接続数",
+    "clusters": "クラスタ数",
+    "largestCluster": "最大クラスタ",
+    "density": "密度"
+  },
+  "controls": {
+    "title": "可視化コントロール",
+    "search": "検索",
+    "searchPlaceholder": "タイトル・タグで検索",
+    "type": "タイプ",
+    "types": {
+      "all": "すべて"
+    },
+    "minWeight": "最小共有タグ数",
+    "minWeightValue": "{{value}} 以上",
+    "colorMode": "色分け",
+    "colorModes": {
+      "type": "タイプ別",
+      "cluster": "クラスタ別"
+    },
+    "timeWindow": "期間",
+    "timeAll": "全期間",
+    "timeDays": "直近{{days}}日",
+    "focusDepth": "展開深さ",
+    "depthValue": "深さ {{value}}",
+    "focusSelected": "選択ノードを中心表示",
+    "clearFocus": "中心表示を解除",
+    "tagsAll": "全タグ"
+  },
+  "topTags": {
+    "title": "共有タグ上位",
+    "empty": "タグなし"
+  },
+  "centrality": {
+    "title": "中心ノード",
+    "empty": "該当なし"
+  },
+  "detail": {
+    "titleFallback": "無題",
+    "id": "ID",
+    "connectedNodes": "接続数",
+    "createdAt": "作成日時",
+    "summary": "要約",
+    "noSummary": "要約がありません",
+    "relatedNodes": "関連ノード",
+    "focusThisNode": "このノードを中心表示",
+    "sharedTagsCount": "共有タグ: {{count}}",
+    "unitType": {
+      "decision": "Decision",
+      "pattern": "Pattern",
+      "rule": "Rule"
+    },
+    "unitStatus": {
+      "pending": "保留",
+      "approved": "承認済み",
+      "rejected": "却下"
+    },
+    "unitKind": {
+      "policy": "ポリシー",
+      "pitfall": "落とし穴",
+      "playbook": "実践パターン"
+    }
   },
   "types": {
-    "decision": "意思決定",
-    "implementation": "実装",
-    "research": "調査",
-    "exploration": "探索",
-    "discussion": "議論",
-    "debug": "デバッグ",
-    "review": "レビュー",
+    "session": "セッション",
+    "unit": "ユニット",
     "unknown": "不明"
   }
 }

@@ -699,6 +699,37 @@ function resolveMnemeSessionId(
   return shortId;
 }
 
+function findSessionFileById(
+  projectPath: string,
+  mnemeSessionId: string,
+): string | null {
+  const sessionsDir = path.join(projectPath, ".mneme", "sessions");
+  const searchDir = (dir: string): string | null => {
+    if (!fs.existsSync(dir)) return null;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const result = searchDir(fullPath);
+        if (result) return result;
+      } else if (entry.name === `${mnemeSessionId}.json`) {
+        return fullPath;
+      }
+    }
+    return null;
+  };
+  return searchDir(sessionsDir);
+}
+
+function hasSessionSummary(sessionFile: string | null): boolean {
+  if (!sessionFile) return false;
+  try {
+    const session = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
+    return !!session.summary;
+  } catch {
+    return false;
+  }
+}
+
 // Main incremental save function
 export async function incrementalSave(
   claudeSessionId: string,
@@ -915,34 +946,8 @@ export function cleanupUncommittedSession(
 
     // Check if session JSON has summary (alternative check)
     const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
-    const sessionsDir = path.join(projectPath, ".mneme", "sessions");
-    let hasSummary = false;
-
-    // Search for session file
-    const searchDir = (dir: string): string | null => {
-      if (!fs.existsSync(dir)) return null;
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        if (entry.isDirectory()) {
-          const result = searchDir(path.join(dir, entry.name));
-          if (result) return result;
-        } else if (entry.name === `${mnemeSessionId}.json`) {
-          return path.join(dir, entry.name);
-        }
-      }
-      return null;
-    };
-
-    const sessionFile = searchDir(sessionsDir);
-    if (sessionFile) {
-      try {
-        const session = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
-        hasSummary = !!session.summary;
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    if (hasSummary) {
+    const sessionFile = findSessionFileById(projectPath, mnemeSessionId);
+    if (hasSessionSummary(sessionFile)) {
       // Session has summary, keep interactions
       return { deleted: false, count: 0 };
     }
@@ -971,6 +976,100 @@ export function cleanupUncommittedSession(
   } catch (error) {
     console.error(`[mneme] Error cleaning up session: ${error}`);
     return { deleted: false, count: 0 };
+  } finally {
+    db.close();
+  }
+}
+
+export function cleanupStaleUncommittedSessions(
+  projectPath: string,
+  graceDays: number,
+): { deletedSessions: number; deletedInteractions: number } {
+  const dbPath = path.join(projectPath, ".mneme", "local.db");
+  if (!fs.existsSync(dbPath)) {
+    return { deletedSessions: 0, deletedInteractions: 0 };
+  }
+
+  const db = new DatabaseSync(dbPath);
+  let deletedSessions = 0;
+  let deletedInteractions = 0;
+  const normalizedGraceDays = Math.max(1, Math.floor(graceDays));
+
+  try {
+    const staleStmt = db.prepare(
+      `
+      SELECT claude_session_id, mneme_session_id
+      FROM session_save_state
+      WHERE is_committed = 0
+        AND updated_at <= datetime('now', ?)
+      `,
+    );
+    const staleRows = staleStmt.all(`-${normalizedGraceDays} days`) as Array<{
+      claude_session_id: string;
+      mneme_session_id: string;
+    }>;
+
+    if (staleRows.length === 0) {
+      return { deletedSessions: 0, deletedInteractions: 0 };
+    }
+
+    const deleteInteractionStmt = db.prepare(
+      "DELETE FROM interactions WHERE claude_session_id = ?",
+    );
+    const countInteractionStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM interactions WHERE claude_session_id = ?",
+    );
+    const deleteStateStmt = db.prepare(
+      "DELETE FROM session_save_state WHERE claude_session_id = ?",
+    );
+
+    for (const row of staleRows) {
+      const sessionFile = findSessionFileById(
+        projectPath,
+        row.mneme_session_id,
+      );
+      if (hasSessionSummary(sessionFile)) {
+        continue;
+      }
+
+      const countResult = countInteractionStmt.get(row.claude_session_id) as
+        | { count: number }
+        | undefined;
+      const count = countResult?.count || 0;
+      if (count > 0) {
+        deleteInteractionStmt.run(row.claude_session_id);
+        deletedInteractions += count;
+      }
+      deleteStateStmt.run(row.claude_session_id);
+
+      if (sessionFile && fs.existsSync(sessionFile)) {
+        try {
+          fs.unlinkSync(sessionFile);
+          deletedSessions += 1;
+        } catch {
+          // Ignore file deletion failures.
+        }
+      }
+
+      const linkPath = path.join(
+        projectPath,
+        ".mneme",
+        "session-links",
+        `${row.claude_session_id.slice(0, 8)}.json`,
+      );
+      if (fs.existsSync(linkPath)) {
+        try {
+          fs.unlinkSync(linkPath);
+        } catch {
+          // Ignore link deletion failures.
+        }
+      }
+    }
+
+    return { deletedSessions, deletedInteractions };
+  } catch (error) {
+    console.error(`[mneme] Error cleaning stale sessions: ${error}`);
+    return { deletedSessions: 0, deletedInteractions: 0 };
   } finally {
     db.close();
   }
@@ -1031,6 +1130,20 @@ async function main() {
     }
 
     const result = cleanupUncommittedSession(sessionId, projectPath);
+    console.log(JSON.stringify(result));
+    process.exit(0);
+  } else if (command === "cleanup-stale") {
+    const projectPath = getArg("project");
+    const graceDays = Number.parseInt(getArg("grace-days") || "7", 10);
+
+    if (!projectPath) {
+      console.error(
+        "Usage: incremental-save.js cleanup-stale --project <path> [--grace-days <n>]",
+      );
+      process.exit(1);
+    }
+
+    const result = cleanupStaleUncommittedSessions(projectPath, graceDays);
     console.log(JSON.stringify(result));
     process.exit(0);
   } else {

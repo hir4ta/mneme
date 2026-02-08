@@ -11,6 +11,14 @@ argument-hint: "[session-id]"
 
 Resume a previous session.
 
+## Required constraints
+
+<required>
+- Do not mutate historical session content except resume metadata fields.
+- Ensure `session-links/{current}.json` points to the selected master session.
+- Preserve backward compatibility fields (`resumedFrom`) when present.
+</required>
+
 ## Usage
 
 ```
@@ -184,6 +192,11 @@ Session chain: current ← abc123
 
 Ready to continue?
 ```
+
+## Failure conditions
+
+- Target session not found.
+- Session-link write failed.
 
 ## Context Injection
 

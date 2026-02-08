@@ -9,21 +9,29 @@
 # Output (stdout): JSON with {"continue": true}
 # Exit codes: 0 = success (non-blocking)
 #
-# Dependencies: Node.js
+# Dependencies: Node.js, jq
 
 set -euo pipefail
+
+continue_json='{"continue": true}'
 
 # Read stdin
 input_json=$(cat)
 
-# Extract fields using bash string manipulation (faster than jq for simple cases)
-session_id=$(echo "$input_json" | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4 || echo "")
-transcript_path=$(echo "$input_json" | grep -o '"transcript_path":"[^"]*"' | cut -d'"' -f4 || echo "")
-cwd=$(echo "$input_json" | grep -o '"cwd":"[^"]*"' | cut -d'"' -f4 || echo "")
+# Extract fields with jq for robust JSON parsing.
+if command -v jq >/dev/null 2>&1; then
+    session_id=$(echo "$input_json" | jq -r '.session_id // empty' 2>/dev/null || echo "")
+    transcript_path=$(echo "$input_json" | jq -r '.transcript_path // empty' 2>/dev/null || echo "")
+    cwd=$(echo "$input_json" | jq -r '.cwd // empty' 2>/dev/null || echo "")
+else
+    session_id=""
+    transcript_path=""
+    cwd=""
+fi
 
 # If no session_id or transcript, just continue
 if [ -z "$session_id" ] || [ -z "$transcript_path" ]; then
-    echo '{"continue": true}'
+    echo "$continue_json"
     exit 0
 fi
 
@@ -31,11 +39,17 @@ fi
 if [ -z "$cwd" ]; then
     cwd="${PWD}"
 fi
+cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
+
+if [ ! -f "$transcript_path" ]; then
+    echo "$continue_json"
+    exit 0
+fi
 
 # Check if .mneme directory exists (project initialized)
 mneme_dir="${cwd}/.mneme"
 if [ ! -d "$mneme_dir" ]; then
-    echo '{"continue": true}'
+    echo "$continue_json"
     exit 0
 fi
 
@@ -53,7 +67,7 @@ elif [ -f "${PLUGIN_ROOT}/lib/incremental-save.ts" ]; then
 fi
 
 if [ -z "$incremental_save_script" ]; then
-    echo '{"continue": true}'
+    echo "$continue_json"
     exit 0
 fi
 
@@ -77,4 +91,4 @@ if echo "$result" | grep -q '"savedCount":[1-9]'; then
     echo "[mneme] Incremental save: ${result}" >&2
 fi
 
-echo '{"continue": true}'
+echo "$continue_json"

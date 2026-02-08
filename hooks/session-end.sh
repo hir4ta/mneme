@@ -16,6 +16,11 @@
 
 set -euo pipefail
 
+if ! command -v jq >/dev/null 2>&1; then
+    echo "[mneme] SessionEnd: jq not found, skipping" >&2
+    exit 0
+fi
+
 # Read input from stdin
 input_json=$(cat)
 
@@ -38,6 +43,13 @@ cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 mneme_dir="${cwd}/.mneme"
 sessions_dir="${mneme_dir}/sessions"
 session_links_dir="${mneme_dir}/session-links"
+
+# Cleanup policy
+# - immediate: old behavior, delete unsaved sessions immediately
+# - grace: mark unsaved sessions and delete after grace days
+# - never: keep unsaved sessions
+cleanup_policy="${MNEME_UNCOMMITTED_POLICY:-grace}"
+cleanup_grace_days="${MNEME_UNCOMMITTED_GRACE_DAYS:-7}"
 
 # Check if .mneme directory exists
 if [ ! -d "$mneme_dir" ]; then
@@ -100,21 +112,27 @@ if [ -n "$session_file" ] && [ -f "$session_file" ]; then
     # Check if session has summary (was saved with /mneme:save)
     has_summary=$(jq -r 'if .summary then "true" else "false" end' "$session_file" 2>/dev/null || echo "false")
 
-    # Update status and timestamps
-    jq --arg status "complete" \
-       --arg endedAt "$now" \
-       --arg updatedAt "$now" '
-        .status = $status |
-        .endedAt = $endedAt |
-        .updatedAt = $updatedAt |
-        del(.interactions) |
-        del(.preCompactBackups)
-    ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
-
     # Cleanup uncommitted sessions
     if [ "$has_summary" = "false" ]; then
-        # Session was not saved with /mneme:save
-        if [ -n "$incremental_save_script" ]; then
+        cleanup_after=$(date -u -v+"${cleanup_grace_days}"d +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -d "+${cleanup_grace_days} days" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo "")
+        jq --arg status "uncommitted" \
+           --arg endedAt "$now" \
+           --arg updatedAt "$now" \
+           --arg policy "$cleanup_policy" \
+           --arg cleanupAfter "$cleanup_after" '
+            .status = $status |
+            .endedAt = $endedAt |
+            .updatedAt = $updatedAt |
+            .uncommitted = {
+                endedAt: $endedAt,
+                policy: $policy,
+                cleanupAfter: (if $cleanupAfter == "" then null else $cleanupAfter end)
+            } |
+            del(.interactions) |
+            del(.preCompactBackups)
+        ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
+
+        if [ "$cleanup_policy" = "immediate" ] && [ -n "$incremental_save_script" ]; then
             if [[ "$incremental_save_script" == *.ts ]]; then
                 cleanup_result=$(npx tsx "$incremental_save_script" cleanup \
                     --session "$session_id" \
@@ -129,27 +147,52 @@ if [ -n "$session_file" ] && [ -f "$session_file" ]; then
                 deleted_count=$(echo "$cleanup_result" | grep -o '"count":[0-9]*' | cut -d':' -f2 || echo "0")
                 echo "[mneme] Session ended without /mneme:save - cleaned up ${deleted_count} interactions" >&2
             fi
-        fi
 
-        # Also delete the empty session JSON file (no summary = not saved)
-        if [ -f "$session_file" ]; then
             rm -f "$session_file"
-            echo "[mneme] Deleted empty session file: ${session_file}" >&2
+            link_file="${session_links_dir}/${session_short_id}.json"
+            if [ -f "$link_file" ]; then
+                rm -f "$link_file"
+            fi
+            echo "[mneme] Session completed (not saved, cleaned up immediately)" >&2
+        elif [ "$cleanup_policy" = "never" ]; then
+            echo "[mneme] Session completed (not saved, kept as uncommitted)" >&2
+        else
+            echo "[mneme] Session completed (not saved, marked uncommitted for grace cleanup)" >&2
         fi
-
-        # Delete session-link file if exists
-        link_file="${session_links_dir}/${session_short_id}.json"
-        if [ -f "$link_file" ]; then
-            rm -f "$link_file"
-            echo "[mneme] Deleted session-link file: ${link_file}" >&2
-        fi
-
-        echo "[mneme] Session completed (not saved, cleaned up)" >&2
     else
+        jq --arg status "complete" \
+           --arg endedAt "$now" \
+           --arg updatedAt "$now" '
+            .status = $status |
+            .endedAt = $endedAt |
+            .updatedAt = $updatedAt |
+            del(.uncommitted) |
+            del(.interactions) |
+            del(.preCompactBackups)
+        ' "$session_file" > "${session_file}.tmp" && mv "${session_file}.tmp" "$session_file"
         echo "[mneme] Session completed: ${session_file}" >&2
     fi
 else
     echo "[mneme] Session completed (no session file found)" >&2
+fi
+
+# Grace cleanup for stale uncommitted sessions
+if [ "$cleanup_policy" = "grace" ] && [ -n "$incremental_save_script" ]; then
+    if [[ "$incremental_save_script" == *.ts ]]; then
+        stale_result=$(npx tsx "$incremental_save_script" cleanup-stale \
+            --project "$cwd" \
+            --grace-days "$cleanup_grace_days" 2>/dev/null) || stale_result='{}'
+    else
+        stale_result=$(node "$incremental_save_script" cleanup-stale \
+            --project "$cwd" \
+            --grace-days "$cleanup_grace_days" 2>/dev/null) || stale_result='{}'
+    fi
+
+    deleted_sessions=$(echo "$stale_result" | jq -r '.deletedSessions // 0' 2>/dev/null || echo "0")
+    deleted_interactions=$(echo "$stale_result" | jq -r '.deletedInteractions // 0' 2>/dev/null || echo "0")
+    if [ "$deleted_sessions" -gt 0 ] || [ "$deleted_interactions" -gt 0 ]; then
+        echo "[mneme] Grace cleanup removed ${deleted_sessions} sessions and ${deleted_interactions} interactions" >&2
+    fi
 fi
 
 # Update master session workPeriods.endedAt (if linked)

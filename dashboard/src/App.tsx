@@ -14,6 +14,7 @@ import { RulesPage } from "./pages/rules";
 import { SessionsPage } from "./pages/sessions";
 import { SessionDetailPage } from "./pages/sessions/[id]";
 import { StatsPage } from "./pages/stats";
+import { UnitsPage } from "./pages/units";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/decisions/:id" element={<DecisionDetailPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/patterns" element={<PatternsPage />} />
+        <Route path="/units" element={<UnitsPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/graph" element={<GraphPage />} />
         <Route path="/guide" element={<GuidePage />} />

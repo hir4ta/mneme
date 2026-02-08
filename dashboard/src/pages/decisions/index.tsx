@@ -1,7 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DecisionCardSkeletonList } from "@/components/ui/decision-card-skeleton";
 import {
   Dialog,
@@ -20,7 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDecisions } from "@/hooks/use-decisions";
-import { getDecision } from "@/lib/api";
+import { deleteDecision, getDecision } from "@/lib/api";
+import { invalidateDashboardData } from "@/lib/invalidate-dashboard-data";
 import type { Decision } from "@/lib/types";
 
 function DecisionCard({
@@ -72,15 +76,18 @@ function DecisionDetailDialog({
   decisionId,
   open,
   onOpenChange,
+  onDeleted,
 }: {
   decisionId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted: (id: string) => Promise<void>;
 }) {
   const { t } = useTranslation("decisions");
   const { t: tc } = useTranslation("common");
   const [decision, setDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!decisionId || !open) {
@@ -178,12 +185,34 @@ function DecisionDetailDialog({
                 ))}
               </div>
             )}
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                size="sm"
+                onClick={() => setConfirmDeleteOpen(true)}
+              >
+                {tc("delete")}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             {tc("loading")}
           </div>
         )}
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title={tc("deleteDialog.title")}
+          description={tc("deleteDialog.description")}
+          onConfirm={async () => {
+            if (!decision) return;
+            await deleteDecision(decision.id);
+            await onDeleted(decision.id);
+            onOpenChange(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -192,11 +221,15 @@ function DecisionDetailDialog({
 export function DecisionsPage() {
   const { t } = useTranslation("decisions");
   const { t: tc } = useTranslation("common");
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(
     null,
+  );
+  const [deletedDecisionIds, setDeletedDecisionIds] = useState<Set<string>>(
+    () => new Set(),
   );
 
   // Debounced search
@@ -247,7 +280,9 @@ export function DecisionsPage() {
     );
   }
 
-  const decisions = data?.data || [];
+  const decisions = (data?.data || []).filter(
+    (decision) => !deletedDecisionIds.has(decision.id),
+  );
   const pagination = data?.pagination;
 
   return (
@@ -333,6 +368,15 @@ export function DecisionsPage() {
         decisionId={selectedDecisionId}
         open={!!selectedDecisionId}
         onOpenChange={(open) => !open && setSelectedDecisionId(null)}
+        onDeleted={async (id) => {
+          setDeletedDecisionIds((prev) => {
+            const next = new Set(prev);
+            next.add(id);
+            return next;
+          });
+          setSelectedDecisionId(null);
+          await invalidateDashboardData(queryClient);
+        }}
       />
     </div>
   );

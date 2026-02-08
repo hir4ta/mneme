@@ -11,6 +11,12 @@ user-invocable: true
 <instructions>
 Create the `.mneme` directory structure in the current project.
 
+<required>
+- Never overwrite existing user data under `.mneme/` without explicit confirmation.
+- Create JSON files with valid schema fields.
+- Ensure `.mneme/local.db` is gitignored.
+</required>
+
 1. Check if `.mneme` already exists - if so, inform the user it's already initialized
 2. Create the directory structure:
    - `.mneme/sessions/`

@@ -1,0 +1,78 @@
+{
+  "queries": [
+    {
+      "query": "session resume",
+      "expectedTerms": ["resume", "workPeriods", "resumedFrom"]
+    },
+    {
+      "query": "incremental save",
+      "expectedTerms": ["incremental", "save", "stop hook"]
+    },
+    {
+      "query": "pre compact backup",
+      "expectedTerms": ["precompact", "backup", "compact"]
+    },
+    {
+      "query": "rule based review",
+      "expectedTerms": ["review", "rule", "guideline"]
+    },
+    {
+      "query": "harvest PR comments",
+      "expectedTerms": ["harvest", "pr", "comment"]
+    },
+    {
+      "query": "weekly report",
+      "expectedTerms": ["report", "weekly", "review"]
+    },
+    {
+      "query": "search mcp",
+      "expectedTerms": ["mcp", "search", "mneme_search"]
+    },
+    {
+      "query": "db mcp cross project",
+      "expectedTerms": ["cross-project", "project", "db"]
+    },
+    {
+      "query": "session end cleanup",
+      "expectedTerms": ["session-end", "cleanup", "uncommitted"]
+    },
+    {
+      "query": "user prompt submit context",
+      "expectedTerms": ["additionalContext", "prompt", "context"]
+    },
+    {
+      "query": "dashboard patterns",
+      "expectedTerms": ["pattern", "dashboard", "stats"]
+    },
+    {
+      "query": "dashboard decisions",
+      "expectedTerms": ["decision", "dashboard", "alternatives"]
+    },
+    {
+      "query": "rules dev-rules",
+      "expectedTerms": ["dev-rules", "review-guidelines", "rules"]
+    },
+    {
+      "query": "tags alias search",
+      "expectedTerms": ["tags", "alias", "search"]
+    },
+    {
+      "query": "session links master session",
+      "expectedTerms": ["session-links", "masterSessionId", "resume"]
+    },
+    {
+      "query": "sqlite interactions",
+      "expectedTerms": ["sqlite", "interactions", "local.db"]
+    },
+    {
+      "query": "compact summary",
+      "expectedTerms": ["compact", "summary", "backup"]
+    },
+    { "query": "plan mode", "expectedTerms": ["plan", "socratic", "task"] },
+    { "query": "init mneme", "expectedTerms": ["init", ".mneme", "tags.json"] },
+    {
+      "query": "error solution pattern",
+      "expectedTerms": ["error", "solution", "pattern"]
+    }
+  ]
+}

@@ -20,6 +20,7 @@ const navGroups: NavGroup[] = [
     labelKey: "nav.platform",
     items: [
       { href: "/", labelKey: "nav.sessions", icon: "folder" },
+      { href: "/units", labelKey: "nav.units", icon: "cards" },
       { href: "/decisions", labelKey: "nav.decisions", icon: "lightbulb" },
       { href: "/patterns", labelKey: "nav.patterns", icon: "pattern" },
       { href: "/rules", labelKey: "nav.rules", icon: "check" },
@@ -127,6 +128,22 @@ const icons: Record<string, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+      />
+    </svg>
+  ),
+  cards: (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <title>Units</title>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M4 7a2 2 0 012-2h11a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7zm3 3h9m-9 4h6M9 5h9a2 2 0 012 2v10"
       />
     </svg>
   ),

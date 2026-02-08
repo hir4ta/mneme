@@ -24,9 +24,9 @@ import {
 } from "../../lib/index/manager.js";
 
 // =============================================================================
-// Note: Dashboard supports read and delete operations.
-// Create/update should be done via /mneme:* commands.
-// Data modifications should be done via /mneme:* commands.
+// Note: Dashboard supports read and selected maintenance operations
+// (session/decision/pattern/rule deletions and rule updates).
+// Primary data creation remains via /mneme:* commands.
 // =============================================================================
 
 // =============================================================================
@@ -37,7 +37,16 @@ import {
  * Sanitize ID parameter to prevent path traversal
  */
 function sanitizeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_-]/g, "");
+  const normalized = decodeURIComponent(id).trim();
+  if (!normalized) return "";
+  if (
+    normalized.includes("..") ||
+    normalized.includes("/") ||
+    normalized.includes("\\")
+  ) {
+    return "";
+  }
+  return /^[a-zA-Z0-9:_-]+$/.test(normalized) ? normalized : "";
 }
 
 /**
@@ -65,6 +74,8 @@ const getMnemeDir = () => {
   return path.join(getProjectRoot(), ".mneme");
 };
 
+const ALLOWED_RULE_FILES = new Set(["dev-rules", "review-guidelines"]);
+
 const listJsonFiles = (dir: string): string[] => {
   if (!fs.existsSync(dir)) {
     return [];
@@ -81,6 +92,104 @@ const listJsonFiles = (dir: string): string[] => {
     return [];
   });
 };
+
+function writeAuditLog(entry: {
+  entity: "session" | "decision" | "pattern" | "rule" | "unit";
+  action: "create" | "update" | "delete";
+  targetId: string;
+  detail?: Record<string, unknown>;
+}) {
+  try {
+    const now = new Date();
+    const auditDir = path.join(getMnemeDir(), "audit");
+    fs.mkdirSync(auditDir, { recursive: true });
+    const auditFile = path.join(
+      auditDir,
+      `${now.toISOString().slice(0, 10)}.jsonl`,
+    );
+    const payload = {
+      timestamp: now.toISOString(),
+      actor: getCurrentUser(),
+      ...entry,
+    };
+    fs.appendFileSync(auditFile, `${JSON.stringify(payload)}\n`);
+  } catch (error) {
+    console.error("Failed to write audit log:", error);
+  }
+}
+
+type UnitStatus = "pending" | "approved" | "rejected";
+type UnitType = "decision" | "pattern" | "rule";
+type RuleKind = "policy" | "pitfall" | "playbook";
+
+interface RuleSourceRef {
+  type: UnitType;
+  id: string;
+}
+
+interface Unit {
+  id: string;
+  type: UnitType;
+  kind: RuleKind;
+  title: string;
+  summary: string;
+  tags: string[];
+  sourceId: string;
+  sourceType: UnitType;
+  sourceRefs: RuleSourceRef[];
+  status: UnitStatus;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+}
+
+interface UnitsFile {
+  schemaVersion: number;
+  updatedAt: string;
+  items: Unit[];
+}
+
+const getUnitsPath = () => path.join(getMnemeDir(), "units", "units.json");
+
+function readUnits(): UnitsFile {
+  const filePath = getUnitsPath();
+  if (!fs.existsSync(filePath)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: new Date().toISOString(),
+      items: [],
+    };
+  }
+
+  const parsed = safeParseJsonFile<UnitsFile>(filePath);
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: new Date().toISOString(),
+      items: [],
+    };
+  }
+  return parsed;
+}
+
+function writeUnits(doc: UnitsFile) {
+  const filePath = getUnitsPath();
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(doc, null, 2));
+}
+
+function makeUnitId(sourceType: UnitType, sourceId: string): string {
+  const safe = sourceId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return `mc-${sourceType}-${safe}`;
+}
+
+function getPatternKind(type: string | undefined): RuleKind {
+  if (type === "error-solution" || type === "bad") {
+    return "pitfall";
+  }
+  return "playbook";
+}
 
 const listDatedJsonFiles = (dir: string): string[] => {
   const files = listJsonFiles(dir);
@@ -470,6 +579,11 @@ app.delete("/api/sessions/:id", async (c) => {
         const month = (date.getMonth() + 1).toString().padStart(2, "0");
         rebuildSessionIndexForMonth(mnemeDir, year, month);
       }
+      writeAuditLog({
+        entity: "session",
+        action: "delete",
+        targetId: id,
+      });
     }
 
     return c.json({
@@ -573,6 +687,11 @@ app.delete("/api/sessions", async (c) => {
         if (fs.existsSync(linkPath)) {
           fs.unlinkSync(linkPath);
         }
+        writeAuditLog({
+          entity: "session",
+          action: "delete",
+          targetId: session.id,
+        });
       }
     }
 
@@ -965,8 +1084,28 @@ app.get("/api/decisions/:id", async (c) => {
   }
 });
 
-// Note: POST/PUT/DELETE for decisions removed - dashboard is read-only
-// Decisions are created via /mneme:save command
+app.delete("/api/decisions/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const decisionsDir = path.join(getMnemeDir(), "decisions");
+  try {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Decision not found" }, 404);
+    }
+
+    fs.unlinkSync(filePath);
+    rebuildAllDecisionIndexes(getMnemeDir());
+    writeAuditLog({
+      entity: "decision",
+      action: "delete",
+      targetId: id,
+    });
+    return c.json({ deleted: 1, id });
+  } catch (error) {
+    console.error("Failed to delete decision:", error);
+    return c.json({ error: "Failed to delete decision" }, 500);
+  }
+});
 
 // Project info
 app.get("/api/info", async (c) => {
@@ -982,6 +1121,9 @@ app.get("/api/info", async (c) => {
 // Rules
 app.get("/api/rules/:id", async (c) => {
   const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
   const dir = rulesDir();
   try {
     const filePath = path.join(dir, `${id}.json`);
@@ -1003,7 +1145,7 @@ app.get("/api/rules/:id", async (c) => {
 app.put("/api/rules/:id", async (c) => {
   const id = c.req.param("id");
   // Only allow known rule types
-  if (id !== "dev-rules" && id !== "review-guidelines") {
+  if (!ALLOWED_RULE_FILES.has(id)) {
     return c.json({ error: "Invalid rule type" }, 400);
   }
   const dir = rulesDir();
@@ -1018,10 +1160,68 @@ app.put("/api/rules/:id", async (c) => {
       return c.json({ error: "Invalid rules format" }, 400);
     }
     fs.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "update",
+      targetId: id,
+      detail: { itemCount: body.items.length },
+    });
     return c.json(body);
   } catch (error) {
     console.error("Failed to update rules:", error);
     return c.json({ error: "Failed to update rules" }, 500);
+  }
+});
+
+app.delete("/api/rules/:id/:ruleId", async (c) => {
+  const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
+
+  const ruleId = sanitizeId(c.req.param("ruleId"));
+  if (!ruleId) {
+    return c.json({ error: "Invalid rule id" }, 400);
+  }
+
+  const filePath = path.join(rulesDir(), `${id}.json`);
+  if (!fs.existsSync(filePath)) {
+    return c.json({ error: "Rules not found" }, 404);
+  }
+
+  try {
+    const doc = safeParseJsonFile<{
+      schemaVersion?: number;
+      createdAt?: string;
+      updatedAt?: string;
+      items?: Array<{ id?: string }>;
+    }>(filePath);
+
+    if (!doc || !Array.isArray(doc.items)) {
+      return c.json({ error: "Invalid rules format" }, 500);
+    }
+
+    const nextItems = doc.items.filter((item) => item.id !== ruleId);
+    if (nextItems.length === doc.items.length) {
+      return c.json({ error: "Rule not found" }, 404);
+    }
+
+    const nextDoc = {
+      ...doc,
+      items: nextItems,
+      updatedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "delete",
+      targetId: ruleId,
+      detail: { ruleType: id },
+    });
+    return c.json({ deleted: 1, id: ruleId, ruleType: id });
+  } catch (error) {
+    console.error("Failed to delete rule:", error);
+    return c.json({ error: "Failed to delete rule" }, 500);
   }
 });
 
@@ -1614,8 +1814,375 @@ app.get("/api/patterns/stats", async (c) => {
   }
 });
 
-// Note: DELETE for patterns removed - dashboard is read-only
-// Patterns are managed via /mneme:save command
+app.delete("/api/patterns/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sourceFile = c.req.query("source");
+  if (!id) {
+    return c.json({ error: "Invalid pattern id" }, 400);
+  }
+  if (!sourceFile) {
+    return c.json({ error: "Missing source file" }, 400);
+  }
+
+  const safeSource = sourceFile.replace(/[^a-zA-Z0-9_-]/g, "");
+  const filePath = path.join(patternsDir(), `${safeSource}.json`);
+  if (!fs.existsSync(filePath)) {
+    return c.json({ error: "Pattern source file not found" }, 404);
+  }
+
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const data = JSON.parse(content) as {
+      items?: Array<{ id?: string }>;
+      patterns?: Array<{ id?: string }>;
+    };
+
+    let deleted = 0;
+    if (Array.isArray(data.items)) {
+      const nextItems = data.items.filter((item) => item.id !== id);
+      deleted = data.items.length - nextItems.length;
+      data.items = nextItems;
+    } else if (Array.isArray(data.patterns)) {
+      const nextPatterns = data.patterns.filter((item) => item.id !== id);
+      deleted = data.patterns.length - nextPatterns.length;
+      data.patterns = nextPatterns;
+    } else {
+      return c.json({ error: "Invalid pattern file format" }, 500);
+    }
+
+    if (deleted === 0) {
+      return c.json({ error: "Pattern not found" }, 404);
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    writeAuditLog({
+      entity: "pattern",
+      action: "delete",
+      targetId: id,
+      detail: { sourceFile: safeSource },
+    });
+    return c.json({ deleted, id, sourceFile: safeSource });
+  } catch (error) {
+    console.error("Failed to delete pattern:", error);
+    return c.json({ error: "Failed to delete pattern" }, 500);
+  }
+});
+
+app.get("/api/units", async (c) => {
+  const status = c.req.query("status") as UnitStatus | undefined;
+  const doc = readUnits();
+  const items =
+    status && ["pending", "approved", "rejected"].includes(status)
+      ? doc.items.filter((item) => item.status === status)
+      : doc.items;
+  return c.json({
+    ...doc,
+    items: items.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    ),
+  });
+});
+
+app.get("/api/units/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  const doc = readUnits();
+  const item = doc.items.find((unit) => unit.id === id);
+  if (!item) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  return c.json(item);
+});
+
+app.get("/api/approval-queue", async (c) => {
+  const doc = readUnits();
+  const pending = doc.items.filter((item) => item.status === "pending");
+  return c.json({
+    pending,
+    totalPending: pending.length,
+    byType: pending.reduce(
+      (acc, item) => {
+        acc[item.type] = (acc[item.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    ),
+  });
+});
+
+app.post("/api/units/generate", async (c) => {
+  const now = new Date().toISOString();
+  const existing = readUnits();
+  const bySourceKey = new Map(
+    existing.items.map((item) => [`${item.sourceType}:${item.sourceId}`, item]),
+  );
+  const generated: Unit[] = [];
+
+  try {
+    const decisionFiles = listDatedJsonFiles(
+      path.join(getMnemeDir(), "decisions"),
+    );
+    for (const filePath of decisionFiles) {
+      const decision = safeParseJsonFile<Record<string, unknown>>(filePath);
+      if (!decision) continue;
+      const sourceId = String(decision.id || "");
+      if (!sourceId) continue;
+      const sourceType: UnitType = "decision";
+      const key = `${sourceType}:${sourceId}`;
+      const previous = bySourceKey.get(key);
+      generated.push({
+        id: previous?.id || makeUnitId(sourceType, sourceId),
+        type: "decision",
+        kind: "policy",
+        title: String(decision.title || sourceId),
+        summary: String(
+          decision.decision || decision.reasoning || decision.title || "",
+        ),
+        tags: Array.isArray(decision.tags)
+          ? decision.tags.map((tag) => String(tag))
+          : [],
+        sourceId,
+        sourceType,
+        sourceRefs: [{ type: sourceType, id: sourceId }],
+        status: previous?.status || "pending",
+        createdAt: previous?.createdAt || now,
+        updatedAt: now,
+        reviewedAt: previous?.reviewedAt,
+        reviewedBy: previous?.reviewedBy,
+      });
+    }
+
+    const ruleFiles = ["dev-rules", "review-guidelines"];
+    for (const ruleFile of ruleFiles) {
+      const filePath = path.join(rulesDir(), `${ruleFile}.json`);
+      const doc = safeParseJsonFile<{ items?: Array<Record<string, unknown>> }>(
+        filePath,
+      );
+      if (!doc || !Array.isArray(doc.items)) continue;
+      for (const rule of doc.items) {
+        const ruleId = String(rule.id || "");
+        if (!ruleId) continue;
+        const sourceType: UnitType = "rule";
+        const sourceId = `${ruleFile}:${ruleId}`;
+        const key = `${sourceType}:${sourceId}`;
+        const previous = bySourceKey.get(key);
+        const title =
+          String(rule.text || rule.title || rule.rule || ruleId) || ruleId;
+        const summary =
+          String(rule.rationale || rule.description || "") || title;
+        generated.push({
+          id: previous?.id || makeUnitId(sourceType, sourceId),
+          type: "rule",
+          kind: "policy",
+          title,
+          summary,
+          tags: Array.isArray(rule.tags)
+            ? rule.tags.map((tag) => String(tag))
+            : [ruleFile],
+          sourceId,
+          sourceType,
+          sourceRefs: [{ type: sourceType, id: sourceId }],
+          status: previous?.status || "pending",
+          createdAt: previous?.createdAt || now,
+          updatedAt: now,
+          reviewedAt: previous?.reviewedAt,
+          reviewedBy: previous?.reviewedBy,
+        });
+      }
+    }
+
+    const patternFiles = listJsonFiles(patternsDir());
+    for (const patternFile of patternFiles) {
+      const sourceName = path.basename(patternFile, ".json");
+      const doc = safeParseJsonFile<{
+        items?: Array<Record<string, unknown>>;
+        patterns?: Array<Record<string, unknown>>;
+      }>(patternFile);
+      const items = doc?.items || doc?.patterns || [];
+      for (const pattern of items) {
+        const patternId = String(pattern.id || "");
+        if (!patternId) continue;
+        const sourceType: UnitType = "pattern";
+        const sourceId = `${sourceName}:${patternId}`;
+        const key = `${sourceType}:${sourceId}`;
+        const previous = bySourceKey.get(key);
+        const title = String(
+          pattern.title ||
+            pattern.errorPattern ||
+            pattern.description ||
+            patternId,
+        );
+        const summary = String(
+          pattern.solution || pattern.description || pattern.errorPattern || "",
+        );
+        generated.push({
+          id: previous?.id || makeUnitId(sourceType, sourceId),
+          type: "pattern",
+          kind: getPatternKind(String(pattern.type || "")),
+          title,
+          summary,
+          tags: Array.isArray(pattern.tags)
+            ? pattern.tags.map((tag) => String(tag))
+            : [sourceName],
+          sourceId,
+          sourceType,
+          sourceRefs: [{ type: sourceType, id: sourceId }],
+          status: previous?.status || "pending",
+          createdAt: previous?.createdAt || now,
+          updatedAt: now,
+          reviewedAt: previous?.reviewedAt,
+          reviewedBy: previous?.reviewedBy,
+        });
+      }
+    }
+
+    const next: UnitsFile = {
+      schemaVersion: 1,
+      updatedAt: now,
+      items: generated.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      ),
+    };
+    writeUnits(next);
+    writeAuditLog({
+      entity: "unit",
+      action: "create",
+      targetId: "units",
+      detail: { count: generated.length },
+    });
+    return c.json({
+      generated: generated.length,
+      pending: generated.filter((item) => item.status === "pending").length,
+      updatedAt: now,
+    });
+  } catch (error) {
+    console.error("Failed to generate units:", error);
+    return c.json({ error: "Failed to generate units" }, 500);
+  }
+});
+
+app.patch("/api/units/:id/status", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const body = (await c.req.json()) as { status?: UnitStatus };
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  if (
+    !body.status ||
+    !["pending", "approved", "rejected"].includes(body.status)
+  ) {
+    return c.json({ error: "Invalid status" }, 400);
+  }
+
+  const doc = readUnits();
+  const index = doc.items.findIndex((item) => item.id === id);
+  if (index === -1) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+
+  const now = new Date().toISOString();
+  const actor = getCurrentUser();
+  const nextItem: Unit = {
+    ...doc.items[index],
+    status: body.status,
+    updatedAt: now,
+    reviewedAt: now,
+    reviewedBy: actor,
+  };
+  doc.items[index] = nextItem;
+  doc.updatedAt = now;
+  writeUnits(doc);
+  writeAuditLog({
+    entity: "unit",
+    action: "update",
+    targetId: id,
+    detail: { status: body.status },
+  });
+
+  return c.json(nextItem);
+});
+
+app.delete("/api/units/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  const doc = readUnits();
+  const nextItems = doc.items.filter((item) => item.id !== id);
+  if (nextItems.length === doc.items.length) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  doc.items = nextItems;
+  doc.updatedAt = new Date().toISOString();
+  writeUnits(doc);
+  writeAuditLog({
+    entity: "unit",
+    action: "delete",
+    targetId: id,
+  });
+  return c.json({ deleted: 1, id });
+});
+
+app.get("/api/knowledge-graph", async (c) => {
+  try {
+    const sessionItems = readAllSessionIndexes(getMnemeDir()).items;
+    const units = readUnits().items.filter(
+      (item) => item.status === "approved",
+    );
+
+    const nodes = [
+      ...sessionItems
+        .filter((item) => item.hasSummary)
+        .map((item) => ({
+          id: `session:${item.id}`,
+          entityType: "session",
+          entityId: item.id,
+          title: item.title,
+          tags: item.tags || [],
+          createdAt: item.createdAt,
+        })),
+      ...units.map((item) => ({
+        id: `unit:${item.id}`,
+        entityType: "unit",
+        entityId: item.id,
+        title: item.title,
+        tags: item.tags || [],
+        createdAt: item.createdAt,
+      })),
+    ];
+
+    const edges: Array<{
+      source: string;
+      target: string;
+      weight: number;
+      sharedTags: string[];
+    }> = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const sharedTags = nodes[i].tags.filter((tag) =>
+          nodes[j].tags.includes(tag),
+        );
+        if (sharedTags.length > 0) {
+          edges.push({
+            source: nodes[i].id,
+            target: nodes[j].id,
+            weight: sharedTags.length,
+            sharedTags,
+          });
+        }
+      }
+    }
+
+    return c.json({ nodes, edges });
+  } catch (error) {
+    console.error("Failed to build knowledge graph:", error);
+    return c.json({ error: "Failed to build knowledge graph" }, 500);
+  }
+});
 
 // Export API
 function sessionToMarkdown(session: Record<string, unknown>): string {

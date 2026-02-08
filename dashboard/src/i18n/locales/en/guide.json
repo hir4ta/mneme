@@ -46,7 +46,7 @@
         },
         {
           "title": "Code Review",
-          "description": "Rule-based code review with support for staged changes and GitHub PRs"
+          "description": "Unit-based code review with support for staged changes and GitHub PRs"
         }
       ]
     },
@@ -64,7 +64,7 @@
         },
         {
           "title": "Save session data",
-          "description": "Run /mneme:save to extract decisions, patterns, and rules from your session",
+          "description": "Run /mneme:save to extract source knowledge and refresh units from your session",
           "code": "/mneme:save"
         },
         {
@@ -83,9 +83,9 @@
       {
         "name": "Plan",
         "command": "/mneme:plan",
-        "description": "Start with memory-informed design. mneme searches past sessions and decisions to provide context.",
+        "description": "Start with memory-informed design. mneme searches past sessions and approved units to provide context.",
         "benefits": [
-          "Automatically surfaces relevant past decisions",
+          "Automatically surfaces relevant approved units",
           "Socratic questions clarify requirements",
           "Task breakdown for organized implementation"
         ],
@@ -98,25 +98,25 @@
         "benefits": [
           "Past patterns guide implementation",
           "Error solutions are readily available",
-          "Consistent with previous decisions"
+          "Consistent with approved guidance"
         ],
         "example": null
       },
       {
         "name": "Save",
         "command": "/mneme:save",
-        "description": "Extract and persist knowledge from your session. Captures decisions, patterns, and rules.",
+        "description": "Extract and persist source knowledge from your session, then regenerate units.",
         "benefits": [
-          "Decisions are documented with reasoning",
-          "Error patterns become searchable",
-          "Rules are extracted for future enforcement"
+          "Decision/pattern/rule sources are preserved with rationale",
+          "Units are regenerated for review/planning",
+          "Approved guidance stays enforceable"
         ],
         "example": "/mneme:save"
       },
       {
         "name": "Review",
         "command": "/mneme:review",
-        "description": "Review code against repository-specific rules and guidelines.",
+        "description": "Review code against approved units.",
         "benefits": [
           "Catches issues before commit",
           "Enforces team standards",
@@ -171,15 +171,16 @@
             "name": "/mneme:save",
             "description": "Save all session data",
             "usage": "/mneme:save",
-            "details": "Extracts and persists: interactions (to local.db), summary, decisions, patterns, and rules. Run anytime during or after a session.",
+            "details": "Extracts and persists: interactions (to local.db), summary, decision/pattern/rule sources, and unit refresh inputs. Run anytime during or after a session.",
             "options": [],
             "phases": [
               "Phase 0: Master Session (merge child sessions)",
               "Phase 1: Interactions (save to local.db)",
               "Phase 2: Summary (title, goal, outcome)",
-              "Phase 3: Decisions (technical choices)",
-              "Phase 4: Patterns (error solutions)",
-              "Phase 5: Rules (dev rules, review guidelines)"
+              "Phase 3: Decisions (source knowledge)",
+              "Phase 4: Patterns (source knowledge)",
+              "Phase 5: Rules (source knowledge)",
+              "Phase 6: Unit refresh (pending approval)"
             ]
           },
           {
@@ -226,7 +227,7 @@
             "name": "/mneme:search",
             "description": "Search saved knowledge",
             "usage": "/mneme:search <query>",
-            "details": "Searches sessions, decisions, patterns, and rules using full-text search.",
+            "details": "Searches sessions and approved units using full-text search.",
             "options": [
               {
                 "name": "query",
@@ -241,9 +242,9 @@
         "commands": [
           {
             "name": "/mneme:review",
-            "description": "Rule-based code review",
+            "description": "Unit-based code review",
             "usage": "/mneme:review [options|PR-URL]",
-            "details": "Reviews code against dev-rules.json and review-guidelines.json. Supports local changes and GitHub PRs.",
+            "details": "Reviews code against approved units. Supports local changes and GitHub PRs.",
             "options": [
               {
                 "name": "--staged",
@@ -276,27 +277,6 @@
               {
                 "name": "PR-URL",
                 "description": "GitHub PR URL (required)"
-              }
-            ]
-          }
-        ]
-      },
-      "reporting": {
-        "title": "Reporting",
-        "commands": [
-          {
-            "name": "/mneme:report",
-            "description": "Generate weekly review report",
-            "usage": "/mneme:report [--from DATE --to DATE]",
-            "details": "Aggregates review results from .mneme/reviews/ into a summary report.",
-            "options": [
-              {
-                "name": "--from",
-                "description": "Start date (YYYY-MM-DD)"
-              },
-              {
-                "name": "--to",
-                "description": "End date (YYYY-MM-DD)"
               }
             ]
           }
@@ -447,11 +427,11 @@
           },
           {
             "question": "How does auto-search work?",
-            "answer": "On each prompt, mneme extracts keywords and searches sessions, decisions, patterns, and rules. Relevant matches are injected as context."
+            "answer": "On each prompt, mneme extracts keywords and searches sessions and approved units. Relevant matches are injected as context."
           },
           {
             "question": "When should I run /mneme:save?",
-            "answer": "Run it after making important decisions, solving complex errors, or before ending a long session. Interactions are auto-saved at session end, but decisions and patterns require manual save."
+            "answer": "Run it after important work or before ending a long session. Interactions are auto-saved at session end; source knowledge extraction and unit refresh require /mneme:save."
           },
           {
             "question": "Can I use mneme across multiple projects?",

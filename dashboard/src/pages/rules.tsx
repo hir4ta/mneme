@@ -1,8 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { deleteRule } from "@/lib/api";
+import { invalidateDashboardData } from "@/lib/invalidate-dashboard-data";
 import type { RuleDocument, RuleItem } from "@/types/rules";
 
 const RULE_TYPES = ["dev-rules", "review-guidelines"] as const;
@@ -102,11 +106,13 @@ function RuleDetailDialog({
   open,
   onOpenChange,
   onSave,
+  onDelete,
 }: {
   item: RuleWithType | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (updated: RuleWithType) => Promise<void>;
+  onDelete: (item: RuleWithType) => Promise<void>;
 }) {
   const { t } = useTranslation("rules");
   const { t: tc } = useTranslation("common");
@@ -114,6 +120,7 @@ function RuleDetailDialog({
   const [draft, setDraft] = useState<RuleWithType | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // Reset state when dialog opens/closes or item changes
   useEffect(() => {
@@ -357,11 +364,39 @@ function RuleDetailDialog({
               </Button>
             </>
           ) : (
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
-              {tc("edit")}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                {tc("edit")}
+              </Button>
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDeleteOpen(true)}
+                disabled={saving}
+              >
+                {saving ? tc("deleting") : tc("delete")}
+              </Button>
+            </div>
           )}
         </DialogFooter>
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title={tc("deleteDialog.title")}
+          description={tc("deleteDialog.description")}
+          onConfirm={async () => {
+            if (!item) return;
+            setSaving(true);
+            try {
+              await onDelete(item);
+              onOpenChange(false);
+            } catch {
+              setError(t("errors.saveFailed"));
+            } finally {
+              setSaving(false);
+            }
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -370,6 +405,7 @@ function RuleDetailDialog({
 export function RulesPage() {
   const { t } = useTranslation("rules");
   const { t: tc } = useTranslation("common");
+  const queryClient = useQueryClient();
   const [documents, setDocuments] = useState<RuleDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -475,6 +511,27 @@ export function RulesPage() {
 
     // Update selected item with new data
     setSelectedItem({ ...cleanedItem, ruleType });
+    await invalidateDashboardData(queryClient);
+  };
+
+  const handleDelete = async (target: RuleWithType) => {
+    const ruleType = target.ruleType;
+    if (!ruleType) throw new Error("Missing rule type");
+
+    await deleteRule(ruleType, target.id);
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc.ruleType !== ruleType
+          ? doc
+          : {
+              ...doc,
+              updatedAt: new Date().toISOString(),
+              items: doc.items.filter((item) => item.id !== target.id),
+            },
+      ),
+    );
+    setSelectedItem(null);
+    await invalidateDashboardData(queryClient);
   };
 
   const hasFilters =
@@ -641,6 +698,7 @@ export function RulesPage() {
         open={!!selectedItem}
         onOpenChange={(open) => !open && setSelectedItem(null)}
         onSave={handleSave}
+        onDelete={handleDelete}
       />
     </div>
   );

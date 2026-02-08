@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path2) {
-      let input = path2;
+    function removeDotSegments(path3) {
+      let input = path3;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path2, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path2 && path2 !== "/" ? path2 : void 0;
+        const [path3, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6776,12 +6776,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs2, exportName) {
+    function addFormats(ajv, list, fs3, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs2[f]);
+        ajv.addFormat(f, fs3[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6790,9 +6790,9 @@ var require_dist = __commonJS({
 });
 
 // servers/db-server.ts
-import * as fs from "node:fs";
+import * as fs2 from "node:fs";
 import * as os from "node:os";
-import * as path from "node:path";
+import * as path2 from "node:path";
 import * as readline from "node:readline";
 
 // node_modules/zod/v3/helpers/util.js
@@ -7154,8 +7154,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path2, errorMaps, issueData } = params;
-  const fullPath = [...path2, ...issueData.path || []];
+  const { data, path: path3, errorMaps, issueData } = params;
+  const fullPath = [...path3, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7270,11 +7270,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path2, key) {
+  constructor(parent, value, path3, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path2;
+    this._path = path3;
     this._key = key;
   }
   get path() {
@@ -10503,7 +10503,6 @@ ZodNaN.create = (params) => {
     ...processCreateParams(params)
   });
 };
-var BRAND = Symbol("zod_brand");
 var ZodBranded = class extends ZodType {
   _parse(input) {
     const { ctx } = this._processInputParams(input);
@@ -11006,7 +11005,7 @@ function $constructor(name, initializer3, params) {
   Object.defineProperty(_, "name", { value: name });
   return _;
 }
-var $brand = Symbol("zod_brand");
+var $brand = /* @__PURE__ */ Symbol("zod_brand");
 var $ZodAsyncError = class extends Error {
   constructor() {
     super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
@@ -11153,7 +11152,7 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-var EVALUATING = Symbol("evaluating");
+var EVALUATING = /* @__PURE__ */ Symbol("evaluating");
 function defineLazy(object3, key, getter) {
   let value = void 0;
   Object.defineProperty(object3, key, {
@@ -11198,10 +11197,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path2) {
-  if (!path2)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path2.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11584,11 +11583,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path2, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path2);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -11771,7 +11770,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path2 = []) => {
+  const processError = (error49, path3 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -11781,7 +11780,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path2, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11813,8 +11812,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path2 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path2) {
+  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path3) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20226,8 +20225,8 @@ function yo_default() {
 
 // node_modules/zod/v4/core/registries.js
 var _a;
-var $output = Symbol("ZodOutput");
-var $input = Symbol("ZodInput");
+var $output = /* @__PURE__ */ Symbol("ZodOutput");
+var $input = /* @__PURE__ */ Symbol("ZodInput");
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new WeakMap();
@@ -21264,7 +21263,7 @@ function _stringbool(Classes, _params) {
     type: "pipe",
     in: stringSchema,
     out: booleanSchema,
-    transform: (input, payload) => {
+    transform: ((input, payload) => {
       let data = input;
       if (params.case !== "sensitive")
         data = data.toLowerCase();
@@ -21283,14 +21282,14 @@ function _stringbool(Classes, _params) {
         });
         return {};
       }
-    },
-    reverseTransform: (input, _payload) => {
+    }),
+    reverseTransform: ((input, _payload) => {
       if (input === true) {
         return truthyArray[0] || "true";
       } else {
         return falsyArray[0] || "false";
       }
-    },
+    }),
     error: params.error
   });
   return codec2;
@@ -22317,10 +22316,10 @@ var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   inst.with = inst.check;
   inst.clone = (_def, params) => clone(inst, _def, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta3) => {
+  inst.register = ((reg, meta3) => {
     reg.add(inst, meta3);
     return inst;
-  };
+  });
   inst.apply = (fn) => fn(inst);
 });
 var ZodMiniObject = /* @__PURE__ */ $constructor("ZodMiniObject", (inst, def) => {
@@ -23047,10 +23046,10 @@ var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   inst.with = inst.check;
   inst.clone = (def2, params) => clone(inst, def2, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta3) => {
+  inst.register = ((reg, meta3) => {
     reg.add(inst, meta3);
     return inst;
-  };
+  });
   inst.parse = (data, params) => parse2(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse3(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
@@ -24220,13 +24219,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path2 = ref.slice(1).split("/").filter(Boolean);
-  if (path2.length === 0) {
+  const path3 = ref.slice(1).split("/").filter(Boolean);
+  if (path3.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path2[0] === defsKey) {
-    const key = path2[1];
+  if (path3[0] === defsKey) {
+    const key = path3[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -25993,11 +25992,13 @@ function assertCompleteRequestPrompt(request) {
   if (request.params.ref.type !== "ref/prompt") {
     throw new TypeError(`Expected CompleteRequestPrompt, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 function assertCompleteRequestResourceTemplate(request) {
   if (request.params.ref.type !== "ref/resource") {
     throw new TypeError(`Expected CompleteRequestResourceTemplate, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 var CompleteResultSchema = ResultSchema.extend({
   completion: looseObject({
@@ -26150,7 +26151,7 @@ function isTerminal(status) {
 }
 
 // node_modules/zod-to-json-schema/dist/esm/Options.js
-var ignoreOverride = Symbol("Let zodToJsonSchema decide on which parser to use");
+var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
   $refStrategy: "root",
@@ -27652,6 +27653,9 @@ var Protocol = class {
    * The Protocol object assumes ownership of the Transport, replacing any callbacks that have already been set, and expects that it is the only user of the Transport instance going forward.
    */
   async connect(transport) {
+    if (this._transport) {
+      throw new Error("Already connected to a transport. Call close() before connecting to a new transport, or use a separate Protocol instance per connection.");
+    }
     this._transport = transport;
     const _onclose = this.transport?.onclose;
     this._transport.onclose = () => {
@@ -27684,6 +27688,10 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
+    for (const controller of this._requestHandlerAbortControllers.values()) {
+      controller.abort();
+    }
+    this._requestHandlerAbortControllers.clear();
     const error48 = McpError.fromError(ErrorCode.ConnectionClosed, "Connection closed");
     this._transport = void 0;
     this.onclose?.();
@@ -27734,6 +27742,8 @@ var Protocol = class {
       sessionId: capturedTransport?.sessionId,
       _meta: request.params?._meta,
       sendNotification: async (notification) => {
+        if (abortController.signal.aborted)
+          return;
         const notificationOptions = { relatedRequestId: request.id };
         if (relatedTaskId) {
           notificationOptions.relatedTask = { taskId: relatedTaskId };
@@ -27741,6 +27751,9 @@ var Protocol = class {
         await this.notification(notification, notificationOptions);
       },
       sendRequest: async (r, resultSchema, options) => {
+        if (abortController.signal.aborted) {
+          throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
+        }
         const requestOptions = { ...options, relatedRequestId: request.id };
         if (relatedTaskId && !requestOptions.relatedTask) {
           requestOptions.relatedTask = { taskId: relatedTaskId };
@@ -28967,7 +28980,7 @@ var Server = class extends Protocol {
 };
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
-var COMPLETABLE_SYMBOL = Symbol.for("mcp.completable");
+var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
 }
@@ -29931,6 +29944,260 @@ var StdioServerTransport = class {
   }
 };
 
+// lib/search-core.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+function escapeRegex2(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function loadTags(mnemeDir) {
+  const tagsPath = path.join(mnemeDir, "tags.json");
+  if (!fs.existsSync(tagsPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(tagsPath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+function expandKeywordsWithAliases(keywords, tags) {
+  if (!tags) return keywords;
+  const expanded = new Set(keywords.map((k) => k.toLowerCase()));
+  for (const keyword of keywords) {
+    const lowerKeyword = keyword.toLowerCase();
+    for (const tag of tags.tags) {
+      const matches = tag.id.toLowerCase() === lowerKeyword || tag.label.toLowerCase() === lowerKeyword || tag.aliases?.some((alias) => alias.toLowerCase() === lowerKeyword);
+      if (!matches) continue;
+      expanded.add(tag.id.toLowerCase());
+      expanded.add(tag.label.toLowerCase());
+      for (const alias of tag.aliases || []) {
+        expanded.add(alias.toLowerCase());
+      }
+    }
+  }
+  return Array.from(expanded);
+}
+function searchInteractions(keywords, projectPath, database, limit = 5) {
+  if (!database) return [];
+  try {
+    const stmt = database.prepare(`
+      SELECT
+        i.session_id,
+        i.content,
+        i.timestamp,
+        highlight(interactions_fts, 0, '[', ']') as content_highlight
+      FROM interactions_fts
+      JOIN interactions i ON interactions_fts.rowid = i.id
+      WHERE interactions_fts MATCH ?
+        AND i.project_path = ?
+      ORDER BY rank
+      LIMIT ?
+    `);
+    const rows = stmt.all(keywords.join(" OR "), projectPath, limit);
+    return rows.map((row) => ({
+      type: "interaction",
+      id: row.session_id,
+      title: `Interaction from ${row.timestamp}`,
+      snippet: (row.content_highlight || row.content).substring(0, 150),
+      score: 5,
+      matchedFields: ["content"]
+    }));
+  } catch {
+    try {
+      const clauses = keywords.map(() => "(content LIKE ? OR thinking LIKE ?)");
+      const sql = `
+        SELECT DISTINCT session_id, substr(content, 1, 120) as snippet, timestamp
+        FROM interactions
+        WHERE project_path = ?
+          AND (${clauses.join(" OR ")})
+        ORDER BY timestamp DESC
+        LIMIT ?
+      `;
+      const args = [projectPath];
+      for (const keyword of keywords) {
+        const pattern = `%${keyword}%`;
+        args.push(pattern, pattern);
+      }
+      args.push(limit);
+      const stmt = database.prepare(sql);
+      const rows = stmt.all(...args);
+      return rows.map((row) => ({
+        type: "interaction",
+        id: row.session_id,
+        title: `Interaction from ${row.timestamp}`,
+        snippet: row.snippet,
+        score: 3,
+        matchedFields: ["content"]
+      }));
+    } catch {
+      return [];
+    }
+  }
+}
+function walkJsonFiles(dir, callback) {
+  if (!fs.existsSync(dir)) return;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+function searchSessions(mnemeDir, keywords, limit = 5) {
+  const sessionsDir = path.join(mnemeDir, "sessions");
+  const results = [];
+  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
+  walkJsonFiles(sessionsDir, (filePath) => {
+    try {
+      const session = JSON.parse(
+        fs.readFileSync(filePath, "utf-8")
+      );
+      const title = session.title || session.summary?.title || "";
+      let score = 0;
+      const matchedFields = [];
+      if (title && pattern.test(title)) {
+        score += 3;
+        matchedFields.push("title");
+      }
+      if (session.tags?.some((t) => pattern.test(t))) {
+        score += 1;
+        matchedFields.push("tags");
+      }
+      if (session.summary?.goal && pattern.test(session.summary.goal)) {
+        score += 2;
+        matchedFields.push("summary.goal");
+      }
+      if (session.summary?.description && pattern.test(session.summary.description)) {
+        score += 2;
+        matchedFields.push("summary.description");
+      }
+      if (session.discussions?.some(
+        (d) => pattern.test(d.topic || "") || pattern.test(d.decision || "")
+      )) {
+        score += 2;
+        matchedFields.push("discussions");
+      }
+      if (session.errors?.some(
+        (e) => pattern.test(e.error || "") || pattern.test(e.solution || "")
+      )) {
+        score += 2;
+        matchedFields.push("errors");
+      }
+      if (score > 0) {
+        results.push({
+          type: "session",
+          id: session.id,
+          title: title || session.id,
+          snippet: session.summary?.description || session.summary?.goal || "",
+          score,
+          matchedFields
+        });
+      }
+    } catch {
+    }
+  });
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function searchUnits(mnemeDir, keywords, limit = 5) {
+  const unitsPath = path.join(mnemeDir, "units", "units.json");
+  const results = [];
+  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
+  if (!fs.existsSync(unitsPath)) return results;
+  try {
+    const cards = JSON.parse(fs.readFileSync(unitsPath, "utf-8"));
+    const items = (cards.items || []).filter(
+      (item) => item.status === "approved"
+    );
+    for (const item of items) {
+      let score = 0;
+      const matchedFields = [];
+      if (item.title && pattern.test(item.title)) {
+        score += 3;
+        matchedFields.push("title");
+      }
+      if (item.summary && pattern.test(item.summary)) {
+        score += 2;
+        matchedFields.push("summary");
+      }
+      if (item.tags?.some((tag) => pattern.test(tag))) {
+        score += 1;
+        matchedFields.push("tags");
+      }
+      if (item.sourceType && pattern.test(item.sourceType)) {
+        score += 1;
+        matchedFields.push("sourceType");
+      }
+      if (score > 0) {
+        results.push({
+          type: "unit",
+          id: item.id,
+          title: item.title || item.id,
+          snippet: item.summary || "",
+          score,
+          matchedFields
+        });
+      }
+    }
+  } catch {
+  }
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function normalizeRequestedTypes(types) {
+  const normalized = /* @__PURE__ */ new Set();
+  for (const type of types) {
+    normalized.add(type);
+  }
+  return normalized;
+}
+function searchKnowledge(options) {
+  const {
+    query,
+    mnemeDir,
+    projectPath,
+    database = null,
+    types = ["session", "unit", "interaction"],
+    limit = 10,
+    offset = 0
+  } = options;
+  const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
+  if (keywords.length === 0) return [];
+  const expandedKeywords = expandKeywordsWithAliases(
+    keywords,
+    loadTags(mnemeDir)
+  );
+  const results = [];
+  const safeOffset = Math.max(0, offset);
+  const fetchLimit = Math.max(limit + safeOffset, limit, 10);
+  const normalizedTypes = normalizeRequestedTypes(types);
+  if (normalizedTypes.has("session")) {
+    results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
+  }
+  if (normalizedTypes.has("unit")) {
+    results.push(...searchUnits(mnemeDir, expandedKeywords, fetchLimit));
+  }
+  if (normalizedTypes.has("interaction")) {
+    results.push(
+      ...searchInteractions(
+        expandedKeywords,
+        projectPath,
+        database,
+        fetchLimit
+      )
+    );
+  }
+  const seen = /* @__PURE__ */ new Set();
+  return results.sort((a, b) => b.score - a.score).filter((result) => {
+    const key = `${result.type}:${result.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(safeOffset, safeOffset + limit);
+}
+
 // servers/db-server.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
@@ -29940,17 +30207,187 @@ process.emit = (event, ...args) => {
   return originalEmit.apply(process, [event, ...args]);
 };
 var { DatabaseSync } = await import("node:sqlite");
+var LIST_LIMIT_MIN = 1;
+var LIST_LIMIT_MAX = 200;
+var INTERACTION_OFFSET_MIN = 0;
+var QUERY_MAX_LENGTH = 500;
+var UNIT_LIMIT_MAX = 500;
+var SEARCH_EVAL_DEFAULT_LIMIT = 5;
+function ok(text) {
+  return { content: [{ type: "text", text }] };
+}
+function fail(message) {
+  return {
+    content: [{ type: "text", text: message }],
+    isError: true
+  };
+}
 function getProjectPath() {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 function getLocalDbPath() {
-  return path.join(getProjectPath(), ".mneme", "local.db");
+  return path2.join(getProjectPath(), ".mneme", "local.db");
+}
+function getMnemeDir() {
+  return path2.join(getProjectPath(), ".mneme");
+}
+function readJsonFile(filePath) {
+  if (!fs2.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs2.readFileSync(filePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+function listJsonFiles(dir) {
+  if (!fs2.existsSync(dir)) return [];
+  const entries = fs2.readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const fullPath = path2.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return listJsonFiles(fullPath);
+    }
+    return entry.isFile() && entry.name.endsWith(".json") ? [fullPath] : [];
+  });
+}
+function readUnits() {
+  const unitsPath = path2.join(getMnemeDir(), "units", "units.json");
+  const parsed = readJsonFile(unitsPath);
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      items: []
+    };
+  }
+  return parsed;
+}
+function writeUnits(doc) {
+  const unitsPath = path2.join(getMnemeDir(), "units", "units.json");
+  fs2.mkdirSync(path2.dirname(unitsPath), { recursive: true });
+  fs2.writeFileSync(unitsPath, JSON.stringify(doc, null, 2));
+}
+function readRuleItems(ruleType) {
+  const filePath = path2.join(getMnemeDir(), "rules", `${ruleType}.json`);
+  const parsed = readJsonFile(filePath);
+  const items = parsed?.items ?? parsed?.rules;
+  return Array.isArray(items) ? items : [];
+}
+function readAuditEntries(options = {}) {
+  const auditDir = path2.join(getMnemeDir(), "audit");
+  if (!fs2.existsSync(auditDir)) return [];
+  const files = fs2.readdirSync(auditDir).filter((name) => name.endsWith(".jsonl")).sort();
+  const fromTime = options.from ? new Date(options.from).getTime() : null;
+  const toTime = options.to ? new Date(options.to).getTime() : null;
+  const entries = [];
+  for (const name of files) {
+    const fullPath = path2.join(auditDir, name);
+    const lines = fs2.readFileSync(fullPath, "utf-8").split("\n");
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const parsed = JSON.parse(line);
+        const ts = new Date(parsed.timestamp).getTime();
+        if (fromTime !== null && ts < fromTime) continue;
+        if (toTime !== null && ts > toTime) continue;
+        if (options.entity && parsed.entity !== options.entity) continue;
+        entries.push(parsed);
+      } catch {
+      }
+    }
+  }
+  return entries.sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+}
+function readSessionsById() {
+  const sessionsDir = path2.join(getMnemeDir(), "sessions");
+  const map2 = /* @__PURE__ */ new Map();
+  for (const filePath of listJsonFiles(sessionsDir)) {
+    const parsed = readJsonFile(filePath);
+    const id = typeof parsed?.id === "string" ? parsed.id : "";
+    if (!id) continue;
+    map2.set(id, parsed);
+  }
+  return map2;
+}
+function inferUnitPriority(unit) {
+  if (unit.sourceType === "rule") {
+    const [ruleFile, ruleId] = unit.sourceId.split(":", 2);
+    if ((ruleFile === "dev-rules" || ruleFile === "review-guidelines") && ruleId) {
+      const rule = readRuleItems(ruleFile).find((item) => item.id === ruleId);
+      const priority = typeof rule?.priority === "string" ? rule.priority.toLowerCase() : "";
+      if (priority === "p0" || priority === "p1" || priority === "p2") {
+        return priority;
+      }
+    }
+  }
+  const text = `${unit.title} ${unit.summary} ${unit.tags.join(" ")}`.toLowerCase();
+  if (/(security|auth|token|secret|password|injection|xss|csrf|compliance|outage|data[- ]?loss)/.test(
+    text
+  )) {
+    return "p0";
+  }
+  if (/(crash|error|correct|reliab|timeout|retry|integrity)/.test(text)) {
+    return "p1";
+  }
+  return "p2";
+}
+function extractChangedFilesFromDiff(diffText) {
+  const files = /* @__PURE__ */ new Set();
+  const lines = diffText.split("\n");
+  for (const line of lines) {
+    if (!line.startsWith("diff --git ")) continue;
+    const parts = line.split(" ");
+    if (parts.length >= 4) {
+      const bPath = parts[3].replace(/^b\//, "");
+      if (bPath) files.add(bPath);
+    }
+  }
+  return Array.from(files);
+}
+function scoreUnitAgainstDiff(unit, diffText, changedFiles) {
+  const reasons = [];
+  let score = 0;
+  const corpus = `${unit.title} ${unit.summary}`.toLowerCase();
+  const diffLower = diffText.toLowerCase();
+  for (const tag of unit.tags) {
+    if (!tag) continue;
+    const tagLower = tag.toLowerCase();
+    if (diffLower.includes(tagLower)) {
+      score += 3;
+      reasons.push(`tag:${tag}`);
+    }
+  }
+  const keywords = corpus.split(/[^a-zA-Z0-9_-]+/).filter((token) => token.length >= 5).slice(0, 20);
+  for (const token of keywords) {
+    if (diffLower.includes(token)) {
+      score += 1;
+      reasons.push(`keyword:${token}`);
+    }
+  }
+  for (const filePath of changedFiles) {
+    const lower = filePath.toLowerCase();
+    if (corpus.includes("test") && lower.includes("test")) {
+      score += 1;
+      reasons.push("path:test");
+    }
+    if ((corpus.includes("api") || unit.tags.includes("api")) && (lower.includes("api") || lower.includes("route"))) {
+      score += 1;
+      reasons.push("path:api");
+    }
+    if ((corpus.includes("db") || corpus.includes("sql")) && (lower.includes("db") || lower.includes("prisma") || lower.includes("migration"))) {
+      score += 1;
+      reasons.push("path:db");
+    }
+  }
+  return { score, reasons: Array.from(new Set(reasons)) };
 }
 var db = null;
 function getDb() {
   if (db) return db;
   const dbPath = getLocalDbPath();
-  if (!fs.existsSync(dbPath)) {
+  if (!fs2.existsSync(dbPath)) {
     return null;
   }
   try {
@@ -30184,17 +30621,17 @@ function crossProjectSearch(query, options = {}) {
 function getTranscriptPath(claudeSessionId) {
   const projectPath = getProjectPath();
   const encodedPath = projectPath.replace(/\//g, "-");
-  const transcriptPath = path.join(
+  const transcriptPath = path2.join(
     os.homedir(),
     ".claude",
     "projects",
     encodedPath,
     `${claudeSessionId}.jsonl`
   );
-  return fs.existsSync(transcriptPath) ? transcriptPath : null;
+  return fs2.existsSync(transcriptPath) ? transcriptPath : null;
 }
 async function parseTranscript(transcriptPath) {
-  const fileStream = fs.createReadStream(transcriptPath);
+  const fileStream = fs2.createReadStream(transcriptPath);
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Number.POSITIVE_INFINITY
@@ -30492,6 +30929,69 @@ function markSessionCommitted(claudeSessionId) {
     return false;
   }
 }
+function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT) {
+  const queryPath = path2.join(
+    getProjectPath(),
+    "scripts",
+    "search-benchmark.queries.json"
+  );
+  const queryDoc = readJsonFile(queryPath);
+  const queries = Array.isArray(queryDoc?.queries) ? queryDoc.queries : [];
+  const details = [];
+  if (queries.length === 0) {
+    return { queryCount: 0, hits: 0, recall: 0, details };
+  }
+  const mnemeDir = getMnemeDir();
+  const database = getDb();
+  let hits = 0;
+  for (const item of queries) {
+    const results = searchKnowledge({
+      query: item.query,
+      mnemeDir,
+      projectPath: getProjectPath(),
+      database,
+      limit
+    });
+    const corpus = results.map(
+      (result) => `${result.title} ${result.snippet} ${result.matchedFields.join(" ")}`
+    ).join(" ").toLowerCase();
+    const matched = item.expectedTerms.some(
+      (term) => corpus.includes(String(term).toLowerCase())
+    );
+    if (matched) hits += 1;
+    details.push({
+      query: item.query,
+      matched,
+      topResult: results[0] ? `${results[0].type}:${results[0].id}` : "none",
+      resultCount: results.length
+    });
+  }
+  return {
+    queryCount: queries.length,
+    hits,
+    recall: queries.length > 0 ? hits / queries.length : 0,
+    details
+  };
+}
+function buildUnitGraph(units) {
+  const approved = units.filter((unit) => unit.status === "approved");
+  const edges = [];
+  for (let i = 0; i < approved.length; i++) {
+    for (let j = i + 1; j < approved.length; j++) {
+      const shared = approved[i].tags.filter(
+        (tag) => approved[j].tags.includes(tag)
+      );
+      if (shared.length > 0) {
+        edges.push({
+          source: approved[i].id,
+          target: approved[j].id,
+          weight: shared.length
+        });
+      }
+    }
+  }
+  return { nodes: approved, edges };
+}
 var server = new McpServer({
   name: "mneme-db",
   version: "0.1.0"
@@ -30503,10 +31003,11 @@ server.registerTool(
     inputSchema: {}
   },
   async () => {
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const projects = listProjects();
-    return {
-      content: [{ type: "text", text: JSON.stringify(projects, null, 2) }]
-    };
+    return ok(JSON.stringify(projects, null, 2));
   }
 );
 server.registerTool(
@@ -30516,14 +31017,17 @@ server.registerTool(
     inputSchema: {
       projectPath: external_exports3.string().optional().describe("Filter by project path"),
       repository: external_exports3.string().optional().describe("Filter by repository (owner/repo)"),
-      limit: external_exports3.number().optional().describe("Maximum results (default: 20)")
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(LIST_LIMIT_MAX).optional().describe(
+        `Maximum results (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 20)`
+      )
     }
   },
   async ({ projectPath, repository, limit }) => {
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const sessions = listSessions({ projectPath, repository, limit });
-    return {
-      content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }]
-    };
+    return ok(JSON.stringify(sessions, null, 2));
   }
 );
 server.registerTool(
@@ -30532,25 +31036,24 @@ server.registerTool(
     description: "Get conversation interactions for a specific session",
     inputSchema: {
       sessionId: external_exports3.string().describe("Session ID (full UUID or short form)"),
-      limit: external_exports3.number().optional().describe("Maximum messages (default: 50)"),
-      offset: external_exports3.number().optional().describe("Offset for pagination (default: 0)")
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(LIST_LIMIT_MAX).optional().describe(
+        `Maximum messages (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 50)`
+      ),
+      offset: external_exports3.number().int().min(INTERACTION_OFFSET_MIN).optional().describe("Offset for pagination (default: 0)")
     }
   },
   async ({ sessionId, limit, offset }) => {
+    if (!sessionId.trim()) {
+      return fail("sessionId must not be empty.");
+    }
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
     const interactions = getInteractions(sessionId, { limit, offset });
     if (interactions.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `No interactions found for session: ${sessionId}`
-          }
-        ]
-      };
+      return fail(`No interactions found for session: ${sessionId}`);
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(interactions, null, 2) }]
-    };
+    return ok(JSON.stringify(interactions, null, 2));
   }
 );
 server.registerTool(
@@ -30562,14 +31065,9 @@ server.registerTool(
   async () => {
     const stats = getStats();
     if (!stats) {
-      return {
-        content: [{ type: "text", text: "Database not available" }],
-        isError: true
-      };
+      return fail("Database not available.");
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(stats, null, 2) }]
-    };
+    return ok(JSON.stringify(stats, null, 2));
   }
 );
 server.registerTool(
@@ -30577,15 +31075,22 @@ server.registerTool(
   {
     description: "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
     inputSchema: {
-      query: external_exports3.string().describe("Search query"),
-      limit: external_exports3.number().optional().describe("Maximum results (default: 10)")
+      query: external_exports3.string().max(QUERY_MAX_LENGTH).describe("Search query"),
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(LIST_LIMIT_MAX).optional().describe(
+        `Maximum results (${LIST_LIMIT_MIN}-${LIST_LIMIT_MAX}, default: 10)`
+      )
     }
   },
   async ({ query, limit }) => {
-    const results = crossProjectSearch(query, { limit });
-    return {
-      content: [{ type: "text", text: JSON.stringify(results, null, 2) }]
-    };
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return fail("query must not be empty.");
+    }
+    if (!getDb()) {
+      return fail("Database not available.");
+    }
+    const results = crossProjectSearch(trimmedQuery, { limit });
+    return ok(JSON.stringify(results, null, 2));
   }
 );
 server.registerTool(
@@ -30593,21 +31098,19 @@ server.registerTool(
   {
     description: "Save conversation interactions from Claude Code transcript to SQLite. Use this during /mneme:save to persist the conversation history. Reads the transcript file directly and extracts user/assistant messages.",
     inputSchema: {
-      claudeSessionId: external_exports3.string().describe("Full Claude Code session UUID (36 chars)"),
+      claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
       mnemeSessionId: external_exports3.string().optional().describe(
         "Mneme session ID (8 chars). If not provided, uses first 8 chars of claudeSessionId"
       )
     }
   },
   async ({ claudeSessionId, mnemeSessionId }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
     const result = await saveInteractions(claudeSessionId, mnemeSessionId);
     return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2)
-        }
-      ],
+      ...ok(JSON.stringify(result, null, 2)),
       isError: !result.success
     };
   }
@@ -30617,20 +31120,458 @@ server.registerTool(
   {
     description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",
     inputSchema: {
-      claudeSessionId: external_exports3.string().describe("Full Claude Code session UUID (36 chars)")
+      claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)")
     }
   },
   async ({ claudeSessionId }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
     const success2 = markSessionCommitted(claudeSessionId);
     return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({ success: success2, claudeSessionId }, null, 2)
-        }
-      ],
+      ...ok(JSON.stringify({ success: success2, claudeSessionId }, null, 2)),
       isError: !success2
     };
+  }
+);
+server.registerTool(
+  "mneme_unit_queue_list_pending",
+  {
+    description: "List pending units in the approval queue. Use this in save/review flows to surface actionable approvals.",
+    inputSchema: {
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(UNIT_LIMIT_MAX).optional().describe(
+        `Maximum items (${LIST_LIMIT_MIN}-${UNIT_LIMIT_MAX}, default: 100)`
+      )
+    }
+  },
+  async ({ limit }) => {
+    const units = readUnits().items.filter((item) => item.status === "pending").sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    ).slice(0, limit ?? 100);
+    return ok(
+      JSON.stringify(
+        {
+          count: units.length,
+          items: units
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_unit_queue_update_status",
+  {
+    description: "Update unit status (approve/reject/pending) in bulk or single item.",
+    inputSchema: {
+      unitIds: external_exports3.array(external_exports3.string().min(1)).min(1).describe("Target unit IDs"),
+      status: external_exports3.enum(["pending", "approved", "rejected"]).describe("New status"),
+      reviewedBy: external_exports3.string().optional().describe("Reviewer name (optional)")
+    }
+  },
+  async ({ unitIds, status, reviewedBy }) => {
+    const doc = readUnits();
+    const target = new Set(unitIds);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    let updated = 0;
+    doc.items = doc.items.map((item) => {
+      if (!target.has(item.id)) return item;
+      updated += 1;
+      return {
+        ...item,
+        status,
+        reviewedAt: now,
+        reviewedBy,
+        updatedAt: now
+      };
+    });
+    doc.updatedAt = now;
+    writeUnits(doc);
+    return ok(
+      JSON.stringify(
+        { updated, status, requested: unitIds.length, updatedAt: now },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_unit_apply_suggest_for_diff",
+  {
+    description: "Suggest top approved units for a given git diff text. Intended for automatic review integration.",
+    inputSchema: {
+      diff: external_exports3.string().min(1).describe("Unified diff text"),
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(50).optional().describe("Maximum suggested units (default: 10)")
+    }
+  },
+  async ({ diff, limit }) => {
+    const changedFiles = extractChangedFilesFromDiff(diff);
+    const approved = readUnits().items.filter(
+      (item) => item.status === "approved"
+    );
+    const scored = approved.map((unit) => {
+      const { score, reasons } = scoreUnitAgainstDiff(
+        unit,
+        diff,
+        changedFiles
+      );
+      return { unit, score, reasons };
+    }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, limit ?? 10);
+    return ok(
+      JSON.stringify(
+        {
+          changedFiles,
+          suggestions: scored.map((item) => ({
+            id: item.unit.id,
+            title: item.unit.title,
+            score: item.score,
+            reasons: item.reasons,
+            source: `${item.unit.sourceType}:${item.unit.sourceId}`
+          }))
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_unit_apply_explain_match",
+  {
+    description: "Explain why a specific unit matches a diff.",
+    inputSchema: {
+      unitId: external_exports3.string().min(1).describe("Unit ID"),
+      diff: external_exports3.string().min(1).describe("Unified diff text")
+    }
+  },
+  async ({ unitId, diff }) => {
+    const unit = readUnits().items.find((item) => item.id === unitId);
+    if (!unit) return fail(`Unit not found: ${unitId}`);
+    const changedFiles = extractChangedFilesFromDiff(diff);
+    const scored = scoreUnitAgainstDiff(unit, diff, changedFiles);
+    return ok(
+      JSON.stringify(
+        {
+          unitId,
+          title: unit.title,
+          score: scored.score,
+          reasons: scored.reasons,
+          priority: inferUnitPriority(unit),
+          changedFiles
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_session_timeline",
+  {
+    description: "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
+    inputSchema: {
+      sessionId: external_exports3.string().min(1).describe("Session ID (short or full)"),
+      includeChain: external_exports3.boolean().optional().describe("Include resumedFrom chain and workPeriods (default: true)")
+    }
+  },
+  async ({ sessionId, includeChain }) => {
+    const sessions = readSessionsById();
+    const shortId = sessionId.slice(0, 8);
+    const root = sessions.get(shortId);
+    if (!root) return fail(`Session not found: ${shortId}`);
+    const chain = [shortId];
+    if (includeChain !== false) {
+      let current = root;
+      let guard = 0;
+      while (current && typeof current.resumedFrom === "string" && current.resumedFrom && guard < 30) {
+        chain.push(current.resumedFrom);
+        current = sessions.get(current.resumedFrom);
+        guard += 1;
+      }
+    }
+    const dbAvailable = !!getDb();
+    const timeline = chain.map((id) => {
+      const session = sessions.get(id) || {};
+      let interactionCount = 0;
+      if (dbAvailable) {
+        interactionCount = getInteractions(id, {
+          limit: 1e3,
+          offset: 0
+        }).length;
+      }
+      return {
+        id,
+        title: typeof session.title === "string" ? session.title : null,
+        createdAt: typeof session.createdAt === "string" ? session.createdAt : null,
+        endedAt: typeof session.endedAt === "string" ? session.endedAt : null,
+        resumedFrom: typeof session.resumedFrom === "string" ? session.resumedFrom : null,
+        interactionCount
+      };
+    });
+    return ok(
+      JSON.stringify(
+        {
+          rootSessionId: shortId,
+          dbAvailable,
+          chainLength: timeline.length,
+          timeline
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_rule_linter",
+  {
+    description: "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
+    inputSchema: {
+      ruleType: external_exports3.enum(["dev-rules", "review-guidelines", "all"]).optional().describe("Rule set to lint (default: all)")
+    }
+  },
+  async ({ ruleType }) => {
+    const targets = ruleType && ruleType !== "all" ? [ruleType] : ["dev-rules", "review-guidelines"];
+    const issues = [];
+    for (const type of targets) {
+      const items = readRuleItems(type);
+      const seenKeys = /* @__PURE__ */ new Set();
+      for (const raw of items) {
+        const id = typeof raw.id === "string" ? raw.id : "(unknown)";
+        const text = typeof raw.text === "string" ? raw.text : typeof raw.rule === "string" ? raw.rule : "";
+        const priority = typeof raw.priority === "string" ? raw.priority.toLowerCase() : "";
+        const tags = Array.isArray(raw.tags) ? raw.tags : [];
+        const key = `${type}:${String(raw.key || id)}`;
+        if (!raw.id) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing id"
+          });
+        }
+        if (!raw.key) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing key"
+          });
+        }
+        if (!text.trim()) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Missing text/rule"
+          });
+        }
+        if (!raw.category) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Missing category"
+          });
+        }
+        if (tags.length === 0) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Missing tags"
+          });
+        }
+        if (!["p0", "p1", "p2"].includes(priority)) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "error",
+            message: "Invalid priority (p0|p1|p2 required)"
+          });
+        }
+        if (seenKeys.has(key)) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Duplicate key"
+          });
+        }
+        seenKeys.add(key);
+        if (text.trim().length > 180) {
+          issues.push({
+            ruleType: type,
+            id,
+            level: "warning",
+            message: "Rule text too long (consider splitting)"
+          });
+        }
+      }
+    }
+    return ok(
+      JSON.stringify(
+        {
+          checked: targets,
+          totalIssues: issues.length,
+          errors: issues.filter((issue2) => issue2.level === "error").length,
+          warnings: issues.filter((issue2) => issue2.level === "warning").length,
+          issues
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_graph_insights",
+  {
+    description: "Compute graph insights from approved units: central units, tag communities, orphan units.",
+    inputSchema: {
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(100).optional().describe("Limit for ranked outputs (default: 10)")
+    }
+  },
+  async ({ limit }) => {
+    const k = limit ?? 10;
+    const units = readUnits().items.filter(
+      (item) => item.status === "approved"
+    );
+    const graph = buildUnitGraph(units);
+    const degree = /* @__PURE__ */ new Map();
+    for (const unit of graph.nodes) degree.set(unit.id, 0);
+    for (const edge of graph.edges) {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    }
+    const topCentral = graph.nodes.map((unit) => ({
+      id: unit.id,
+      title: unit.title,
+      degree: degree.get(unit.id) || 0
+    })).sort((a, b) => b.degree - a.degree).slice(0, k);
+    const tagCounts = /* @__PURE__ */ new Map();
+    for (const unit of graph.nodes) {
+      for (const tag of unit.tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+    }
+    const communities = Array.from(tagCounts.entries()).map(([tag, count]) => ({
+      tag,
+      count
+    })).sort((a, b) => b.count - a.count).slice(0, k);
+    const orphans = graph.nodes.filter((unit) => (degree.get(unit.id) || 0) === 0).map((unit) => ({
+      id: unit.id,
+      title: unit.title,
+      tags: unit.tags
+    })).slice(0, k);
+    return ok(
+      JSON.stringify(
+        {
+          approvedUnits: graph.nodes.length,
+          edges: graph.edges.length,
+          topCentral,
+          tagCommunities: communities,
+          orphanUnits: orphans
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
+  "mneme_search_eval",
+  {
+    description: "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
+    inputSchema: {
+      mode: external_exports3.enum(["run", "compare", "regression"]).optional().describe(
+        "run=single, compare=against baseline, regression=threshold check"
+      ),
+      baselineRecall: external_exports3.number().min(0).max(1).optional().describe("Baseline recall for compare/regression"),
+      thresholdDrop: external_exports3.number().min(0).max(1).optional().describe("Allowed recall drop for regression (default: 0.05)"),
+      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(50).optional().describe("Top-k results per query (default: 5)")
+    }
+  },
+  async ({ mode, baselineRecall, thresholdDrop, limit }) => {
+    const run = runSearchBenchmark(limit ?? SEARCH_EVAL_DEFAULT_LIMIT);
+    const payload = {
+      mode: mode || "run",
+      queryCount: run.queryCount,
+      hits: run.hits,
+      recall: run.recall,
+      details: run.details
+    };
+    if ((mode === "compare" || mode === "regression") && baselineRecall !== void 0) {
+      const delta = run.recall - baselineRecall;
+      payload.baselineRecall = baselineRecall;
+      payload.delta = delta;
+      if (mode === "regression") {
+        const allowed = thresholdDrop ?? 0.05;
+        payload.thresholdDrop = allowed;
+        payload.regression = delta < -allowed;
+      }
+    }
+    return ok(JSON.stringify(payload, null, 2));
+  }
+);
+server.registerTool(
+  "mneme_audit_query",
+  {
+    description: "Query unit-related audit logs and summarize change history.",
+    inputSchema: {
+      from: external_exports3.string().optional().describe("Start ISO date/time"),
+      to: external_exports3.string().optional().describe("End ISO date/time"),
+      targetId: external_exports3.string().optional().describe("Filter by target unit ID"),
+      summaryMode: external_exports3.enum(["changes", "actors", "target"]).optional().describe(
+        "changes=list, actors=aggregate by actor, target=single target history"
+      )
+    }
+  },
+  async ({ from, to, targetId, summaryMode }) => {
+    const entries = readAuditEntries({ from, to, entity: "unit" }).filter(
+      (entry) => targetId ? entry.targetId === targetId : true
+    );
+    if ((summaryMode || "changes") === "actors") {
+      const byActor = /* @__PURE__ */ new Map();
+      for (const entry of entries) {
+        const actor = entry.actor || "unknown";
+        byActor.set(actor, (byActor.get(actor) || 0) + 1);
+      }
+      return ok(
+        JSON.stringify(
+          {
+            total: entries.length,
+            actors: Array.from(byActor.entries()).map(([actor, count]) => ({ actor, count })).sort((a, b) => b.count - a.count)
+          },
+          null,
+          2
+        )
+      );
+    }
+    if ((summaryMode || "changes") === "target" && targetId) {
+      return ok(
+        JSON.stringify(
+          {
+            targetId,
+            history: entries
+          },
+          null,
+          2
+        )
+      );
+    }
+    return ok(
+      JSON.stringify(
+        {
+          total: entries.length,
+          changes: entries
+        },
+        null,
+        2
+      )
+    );
   }
 );
 async function main() {

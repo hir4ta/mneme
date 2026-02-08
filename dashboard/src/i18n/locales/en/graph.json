@@ -1,29 +1,86 @@
 {
-  "title": "Session Graph",
-  "subtitle": "Sessions connected by shared tags",
+  "title": "Knowledge Graph",
+  "subtitle": "A visual map of how past sessions and units are connected through tags",
   "noSessions": "No sessions to display",
   "howToRead": {
     "title": "How to Read",
-    "nodes": "Sessions (colored by type)",
-    "lines": "Shared tags between sessions (thicker = more shared)",
-    "clickHint": "Click a node to view session details. Hover to see info in the panel below."
+    "nodes": "Knowledge entities (colored by type)",
+    "lines": "Shared tags between entities (thicker = more shared)",
+    "clickHint": "Click a node to inspect details in a dialog. Hover to inspect details."
   },
-  "sessionTypes": "Session Types",
+  "sessionTypes": "Entity Types",
   "selectedSession": "Selected Session",
   "clickToViewDetails": "Click to view details",
   "graphStats": {
     "title": "Graph Stats",
     "nodes": "Nodes",
-    "connections": "Connections"
+    "connections": "Connections",
+    "avgDegree": "Average Degree",
+    "clusters": "Clusters",
+    "largestCluster": "Largest Cluster",
+    "density": "Density"
+  },
+  "controls": {
+    "title": "Visualization Controls",
+    "search": "Search",
+    "searchPlaceholder": "Search title or tags",
+    "type": "Type",
+    "types": {
+      "all": "All"
+    },
+    "minWeight": "Minimum Shared Tags",
+    "minWeightValue": "{{value}}+",
+    "colorMode": "Color Mode",
+    "colorModes": {
+      "type": "By Type",
+      "cluster": "By Cluster"
+    },
+    "timeWindow": "Time Window",
+    "timeAll": "All Time",
+    "timeDays": "Last {{days}} days",
+    "focusDepth": "Focus Depth",
+    "depthValue": "Depth {{value}}",
+    "focusSelected": "Focus selected",
+    "clearFocus": "Clear focus",
+    "tagsAll": "All Tags"
+  },
+  "topTags": {
+    "title": "Top Shared Tags",
+    "empty": "No tags"
+  },
+  "centrality": {
+    "title": "Central Nodes",
+    "empty": "No nodes"
+  },
+  "detail": {
+    "titleFallback": "Untitled",
+    "id": "ID",
+    "connectedNodes": "Connected",
+    "createdAt": "Created",
+    "summary": "Summary",
+    "noSummary": "No summary available",
+    "relatedNodes": "Related Nodes",
+    "focusThisNode": "Focus this node",
+    "sharedTagsCount": "Shared tags: {{count}}",
+    "unitType": {
+      "decision": "Decision",
+      "pattern": "Pattern",
+      "rule": "Rule"
+    },
+    "unitStatus": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "unitKind": {
+      "policy": "Policy",
+      "pitfall": "Pitfall",
+      "playbook": "Playbook"
+    }
   },
   "types": {
-    "decision": "decision",
-    "implementation": "implementation",
-    "research": "research",
-    "exploration": "exploration",
-    "discussion": "discussion",
-    "debug": "debug",
-    "review": "review",
+    "session": "session",
+    "unit": "unit",
     "unknown": "unknown"
   }
 }

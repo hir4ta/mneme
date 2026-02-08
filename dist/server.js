@@ -45,7 +45,7 @@ var newHeadersFromIncoming = (incoming) => {
   }
   return new Headers(headerRecord);
 };
-var wrapBodyStream = Symbol("wrapBodyStream");
+var wrapBodyStream = /* @__PURE__ */ Symbol("wrapBodyStream");
 var newRequestFromIncoming = (method, url, headers, incoming, abortController) => {
   const init = {
     method,
@@ -93,13 +93,13 @@ var newRequestFromIncoming = (method, url, headers, incoming, abortController) =
   }
   return new Request2(url, init);
 };
-var getRequestCache = Symbol("getRequestCache");
-var requestCache = Symbol("requestCache");
-var incomingKey = Symbol("incomingKey");
-var urlKey = Symbol("urlKey");
-var headersKey = Symbol("headersKey");
-var abortControllerKey = Symbol("abortControllerKey");
-var getAbortController = Symbol("getAbortController");
+var getRequestCache = /* @__PURE__ */ Symbol("getRequestCache");
+var requestCache = /* @__PURE__ */ Symbol("requestCache");
+var incomingKey = /* @__PURE__ */ Symbol("incomingKey");
+var urlKey = /* @__PURE__ */ Symbol("urlKey");
+var headersKey = /* @__PURE__ */ Symbol("headersKey");
+var abortControllerKey = /* @__PURE__ */ Symbol("abortControllerKey");
+var getAbortController = /* @__PURE__ */ Symbol("getAbortController");
 var requestPrototype = {
   get method() {
     return this[incomingKey].method || "GET";
@@ -190,9 +190,9 @@ var newRequest = (incoming, defaultHostname) => {
   req[urlKey] = url.href;
   return req;
 };
-var responseCache = Symbol("responseCache");
-var getResponseCache = Symbol("getResponseCache");
-var cacheKey = Symbol("cache");
+var responseCache = /* @__PURE__ */ Symbol("responseCache");
+var getResponseCache = /* @__PURE__ */ Symbol("getResponseCache");
+var cacheKey = /* @__PURE__ */ Symbol("cache");
 var GlobalResponse = global.Response;
 var Response2 = class _Response {
   #body;
@@ -324,7 +324,7 @@ var X_ALREADY_SENT = "x-hono-already-sent";
 if (typeof global.crypto === "undefined") {
   global.crypto = crypto;
 }
-var outgoingEnded = Symbol("outgoingEnded");
+var outgoingEnded = /* @__PURE__ */ Symbol("outgoingEnded");
 var handleRequestError = () => new Response(null, {
   status: 400
 });
@@ -953,9 +953,11 @@ var getPath = (request) => {
     const charCode = url.charCodeAt(i);
     if (charCode === 37) {
       const queryIndex = url.indexOf("?", i);
-      const path4 = url.slice(start, queryIndex === -1 ? void 0 : queryIndex);
+      const hashIndex = url.indexOf("#", i);
+      const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
+      const path4 = url.slice(start, end);
       return tryDecodeURI(path4.includes("%25") ? path4.replace(/%25/g, "%2525") : path4);
-    } else if (charCode === 63) {
+    } else if (charCode === 63 || charCode === 35) {
       break;
     }
   }
@@ -2182,7 +2184,7 @@ var Hono = class _Hono {
 var emptyParam = [];
 function match(method, path4) {
   const matchers = this.buildAllMatchers();
-  const match2 = (method2, path22) => {
+  const match2 = ((method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
     const staticMatch = matcher[2][path22];
     if (staticMatch) {
@@ -2194,7 +2196,7 @@ function match(method, path4) {
     }
     const index = match3.indexOf("", 1);
     return [matcher[1][index], match3];
-  };
+  });
   this.match = match2;
   return match2(method, path4);
 }
@@ -3331,7 +3333,12 @@ function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
 
 // dashboard/server/index.ts
 function sanitizeId(id) {
-  return id.replace(/[^a-zA-Z0-9_-]/g, "");
+  const normalized = decodeURIComponent(id).trim();
+  if (!normalized) return "";
+  if (normalized.includes("..") || normalized.includes("/") || normalized.includes("\\")) {
+    return "";
+  }
+  return /^[a-zA-Z0-9:_-]+$/.test(normalized) ? normalized : "";
 }
 function safeParseJsonFile(filePath) {
   try {
@@ -3348,6 +3355,7 @@ var getProjectRoot = () => {
 var getMnemeDir = () => {
   return path3.join(getProjectRoot(), ".mneme");
 };
+var ALLOWED_RULE_FILES = /* @__PURE__ */ new Set(["dev-rules", "review-guidelines"]);
 var listJsonFiles = (dir) => {
   if (!fs4.existsSync(dir)) {
     return [];
@@ -3364,6 +3372,61 @@ var listJsonFiles = (dir) => {
     return [];
   });
 };
+function writeAuditLog(entry) {
+  try {
+    const now = /* @__PURE__ */ new Date();
+    const auditDir = path3.join(getMnemeDir(), "audit");
+    fs4.mkdirSync(auditDir, { recursive: true });
+    const auditFile = path3.join(
+      auditDir,
+      `${now.toISOString().slice(0, 10)}.jsonl`
+    );
+    const payload = {
+      timestamp: now.toISOString(),
+      actor: getCurrentUser(),
+      ...entry
+    };
+    fs4.appendFileSync(auditFile, `${JSON.stringify(payload)}
+`);
+  } catch (error) {
+    console.error("Failed to write audit log:", error);
+  }
+}
+var getUnitsPath = () => path3.join(getMnemeDir(), "units", "units.json");
+function readUnits() {
+  const filePath = getUnitsPath();
+  if (!fs4.existsSync(filePath)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      items: []
+    };
+  }
+  const parsed = safeParseJsonFile(filePath);
+  if (!parsed || !Array.isArray(parsed.items)) {
+    return {
+      schemaVersion: 1,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      items: []
+    };
+  }
+  return parsed;
+}
+function writeUnits(doc) {
+  const filePath = getUnitsPath();
+  fs4.mkdirSync(path3.dirname(filePath), { recursive: true });
+  fs4.writeFileSync(filePath, JSON.stringify(doc, null, 2));
+}
+function makeUnitId(sourceType, sourceId) {
+  const safe = sourceId.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return `mc-${sourceType}-${safe}`;
+}
+function getPatternKind(type) {
+  if (type === "error-solution" || type === "bad") {
+    return "pitfall";
+  }
+  return "playbook";
+}
 var listDatedJsonFiles = (dir) => {
   const files = listJsonFiles(dir);
   return files.filter((filePath) => {
@@ -3648,6 +3711,11 @@ app.delete("/api/sessions/:id", async (c) => {
         const month = (date.getMonth() + 1).toString().padStart(2, "0");
         rebuildSessionIndexForMonth(mnemeDir2, year, month);
       }
+      writeAuditLog({
+        entity: "session",
+        action: "delete",
+        targetId: id
+      });
     }
     return c.json({
       deleted: dryRun ? 0 : 1,
@@ -3725,6 +3793,11 @@ app.delete("/api/sessions", async (c) => {
         if (fs4.existsSync(linkPath)) {
           fs4.unlinkSync(linkPath);
         }
+        writeAuditLog({
+          entity: "session",
+          action: "delete",
+          targetId: session.id
+        });
       }
     }
     return c.json({
@@ -3970,6 +4043,27 @@ app.get("/api/decisions/:id", async (c) => {
     return c.json({ error: "Failed to read decision" }, 500);
   }
 });
+app.delete("/api/decisions/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const decisionsDir = path3.join(getMnemeDir(), "decisions");
+  try {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Decision not found" }, 404);
+    }
+    fs4.unlinkSync(filePath);
+    rebuildAllDecisionIndexes(getMnemeDir());
+    writeAuditLog({
+      entity: "decision",
+      action: "delete",
+      targetId: id
+    });
+    return c.json({ deleted: 1, id });
+  } catch (error) {
+    console.error("Failed to delete decision:", error);
+    return c.json({ error: "Failed to delete decision" }, 500);
+  }
+});
 app.get("/api/info", async (c) => {
   const projectRoot = getProjectRoot();
   const mnemeDir2 = getMnemeDir();
@@ -3981,6 +4075,9 @@ app.get("/api/info", async (c) => {
 });
 app.get("/api/rules/:id", async (c) => {
   const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
   const dir = rulesDir();
   try {
     const filePath = path3.join(dir, `${id}.json`);
@@ -3999,7 +4096,7 @@ app.get("/api/rules/:id", async (c) => {
 });
 app.put("/api/rules/:id", async (c) => {
   const id = c.req.param("id");
-  if (id !== "dev-rules" && id !== "review-guidelines") {
+  if (!ALLOWED_RULE_FILES.has(id)) {
     return c.json({ error: "Invalid rule type" }, 400);
   }
   const dir = rulesDir();
@@ -4013,10 +4110,56 @@ app.put("/api/rules/:id", async (c) => {
       return c.json({ error: "Invalid rules format" }, 400);
     }
     fs4.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "update",
+      targetId: id,
+      detail: { itemCount: body.items.length }
+    });
     return c.json(body);
   } catch (error) {
     console.error("Failed to update rules:", error);
     return c.json({ error: "Failed to update rules" }, 500);
+  }
+});
+app.delete("/api/rules/:id/:ruleId", async (c) => {
+  const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
+  const ruleId = sanitizeId(c.req.param("ruleId"));
+  if (!ruleId) {
+    return c.json({ error: "Invalid rule id" }, 400);
+  }
+  const filePath = path3.join(rulesDir(), `${id}.json`);
+  if (!fs4.existsSync(filePath)) {
+    return c.json({ error: "Rules not found" }, 404);
+  }
+  try {
+    const doc = safeParseJsonFile(filePath);
+    if (!doc || !Array.isArray(doc.items)) {
+      return c.json({ error: "Invalid rules format" }, 500);
+    }
+    const nextItems = doc.items.filter((item) => item.id !== ruleId);
+    if (nextItems.length === doc.items.length) {
+      return c.json({ error: "Rule not found" }, 404);
+    }
+    const nextDoc = {
+      ...doc,
+      items: nextItems,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    fs4.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "delete",
+      targetId: ruleId,
+      detail: { ruleType: id }
+    });
+    return c.json({ deleted: 1, id: ruleId, ruleType: id });
+  } catch (error) {
+    console.error("Failed to delete rule:", error);
+    return c.json({ error: "Failed to delete rule" }, 500);
   }
 });
 app.get("/api/timeline", async (c) => {
@@ -4455,6 +4598,321 @@ app.get("/api/patterns/stats", async (c) => {
   } catch (error) {
     console.error("Failed to get pattern stats:", error);
     return c.json({ error: "Failed to get pattern stats" }, 500);
+  }
+});
+app.delete("/api/patterns/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sourceFile = c.req.query("source");
+  if (!id) {
+    return c.json({ error: "Invalid pattern id" }, 400);
+  }
+  if (!sourceFile) {
+    return c.json({ error: "Missing source file" }, 400);
+  }
+  const safeSource = sourceFile.replace(/[^a-zA-Z0-9_-]/g, "");
+  const filePath = path3.join(patternsDir(), `${safeSource}.json`);
+  if (!fs4.existsSync(filePath)) {
+    return c.json({ error: "Pattern source file not found" }, 404);
+  }
+  try {
+    const content = fs4.readFileSync(filePath, "utf-8");
+    const data = JSON.parse(content);
+    let deleted = 0;
+    if (Array.isArray(data.items)) {
+      const nextItems = data.items.filter((item) => item.id !== id);
+      deleted = data.items.length - nextItems.length;
+      data.items = nextItems;
+    } else if (Array.isArray(data.patterns)) {
+      const nextPatterns = data.patterns.filter((item) => item.id !== id);
+      deleted = data.patterns.length - nextPatterns.length;
+      data.patterns = nextPatterns;
+    } else {
+      return c.json({ error: "Invalid pattern file format" }, 500);
+    }
+    if (deleted === 0) {
+      return c.json({ error: "Pattern not found" }, 404);
+    }
+    fs4.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    writeAuditLog({
+      entity: "pattern",
+      action: "delete",
+      targetId: id,
+      detail: { sourceFile: safeSource }
+    });
+    return c.json({ deleted, id, sourceFile: safeSource });
+  } catch (error) {
+    console.error("Failed to delete pattern:", error);
+    return c.json({ error: "Failed to delete pattern" }, 500);
+  }
+});
+app.get("/api/units", async (c) => {
+  const status = c.req.query("status");
+  const doc = readUnits();
+  const items = status && ["pending", "approved", "rejected"].includes(status) ? doc.items.filter((item) => item.status === status) : doc.items;
+  return c.json({
+    ...doc,
+    items: items.sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+  });
+});
+app.get("/api/units/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  const doc = readUnits();
+  const item = doc.items.find((unit) => unit.id === id);
+  if (!item) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  return c.json(item);
+});
+app.get("/api/approval-queue", async (c) => {
+  const doc = readUnits();
+  const pending = doc.items.filter((item) => item.status === "pending");
+  return c.json({
+    pending,
+    totalPending: pending.length,
+    byType: pending.reduce(
+      (acc, item) => {
+        acc[item.type] = (acc[item.type] || 0) + 1;
+        return acc;
+      },
+      {}
+    )
+  });
+});
+app.post("/api/units/generate", async (c) => {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const existing = readUnits();
+  const bySourceKey = new Map(
+    existing.items.map((item) => [`${item.sourceType}:${item.sourceId}`, item])
+  );
+  const generated = [];
+  try {
+    const decisionFiles = listDatedJsonFiles(
+      path3.join(getMnemeDir(), "decisions")
+    );
+    for (const filePath of decisionFiles) {
+      const decision = safeParseJsonFile(filePath);
+      if (!decision) continue;
+      const sourceId = String(decision.id || "");
+      if (!sourceId) continue;
+      const sourceType = "decision";
+      const key = `${sourceType}:${sourceId}`;
+      const previous = bySourceKey.get(key);
+      generated.push({
+        id: previous?.id || makeUnitId(sourceType, sourceId),
+        type: "decision",
+        kind: "policy",
+        title: String(decision.title || sourceId),
+        summary: String(
+          decision.decision || decision.reasoning || decision.title || ""
+        ),
+        tags: Array.isArray(decision.tags) ? decision.tags.map((tag) => String(tag)) : [],
+        sourceId,
+        sourceType,
+        sourceRefs: [{ type: sourceType, id: sourceId }],
+        status: previous?.status || "pending",
+        createdAt: previous?.createdAt || now,
+        updatedAt: now,
+        reviewedAt: previous?.reviewedAt,
+        reviewedBy: previous?.reviewedBy
+      });
+    }
+    const ruleFiles = ["dev-rules", "review-guidelines"];
+    for (const ruleFile of ruleFiles) {
+      const filePath = path3.join(rulesDir(), `${ruleFile}.json`);
+      const doc = safeParseJsonFile(
+        filePath
+      );
+      if (!doc || !Array.isArray(doc.items)) continue;
+      for (const rule of doc.items) {
+        const ruleId = String(rule.id || "");
+        if (!ruleId) continue;
+        const sourceType = "rule";
+        const sourceId = `${ruleFile}:${ruleId}`;
+        const key = `${sourceType}:${sourceId}`;
+        const previous = bySourceKey.get(key);
+        const title = String(rule.text || rule.title || rule.rule || ruleId) || ruleId;
+        const summary = String(rule.rationale || rule.description || "") || title;
+        generated.push({
+          id: previous?.id || makeUnitId(sourceType, sourceId),
+          type: "rule",
+          kind: "policy",
+          title,
+          summary,
+          tags: Array.isArray(rule.tags) ? rule.tags.map((tag) => String(tag)) : [ruleFile],
+          sourceId,
+          sourceType,
+          sourceRefs: [{ type: sourceType, id: sourceId }],
+          status: previous?.status || "pending",
+          createdAt: previous?.createdAt || now,
+          updatedAt: now,
+          reviewedAt: previous?.reviewedAt,
+          reviewedBy: previous?.reviewedBy
+        });
+      }
+    }
+    const patternFiles = listJsonFiles(patternsDir());
+    for (const patternFile of patternFiles) {
+      const sourceName = path3.basename(patternFile, ".json");
+      const doc = safeParseJsonFile(patternFile);
+      const items = doc?.items || doc?.patterns || [];
+      for (const pattern of items) {
+        const patternId = String(pattern.id || "");
+        if (!patternId) continue;
+        const sourceType = "pattern";
+        const sourceId = `${sourceName}:${patternId}`;
+        const key = `${sourceType}:${sourceId}`;
+        const previous = bySourceKey.get(key);
+        const title = String(
+          pattern.title || pattern.errorPattern || pattern.description || patternId
+        );
+        const summary = String(
+          pattern.solution || pattern.description || pattern.errorPattern || ""
+        );
+        generated.push({
+          id: previous?.id || makeUnitId(sourceType, sourceId),
+          type: "pattern",
+          kind: getPatternKind(String(pattern.type || "")),
+          title,
+          summary,
+          tags: Array.isArray(pattern.tags) ? pattern.tags.map((tag) => String(tag)) : [sourceName],
+          sourceId,
+          sourceType,
+          sourceRefs: [{ type: sourceType, id: sourceId }],
+          status: previous?.status || "pending",
+          createdAt: previous?.createdAt || now,
+          updatedAt: now,
+          reviewedAt: previous?.reviewedAt,
+          reviewedBy: previous?.reviewedBy
+        });
+      }
+    }
+    const next = {
+      schemaVersion: 1,
+      updatedAt: now,
+      items: generated.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+    };
+    writeUnits(next);
+    writeAuditLog({
+      entity: "unit",
+      action: "create",
+      targetId: "units",
+      detail: { count: generated.length }
+    });
+    return c.json({
+      generated: generated.length,
+      pending: generated.filter((item) => item.status === "pending").length,
+      updatedAt: now
+    });
+  } catch (error) {
+    console.error("Failed to generate units:", error);
+    return c.json({ error: "Failed to generate units" }, 500);
+  }
+});
+app.patch("/api/units/:id/status", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const body = await c.req.json();
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  if (!body.status || !["pending", "approved", "rejected"].includes(body.status)) {
+    return c.json({ error: "Invalid status" }, 400);
+  }
+  const doc = readUnits();
+  const index = doc.items.findIndex((item) => item.id === id);
+  if (index === -1) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const actor = getCurrentUser();
+  const nextItem = {
+    ...doc.items[index],
+    status: body.status,
+    updatedAt: now,
+    reviewedAt: now,
+    reviewedBy: actor
+  };
+  doc.items[index] = nextItem;
+  doc.updatedAt = now;
+  writeUnits(doc);
+  writeAuditLog({
+    entity: "unit",
+    action: "update",
+    targetId: id,
+    detail: { status: body.status }
+  });
+  return c.json(nextItem);
+});
+app.delete("/api/units/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  if (!id) {
+    return c.json({ error: "Invalid unit id" }, 400);
+  }
+  const doc = readUnits();
+  const nextItems = doc.items.filter((item) => item.id !== id);
+  if (nextItems.length === doc.items.length) {
+    return c.json({ error: "Unit not found" }, 404);
+  }
+  doc.items = nextItems;
+  doc.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  writeUnits(doc);
+  writeAuditLog({
+    entity: "unit",
+    action: "delete",
+    targetId: id
+  });
+  return c.json({ deleted: 1, id });
+});
+app.get("/api/knowledge-graph", async (c) => {
+  try {
+    const sessionItems = readAllSessionIndexes(getMnemeDir()).items;
+    const units = readUnits().items.filter(
+      (item) => item.status === "approved"
+    );
+    const nodes = [
+      ...sessionItems.filter((item) => item.hasSummary).map((item) => ({
+        id: `session:${item.id}`,
+        entityType: "session",
+        entityId: item.id,
+        title: item.title,
+        tags: item.tags || [],
+        createdAt: item.createdAt
+      })),
+      ...units.map((item) => ({
+        id: `unit:${item.id}`,
+        entityType: "unit",
+        entityId: item.id,
+        title: item.title,
+        tags: item.tags || [],
+        createdAt: item.createdAt
+      }))
+    ];
+    const edges = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const sharedTags = nodes[i].tags.filter(
+          (tag) => nodes[j].tags.includes(tag)
+        );
+        if (sharedTags.length > 0) {
+          edges.push({
+            source: nodes[i].id,
+            target: nodes[j].id,
+            weight: sharedTags.length,
+            sharedTags
+          });
+        }
+      }
+    }
+    return c.json({ nodes, edges });
+  } catch (error) {
+    console.error("Failed to build knowledge graph:", error);
+    return c.json({ error: "Failed to build knowledge graph" }, 500);
   }
 });
 function sessionToMarkdown(session) {

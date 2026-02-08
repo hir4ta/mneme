@@ -3,8 +3,8 @@
 # post-tool-use.sh - Post-tool use hook for Bash operations
 #
 # This hook is called after Bash tool execution.
-# It detects errors, searches for matching patterns in mneme,
-# and suggests solutions from past error-solution patterns.
+# It detects errors, searches for matching approved units in mneme,
+# and suggests relevant past guidance.
 #
 # Input (stdin): JSON with tool_name, tool_input, tool_response, cwd
 # Output (stdout): JSON with {"continue": true} and optional additionalContext
@@ -14,83 +14,89 @@
 
 set -euo pipefail
 
+continue_json='{"continue": true}'
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "$continue_json"
+  exit 0
+fi
+
 # Read stdin
 input_json=$(cat)
 
 # Extract relevant fields (tool_response is the official field name)
-exit_code=$(echo "$input_json" | jq -r '.tool_response.exit_code // .tool_result.exit_code // 0')
-stderr=$(echo "$input_json" | jq -r '.tool_response.stderr // .tool_result.stderr // ""')
-command=$(echo "$input_json" | jq -r '.tool_input.command // ""')
-cwd=$(echo "$input_json" | jq -r '.cwd // empty')
+exit_code=$(echo "$input_json" | jq -r '.tool_response.exit_code // .tool_result.exit_code // 0' 2>/dev/null || echo "0")
+stderr=$(echo "$input_json" | jq -r '.tool_response.stderr // .tool_result.stderr // ""' 2>/dev/null || echo "")
+cwd=$(echo "$input_json" | jq -r '.cwd // empty' 2>/dev/null || echo "")
 
 # If no cwd, use PWD
 if [ -z "$cwd" ]; then
   cwd="${PWD}"
 fi
+cwd=$(cd "$cwd" 2>/dev/null && pwd || echo "$cwd")
 
 # Check for error conditions
 if [[ "$exit_code" != "0" && -n "$stderr" ]]; then
-  # Error detected - search for matching patterns first
+  # Error detected - search for matching approved units first.
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+  PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-  patterns_dir="${cwd}/.mneme/patterns"
-  matched_solution=""
-  matched_pattern=""
-  matched_reasoning=""
+  search_script=""
+  runner=""
+  if [ -f "${PLUGIN_ROOT}/dist/lib/prompt-search.js" ]; then
+    search_script="${PLUGIN_ROOT}/dist/lib/prompt-search.js"
+    runner="node"
+  elif [ -f "${PLUGIN_ROOT}/lib/prompt-search.ts" ]; then
+    search_script="${PLUGIN_ROOT}/lib/prompt-search.ts"
+    runner="tsx"
+  fi
 
-  # Search patterns if directory exists
-  if [ -d "$patterns_dir" ]; then
-    # Get first 500 chars of stderr for matching
+  matched_unit=""
+  if [ -n "$search_script" ]; then
     stderr_sample=$(echo "$stderr" | head -c 500)
-
-    # Search through all pattern files
-    for pattern_file in "$patterns_dir"/*.json; do
-      [ -f "$pattern_file" ] || continue
-
-      # Extract error-solution patterns and check for matches (tab-separated output)
-      match_result=$(jq -r --arg stderr "$stderr_sample" '
-        [.patterns // [] | .[] | select(type == "object" and .type == "error-solution")] as $patterns
-        | [$patterns[] |
-            . as $p |
-            (if ($p.errorRegex // "" | length > 0) and ($stderr | test($p.errorRegex; "i")) then true
-             elif ($p.errorPattern // "" | length > 0) and ($stderr | contains($p.errorPattern)) then true
-             else false end) as $matched |
-            select($matched)
-          ]
-        | if length > 0 then
-            .[0] | "MATCH\t" + (.errorPattern // "unknown") + "\t" + (.solution // "no solution") + "\t" + (.reasoning // "")
-          else
-            empty
-          end
-      ' "$pattern_file" 2>/dev/null || echo "")
-
-      if [[ "$match_result" == MATCH$'\t'* ]]; then
-        # Parse the tab-separated match result
-        matched_pattern=$(echo "$match_result" | cut -f2)
-        matched_solution=$(echo "$match_result" | cut -f3)
-        matched_reasoning=$(echo "$match_result" | cut -f4)
-        break
+    if [ -n "$stderr_sample" ]; then
+      search_output=""
+      if [ "$runner" = "tsx" ]; then
+        search_output=$(npx tsx "$search_script" --query "$stderr_sample" --project "$cwd" --limit 5 2>/dev/null || echo "")
+      else
+        search_output=$(node "$search_script" --query "$stderr_sample" --project "$cwd" --limit 5 2>/dev/null || echo "")
       fi
-    done
-  fi
 
-  # Build suggestion message
-  if [ -n "$matched_solution" ]; then
-    # Pattern match found - suggest the solution
-    suggestion="**Past solution found:**\\n"
-    suggestion+="Error pattern: ${matched_pattern}\\n"
-    suggestion+="Solution: ${matched_solution}\\n"
-    if [ -n "$matched_reasoning" ]; then
-      suggestion+="Reasoning: ${matched_reasoning}\\n"
+      matched_unit=$(echo "$search_output" | jq -r '
+        if .success == true then
+          .results
+          | map(select(.type == "unit" and .score >= 3))
+          | .[0]
+          | if . == null then empty else
+              "id=\(.id)\ttitle=\(.title)\tsnippet=\(.snippet)"
+            end
+        else
+          empty
+        end
+      ' 2>/dev/null || echo "")
     fi
-    suggestion+="\\nApply this solution?"
-  else
-    # No match - just note the error
-    suggestion="Error detected (exit code: $exit_code). No matching pattern found in mneme."
   fi
 
-  # Output with additionalContext
-  printf '{"continue": true, "additionalContext": "%s"}\n' "$suggestion"
+  # Build suggestion message.
+  if [ -n "$matched_unit" ]; then
+    unit_id=$(echo "$matched_unit" | awk -F'\t' '{print $1}' | sed 's/^id=//')
+    unit_title=$(echo "$matched_unit" | awk -F'\t' '{print $2}' | sed 's/^title=//')
+    unit_snippet=$(echo "$matched_unit" | awk -F'\t' '{print $3}' | sed 's/^snippet=//')
+
+    suggestion="**Relevant unit found:**\\n"
+    suggestion+="Unit: ${unit_title} (${unit_id})\\n"
+    if [ -n "$unit_snippet" ]; then
+      suggestion+="Guidance: ${unit_snippet}\\n"
+    fi
+    suggestion+="\\nApply this guidance?"
+  else
+    # No match - just note the error.
+    suggestion="Error detected (exit code: $exit_code). No matching approved unit found in mneme."
+  fi
+
+  # Output with additionalContext (JSON-escaped)
+  jq -n --arg context "$suggestion" '{continue: true, additionalContext: $context}'
 else
   # No error - continue normally
-  echo '{"continue": true}'
+  echo "$continue_json"
 fi

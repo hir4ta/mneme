@@ -831,9 +831,9 @@ export function SessionDetailPage() {
                     </p>
                     <div className="flex gap-2">
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
-                        className="flex-1"
+                        className="flex-1 text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
                         onClick={handleDelete}
                         disabled={deleting}
                       >

@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path2) {
-      let input = path2;
+    function removeDotSegments(path3) {
+      let input = path3;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path2, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path2 && path2 !== "/" ? path2 : void 0;
+        const [path3, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6776,12 +6776,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs2, exportName) {
+    function addFormats(ajv, list, fs3, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs2[f]);
+        ajv.addFormat(f, fs3[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6790,8 +6790,8 @@ var require_dist = __commonJS({
 });
 
 // servers/search-server.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -7152,8 +7152,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path2, errorMaps, issueData } = params;
-  const fullPath = [...path2, ...issueData.path || []];
+  const { data, path: path3, errorMaps, issueData } = params;
+  const fullPath = [...path3, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7268,11 +7268,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path2, key) {
+  constructor(parent, value, path3, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path2;
+    this._path = path3;
     this._key = key;
   }
   get path() {
@@ -10501,7 +10501,6 @@ ZodNaN.create = (params) => {
     ...processCreateParams(params)
   });
 };
-var BRAND = Symbol("zod_brand");
 var ZodBranded = class extends ZodType {
   _parse(input) {
     const { ctx } = this._processInputParams(input);
@@ -11004,7 +11003,7 @@ function $constructor(name, initializer3, params) {
   Object.defineProperty(_, "name", { value: name });
   return _;
 }
-var $brand = Symbol("zod_brand");
+var $brand = /* @__PURE__ */ Symbol("zod_brand");
 var $ZodAsyncError = class extends Error {
   constructor() {
     super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
@@ -11151,7 +11150,7 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-var EVALUATING = Symbol("evaluating");
+var EVALUATING = /* @__PURE__ */ Symbol("evaluating");
 function defineLazy(object3, key, getter) {
   let value = void 0;
   Object.defineProperty(object3, key, {
@@ -11196,10 +11195,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path2) {
-  if (!path2)
+function getElementAtPath(obj, path3) {
+  if (!path3)
     return obj;
-  return path2.reduce((acc, key) => acc?.[key], obj);
+  return path3.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11582,11 +11581,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path2, issues) {
+function prefixIssues(path3, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path2);
+    iss.path.unshift(path3);
     return iss;
   });
 }
@@ -11769,7 +11768,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path2 = []) => {
+  const processError = (error49, path3 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -11779,7 +11778,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path2, ...issue2.path];
+        const fullpath = [...path3, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11811,8 +11810,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path2 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path2) {
+  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path3) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -20224,8 +20223,8 @@ function yo_default() {
 
 // node_modules/zod/v4/core/registries.js
 var _a;
-var $output = Symbol("ZodOutput");
-var $input = Symbol("ZodInput");
+var $output = /* @__PURE__ */ Symbol("ZodOutput");
+var $input = /* @__PURE__ */ Symbol("ZodInput");
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new WeakMap();
@@ -21262,7 +21261,7 @@ function _stringbool(Classes, _params) {
     type: "pipe",
     in: stringSchema,
     out: booleanSchema,
-    transform: (input, payload) => {
+    transform: ((input, payload) => {
       let data = input;
       if (params.case !== "sensitive")
         data = data.toLowerCase();
@@ -21281,14 +21280,14 @@ function _stringbool(Classes, _params) {
         });
         return {};
       }
-    },
-    reverseTransform: (input, _payload) => {
+    }),
+    reverseTransform: ((input, _payload) => {
       if (input === true) {
         return truthyArray[0] || "true";
       } else {
         return falsyArray[0] || "false";
       }
-    },
+    }),
     error: params.error
   });
   return codec2;
@@ -22315,10 +22314,10 @@ var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   inst.with = inst.check;
   inst.clone = (_def, params) => clone(inst, _def, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta3) => {
+  inst.register = ((reg, meta3) => {
     reg.add(inst, meta3);
     return inst;
-  };
+  });
   inst.apply = (fn) => fn(inst);
 });
 var ZodMiniObject = /* @__PURE__ */ $constructor("ZodMiniObject", (inst, def) => {
@@ -23045,10 +23044,10 @@ var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   inst.with = inst.check;
   inst.clone = (def2, params) => clone(inst, def2, params);
   inst.brand = () => inst;
-  inst.register = (reg, meta3) => {
+  inst.register = ((reg, meta3) => {
     reg.add(inst, meta3);
     return inst;
-  };
+  });
   inst.parse = (data, params) => parse2(inst, data, params, { callee: inst.parse });
   inst.safeParse = (data, params) => safeParse3(inst, data, params);
   inst.parseAsync = async (data, params) => parseAsync2(inst, data, params, { callee: inst.parseAsync });
@@ -24218,13 +24217,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path2 = ref.slice(1).split("/").filter(Boolean);
-  if (path2.length === 0) {
+  const path3 = ref.slice(1).split("/").filter(Boolean);
+  if (path3.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path2[0] === defsKey) {
-    const key = path2[1];
+  if (path3[0] === defsKey) {
+    const key = path3[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -25991,11 +25990,13 @@ function assertCompleteRequestPrompt(request) {
   if (request.params.ref.type !== "ref/prompt") {
     throw new TypeError(`Expected CompleteRequestPrompt, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 function assertCompleteRequestResourceTemplate(request) {
   if (request.params.ref.type !== "ref/resource") {
     throw new TypeError(`Expected CompleteRequestResourceTemplate, but got ${request.params.ref.type}`);
   }
+  void request;
 }
 var CompleteResultSchema = ResultSchema.extend({
   completion: looseObject({
@@ -26148,7 +26149,7 @@ function isTerminal(status) {
 }
 
 // node_modules/zod-to-json-schema/dist/esm/Options.js
-var ignoreOverride = Symbol("Let zodToJsonSchema decide on which parser to use");
+var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
   $refStrategy: "root",
@@ -27650,6 +27651,9 @@ var Protocol = class {
    * The Protocol object assumes ownership of the Transport, replacing any callbacks that have already been set, and expects that it is the only user of the Transport instance going forward.
    */
   async connect(transport) {
+    if (this._transport) {
+      throw new Error("Already connected to a transport. Call close() before connecting to a new transport, or use a separate Protocol instance per connection.");
+    }
     this._transport = transport;
     const _onclose = this.transport?.onclose;
     this._transport.onclose = () => {
@@ -27682,6 +27686,10 @@ var Protocol = class {
     this._progressHandlers.clear();
     this._taskProgressTokens.clear();
     this._pendingDebouncedNotifications.clear();
+    for (const controller of this._requestHandlerAbortControllers.values()) {
+      controller.abort();
+    }
+    this._requestHandlerAbortControllers.clear();
     const error48 = McpError.fromError(ErrorCode.ConnectionClosed, "Connection closed");
     this._transport = void 0;
     this.onclose?.();
@@ -27732,6 +27740,8 @@ var Protocol = class {
       sessionId: capturedTransport?.sessionId,
       _meta: request.params?._meta,
       sendNotification: async (notification) => {
+        if (abortController.signal.aborted)
+          return;
         const notificationOptions = { relatedRequestId: request.id };
         if (relatedTaskId) {
           notificationOptions.relatedTask = { taskId: relatedTaskId };
@@ -27739,6 +27749,9 @@ var Protocol = class {
         await this.notification(notification, notificationOptions);
       },
       sendRequest: async (r, resultSchema, options) => {
+        if (abortController.signal.aborted) {
+          throw new McpError(ErrorCode.ConnectionClosed, "Request was cancelled");
+        }
         const requestOptions = { ...options, relatedRequestId: request.id };
         if (relatedTaskId && !requestOptions.relatedTask) {
           requestOptions.relatedTask = { taskId: relatedTaskId };
@@ -28965,7 +28978,7 @@ var Server = class extends Protocol {
 };
 
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
-var COMPLETABLE_SYMBOL = Symbol.for("mcp.completable");
+var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
 }
@@ -29929,45 +29942,17 @@ var StdioServerTransport = class {
   }
 };
 
-// servers/search-server.ts
-var originalEmit = process.emit;
-process.emit = (event, ...args) => {
-  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
-    return false;
-  }
-  return originalEmit.apply(process, [event, ...args]);
-};
-var { DatabaseSync } = await import("node:sqlite");
-function getProjectPath() {
-  return process.env.MNEME_PROJECT_PATH || process.cwd();
+// lib/search-core.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+function escapeRegex2(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-function getMnemeDir() {
-  return path.join(getProjectPath(), ".mneme");
-}
-function getLocalDbPath() {
-  return path.join(getMnemeDir(), "local.db");
-}
-var db = null;
-function getDb() {
-  if (db) return db;
-  const dbPath = getLocalDbPath();
-  if (!fs.existsSync(dbPath)) {
-    return null;
-  }
-  try {
-    db = new DatabaseSync(dbPath);
-    db.exec("PRAGMA journal_mode = WAL");
-    return db;
-  } catch {
-    return null;
-  }
-}
-function loadTags() {
-  const tagsPath = path.join(getMnemeDir(), "tags.json");
+function loadTags(mnemeDir) {
+  const tagsPath = path.join(mnemeDir, "tags.json");
   if (!fs.existsSync(tagsPath)) return null;
   try {
-    const content = fs.readFileSync(tagsPath, "utf-8");
-    return JSON.parse(content);
+    return JSON.parse(fs.readFileSync(tagsPath, "utf-8"));
   } catch {
     return null;
   }
@@ -29978,29 +29963,24 @@ function expandKeywordsWithAliases(keywords, tags) {
   for (const keyword of keywords) {
     const lowerKeyword = keyword.toLowerCase();
     for (const tag of tags.tags) {
-      const matches = tag.id.toLowerCase() === lowerKeyword || tag.label.toLowerCase() === lowerKeyword || tag.aliases?.some((a) => a.toLowerCase() === lowerKeyword);
-      if (matches) {
-        expanded.add(tag.id.toLowerCase());
-        expanded.add(tag.label.toLowerCase());
-        for (const alias of tag.aliases || []) {
-          expanded.add(alias.toLowerCase());
-        }
+      const matches = tag.id.toLowerCase() === lowerKeyword || tag.label.toLowerCase() === lowerKeyword || tag.aliases?.some((alias) => alias.toLowerCase() === lowerKeyword);
+      if (!matches) continue;
+      expanded.add(tag.id.toLowerCase());
+      expanded.add(tag.label.toLowerCase());
+      for (const alias of tag.aliases || []) {
+        expanded.add(alias.toLowerCase());
       }
     }
   }
   return Array.from(expanded);
 }
-function searchInteractions(keywords, projectPath, limit = 5) {
-  const database = getDb();
+function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
-  const results = [];
   try {
-    const ftsQuery = keywords.join(" OR ");
-    const ftsStmt = database.prepare(`
+    const stmt = database.prepare(`
       SELECT
         i.session_id,
         i.content,
-        i.thinking,
         i.timestamp,
         highlight(interactions_fts, 0, '[', ']') as content_highlight
       FROM interactions_fts
@@ -30010,251 +29990,282 @@ function searchInteractions(keywords, projectPath, limit = 5) {
       ORDER BY rank
       LIMIT ?
     `);
-    const rows = ftsStmt.all(ftsQuery, projectPath, limit);
-    for (const row of rows) {
-      const snippet = row.content_highlight || row.content.substring(0, 100);
-      results.push({
+    const rows = stmt.all(keywords.join(" OR "), projectPath, limit);
+    return rows.map((row) => ({
+      type: "interaction",
+      id: row.session_id,
+      title: `Interaction from ${row.timestamp}`,
+      snippet: (row.content_highlight || row.content).substring(0, 150),
+      score: 5,
+      matchedFields: ["content"]
+    }));
+  } catch {
+    try {
+      const clauses = keywords.map(() => "(content LIKE ? OR thinking LIKE ?)");
+      const sql = `
+        SELECT DISTINCT session_id, substr(content, 1, 120) as snippet, timestamp
+        FROM interactions
+        WHERE project_path = ?
+          AND (${clauses.join(" OR ")})
+        ORDER BY timestamp DESC
+        LIMIT ?
+      `;
+      const args = [projectPath];
+      for (const keyword of keywords) {
+        const pattern = `%${keyword}%`;
+        args.push(pattern, pattern);
+      }
+      args.push(limit);
+      const stmt = database.prepare(sql);
+      const rows = stmt.all(...args);
+      return rows.map((row) => ({
         type: "interaction",
         id: row.session_id,
         title: `Interaction from ${row.timestamp}`,
-        snippet: snippet.substring(0, 150),
-        score: 5,
+        snippet: row.snippet,
+        score: 3,
         matchedFields: ["content"]
-      });
+      }));
+    } catch {
+      return [];
     }
-  } catch {
+  }
+}
+function walkJsonFiles(dir, callback) {
+  if (!fs.existsSync(dir)) return;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+function searchSessions(mnemeDir, keywords, limit = 5) {
+  const sessionsDir = path.join(mnemeDir, "sessions");
+  const results = [];
+  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
+  walkJsonFiles(sessionsDir, (filePath) => {
     try {
-      const likePattern = `%${keywords.join("%")}%`;
-      const stmt = database.prepare(`
-        SELECT DISTINCT session_id, substr(content, 1, 100) as snippet, timestamp
-        FROM interactions
-        WHERE project_path = ?
-          AND (content LIKE ? OR thinking LIKE ?)
-        ORDER BY timestamp DESC
-        LIMIT ?
-      `);
-      const rows = stmt.all(
-        projectPath,
-        likePattern,
-        likePattern,
-        limit
+      const session = JSON.parse(
+        fs.readFileSync(filePath, "utf-8")
       );
-      for (const row of rows) {
+      const title = session.title || session.summary?.title || "";
+      let score = 0;
+      const matchedFields = [];
+      if (title && pattern.test(title)) {
+        score += 3;
+        matchedFields.push("title");
+      }
+      if (session.tags?.some((t) => pattern.test(t))) {
+        score += 1;
+        matchedFields.push("tags");
+      }
+      if (session.summary?.goal && pattern.test(session.summary.goal)) {
+        score += 2;
+        matchedFields.push("summary.goal");
+      }
+      if (session.summary?.description && pattern.test(session.summary.description)) {
+        score += 2;
+        matchedFields.push("summary.description");
+      }
+      if (session.discussions?.some(
+        (d) => pattern.test(d.topic || "") || pattern.test(d.decision || "")
+      )) {
+        score += 2;
+        matchedFields.push("discussions");
+      }
+      if (session.errors?.some(
+        (e) => pattern.test(e.error || "") || pattern.test(e.solution || "")
+      )) {
+        score += 2;
+        matchedFields.push("errors");
+      }
+      if (score > 0) {
         results.push({
-          type: "interaction",
-          id: row.session_id,
-          title: `Interaction from ${row.timestamp}`,
-          snippet: row.snippet,
-          score: 3,
-          matchedFields: ["content"]
+          type: "session",
+          id: session.id,
+          title: title || session.id,
+          snippet: session.summary?.description || session.summary?.goal || "",
+          score,
+          matchedFields
         });
       }
     } catch {
     }
-  }
-  return results;
-}
-function searchSessions(keywords, limit = 5) {
-  const sessionsDir = path.join(getMnemeDir(), "sessions");
-  if (!fs.existsSync(sessionsDir)) return [];
-  const results = [];
-  const pattern = new RegExp(keywords.join("|"), "i");
-  function walkDir(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.name.endsWith(".json")) {
-        try {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const session = JSON.parse(content);
-          let score = 0;
-          const matchedFields = [];
-          const title = session.title || session.summary?.title || "";
-          if (title && pattern.test(title)) {
-            score += 3;
-            matchedFields.push("title");
-          }
-          if (session.tags?.some((t) => pattern.test(t))) {
-            score += 1;
-            matchedFields.push("tags");
-          }
-          if (session.summary?.goal && pattern.test(session.summary.goal)) {
-            score += 2;
-            matchedFields.push("summary.goal");
-          }
-          if (session.summary?.description && pattern.test(session.summary.description)) {
-            score += 2;
-            matchedFields.push("summary.description");
-          }
-          if (session.discussions?.some(
-            (d) => pattern.test(d.topic || "") || pattern.test(d.decision || "")
-          )) {
-            score += 2;
-            matchedFields.push("discussions");
-          }
-          if (session.errors?.some(
-            (e) => pattern.test(e.error || "") || pattern.test(e.solution || "")
-          )) {
-            score += 2;
-            matchedFields.push("errors");
-          }
-          if (score > 0) {
-            results.push({
-              type: "session",
-              id: session.id,
-              title: title || session.id,
-              snippet: session.summary?.description || session.summary?.goal || "",
-              score,
-              matchedFields
-            });
-          }
-        } catch {
-        }
-      }
-    }
-  }
-  walkDir(sessionsDir);
+  });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function searchDecisions(keywords, limit = 5) {
-  const decisionsDir = path.join(getMnemeDir(), "decisions");
-  if (!fs.existsSync(decisionsDir)) return [];
+function searchUnits(mnemeDir, keywords, limit = 5) {
+  const unitsPath = path.join(mnemeDir, "units", "units.json");
   const results = [];
-  const pattern = new RegExp(keywords.join("|"), "i");
-  function walkDir(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walkDir(fullPath);
-      } else if (entry.name.endsWith(".json")) {
-        try {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const decision = JSON.parse(content);
-          let score = 0;
-          const matchedFields = [];
-          if (decision.title && pattern.test(decision.title)) {
-            score += 3;
-            matchedFields.push("title");
-          }
-          if (decision.decision && pattern.test(decision.decision)) {
-            score += 2;
-            matchedFields.push("decision");
-          }
-          if (decision.reasoning && pattern.test(decision.reasoning)) {
-            score += 2;
-            matchedFields.push("reasoning");
-          }
-          if (decision.tags?.some((t) => pattern.test(t))) {
-            score += 1;
-            matchedFields.push("tags");
-          }
-          if (score > 0) {
-            results.push({
-              type: "decision",
-              id: decision.id,
-              title: decision.title || decision.id,
-              snippet: decision.decision || "",
-              score,
-              matchedFields
-            });
-          }
-        } catch {
-        }
+  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
+  if (!fs.existsSync(unitsPath)) return results;
+  try {
+    const cards = JSON.parse(fs.readFileSync(unitsPath, "utf-8"));
+    const items = (cards.items || []).filter(
+      (item) => item.status === "approved"
+    );
+    for (const item of items) {
+      let score = 0;
+      const matchedFields = [];
+      if (item.title && pattern.test(item.title)) {
+        score += 3;
+        matchedFields.push("title");
+      }
+      if (item.summary && pattern.test(item.summary)) {
+        score += 2;
+        matchedFields.push("summary");
+      }
+      if (item.tags?.some((tag) => pattern.test(tag))) {
+        score += 1;
+        matchedFields.push("tags");
+      }
+      if (item.sourceType && pattern.test(item.sourceType)) {
+        score += 1;
+        matchedFields.push("sourceType");
+      }
+      if (score > 0) {
+        results.push({
+          type: "unit",
+          id: item.id,
+          title: item.title || item.id,
+          snippet: item.summary || "",
+          score,
+          matchedFields
+        });
       }
     }
-  }
-  walkDir(decisionsDir);
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
-function searchPatterns(keywords, limit = 5) {
-  const patternsDir = path.join(getMnemeDir(), "patterns");
-  if (!fs.existsSync(patternsDir)) return [];
-  const results = [];
-  const pattern = new RegExp(keywords.join("|"), "i");
-  const files = fs.readdirSync(patternsDir).filter((f) => f.endsWith(".json"));
-  for (const file2 of files) {
-    try {
-      const content = fs.readFileSync(path.join(patternsDir, file2), "utf-8");
-      const patternFile = JSON.parse(content);
-      for (const p of patternFile.patterns || []) {
-        let score = 0;
-        const matchedFields = [];
-        if (p.errorPattern && pattern.test(p.errorPattern)) {
-          score += 3;
-          matchedFields.push("errorPattern");
-        }
-        if (p.solution && pattern.test(p.solution)) {
-          score += 2;
-          matchedFields.push("solution");
-        }
-        if (p.tags?.some((t) => pattern.test(t))) {
-          score += 1;
-          matchedFields.push("tags");
-        }
-        if (score > 0) {
-          results.push({
-            type: "pattern",
-            id: `${file2}:${p.errorPattern?.substring(0, 20)}`,
-            title: p.errorPattern?.substring(0, 50) || "Pattern",
-            snippet: p.solution || "",
-            score,
-            matchedFields
-          });
-        }
-      }
-    } catch {
-    }
+  } catch {
   }
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function search(query, options = {}) {
+function normalizeRequestedTypes(types) {
+  const normalized = /* @__PURE__ */ new Set();
+  for (const type of types) {
+    normalized.add(type);
+  }
+  return normalized;
+}
+function searchKnowledge(options) {
   const {
-    types = ["session", "decision", "pattern", "interaction"],
-    limit = 10
+    query,
+    mnemeDir,
+    projectPath,
+    database = null,
+    types = ["session", "unit", "interaction"],
+    limit = 10,
+    offset = 0
   } = options;
-  const keywords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
   if (keywords.length === 0) return [];
-  const tags = loadTags();
-  const expandedKeywords = expandKeywordsWithAliases(keywords, tags);
+  const expandedKeywords = expandKeywordsWithAliases(
+    keywords,
+    loadTags(mnemeDir)
+  );
   const results = [];
-  const projectPath = getProjectPath();
-  if (types.includes("session")) {
-    results.push(...searchSessions(expandedKeywords, limit));
+  const safeOffset = Math.max(0, offset);
+  const fetchLimit = Math.max(limit + safeOffset, limit, 10);
+  const normalizedTypes = normalizeRequestedTypes(types);
+  if (normalizedTypes.has("session")) {
+    results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
   }
-  if (types.includes("decision")) {
-    results.push(...searchDecisions(expandedKeywords, limit));
+  if (normalizedTypes.has("unit")) {
+    results.push(...searchUnits(mnemeDir, expandedKeywords, fetchLimit));
   }
-  if (types.includes("pattern")) {
-    results.push(...searchPatterns(expandedKeywords, limit));
-  }
-  if (types.includes("interaction")) {
-    results.push(...searchInteractions(expandedKeywords, projectPath, limit));
+  if (normalizedTypes.has("interaction")) {
+    results.push(
+      ...searchInteractions(
+        expandedKeywords,
+        projectPath,
+        database,
+        fetchLimit
+      )
+    );
   }
   const seen = /* @__PURE__ */ new Set();
-  return results.sort((a, b) => b.score - a.score).filter((r) => {
-    const key = `${r.type}:${r.id}`;
+  return results.sort((a, b) => b.score - a.score).filter((result) => {
+    const key = `${result.type}:${result.id}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, limit);
+  }).slice(safeOffset, safeOffset + limit);
+}
+
+// servers/search-server.ts
+var originalEmit = process.emit;
+process.emit = (event, ...args) => {
+  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.apply(process, [event, ...args]);
+};
+var { DatabaseSync } = await import("node:sqlite");
+var SEARCH_LIMIT_MIN = 1;
+var SEARCH_LIMIT_MAX = 100;
+var SEARCH_OFFSET_MIN = 0;
+var QUERY_MAX_LENGTH = 500;
+function ok(text) {
+  return { content: [{ type: "text", text }] };
+}
+function fail(message) {
+  return {
+    content: [{ type: "text", text: message }],
+    isError: true
+  };
+}
+function getProjectPath() {
+  return process.env.MNEME_PROJECT_PATH || process.cwd();
+}
+function getMnemeDir() {
+  return path2.join(getProjectPath(), ".mneme");
+}
+function getLocalDbPath() {
+  return path2.join(getMnemeDir(), "local.db");
+}
+var db = null;
+function getDb() {
+  if (db) return db;
+  const dbPath = getLocalDbPath();
+  if (!fs2.existsSync(dbPath)) return null;
+  try {
+    db = new DatabaseSync(dbPath);
+    db.exec("PRAGMA journal_mode = WAL");
+    return db;
+  } catch {
+    return null;
+  }
+}
+function search(query, options = {}) {
+  return searchKnowledge({
+    query,
+    mnemeDir: getMnemeDir(),
+    projectPath: getProjectPath(),
+    database: getDb(),
+    types: options.types,
+    limit: options.limit,
+    offset: options.offset
+  });
 }
 function getSession(sessionId) {
-  const sessionsDir = path.join(getMnemeDir(), "sessions");
-  if (!fs.existsSync(sessionsDir)) return null;
+  const sessionsDir = path2.join(getMnemeDir(), "sessions");
+  if (!fs2.existsSync(sessionsDir)) return null;
   function findSession(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    const entries = fs2.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
+      const fullPath = path2.join(dir, entry.name);
       if (entry.isDirectory()) {
         const result = findSession(fullPath);
         if (result) return result;
       } else if (entry.name.endsWith(".json")) {
         try {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const session = JSON.parse(content);
+          const session = JSON.parse(
+            fs2.readFileSync(fullPath, "utf-8")
+          );
           if (session.id === sessionId) return session;
         } catch {
         }
@@ -30264,28 +30275,15 @@ function getSession(sessionId) {
   }
   return findSession(sessionsDir);
 }
-function getDecision(decisionId) {
-  const decisionsDir = path.join(getMnemeDir(), "decisions");
-  if (!fs.existsSync(decisionsDir)) return null;
-  function findDecision(dir) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        const result = findDecision(fullPath);
-        if (result) return result;
-      } else if (entry.name.endsWith(".json")) {
-        try {
-          const content = fs.readFileSync(fullPath, "utf-8");
-          const decision = JSON.parse(content);
-          if (decision.id === decisionId) return decision;
-        } catch {
-        }
-      }
-    }
+function getUnit(unitId) {
+  const unitsPath = path2.join(getMnemeDir(), "units", "units.json");
+  if (!fs2.existsSync(unitsPath)) return null;
+  try {
+    const data = JSON.parse(fs2.readFileSync(unitsPath, "utf-8"));
+    return (data.items || []).find((item) => item.id === unitId) || null;
+  } catch {
     return null;
   }
-  return findDecision(decisionsDir);
 }
 var server = new McpServer({
   name: "mneme-search",
@@ -30294,23 +30292,47 @@ var server = new McpServer({
 server.registerTool(
   "mneme_search",
   {
-    description: "Search mneme's knowledge base for sessions, decisions, patterns, and interactions. Returns scored results with matched fields.",
+    description: "Search mneme's knowledge base for sessions, approved units, and interactions. Returns scored results with matched fields.",
     inputSchema: {
-      query: external_exports3.string().describe("Search query (keywords)"),
-      types: external_exports3.array(external_exports3.enum(["session", "decision", "pattern", "interaction"])).optional().describe("Types to search (default: all)"),
-      limit: external_exports3.number().optional().describe("Maximum results (default: 10)")
+      query: external_exports3.string().max(QUERY_MAX_LENGTH).describe("Search query (keywords)"),
+      types: external_exports3.array(external_exports3.enum(["session", "unit", "interaction"])).optional().describe("Types to search (default: session/unit/interaction)."),
+      limit: external_exports3.number().int().min(SEARCH_LIMIT_MIN).max(SEARCH_LIMIT_MAX).optional().describe(
+        `Maximum results per page (${SEARCH_LIMIT_MIN}-${SEARCH_LIMIT_MAX}, default: 10)`
+      ),
+      offset: external_exports3.number().int().min(SEARCH_OFFSET_MIN).optional().describe(
+        "Pagination offset (default: 0). For 50-unit paging: 0, 50, 100, ..."
+      )
     }
   },
-  async ({ query, types, limit }) => {
-    const results = search(query, { types, limit });
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(results, null, 2)
+  async ({ query, types, limit, offset }) => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      return fail("Query must not be empty.");
+    }
+    try {
+      const pageLimit = limit ?? 10;
+      const pageOffset = offset ?? 0;
+      const results = search(trimmedQuery, {
+        types,
+        limit: pageLimit + 1,
+        offset: pageOffset
+      });
+      const hasMore = results.length > pageLimit;
+      const pageResults = hasMore ? results.slice(0, pageLimit) : results;
+      const payload = {
+        items: pageResults,
+        page: {
+          limit: pageLimit,
+          offset: pageOffset,
+          returned: pageResults.length,
+          hasMore,
+          nextOffset: hasMore ? pageOffset + pageLimit : null
         }
-      ]
-    };
+      };
+      return ok(JSON.stringify(payload, null, 2));
+    } catch (error48) {
+      return fail(`Search failed: ${String(error48)}`);
+    }
   }
 );
 server.registerTool(
@@ -30322,37 +30344,33 @@ server.registerTool(
     }
   },
   async ({ sessionId }) => {
+    if (!sessionId.trim()) {
+      return fail("sessionId must not be empty.");
+    }
     const session = getSession(sessionId);
     if (!session) {
-      return {
-        content: [{ type: "text", text: `Session not found: ${sessionId}` }],
-        isError: true
-      };
+      return fail(`Session not found: ${sessionId}`);
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(session, null, 2) }]
-    };
+    return ok(JSON.stringify(session, null, 2));
   }
 );
 server.registerTool(
-  "mneme_get_decision",
+  "mneme_get_unit",
   {
-    description: "Get full details of a specific decision by ID",
+    description: "Get full details of a specific approved unit by ID",
     inputSchema: {
-      decisionId: external_exports3.string().describe("Decision ID")
+      unitId: external_exports3.string().describe("Unit ID")
     }
   },
-  async ({ decisionId }) => {
-    const decision = getDecision(decisionId);
-    if (!decision) {
-      return {
-        content: [{ type: "text", text: `Decision not found: ${decisionId}` }],
-        isError: true
-      };
+  async ({ unitId }) => {
+    if (!unitId.trim()) {
+      return fail("unitId must not be empty.");
     }
-    return {
-      content: [{ type: "text", text: JSON.stringify(decision, null, 2) }]
-    };
+    const unit = getUnit(unitId);
+    if (!unit) {
+      return fail(`Unit not found: ${unitId}`);
+    }
+    return ok(JSON.stringify(unit, null, 2));
   }
 );
 async function main() {

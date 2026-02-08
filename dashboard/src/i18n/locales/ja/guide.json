@@ -46,7 +46,7 @@
         },
         {
           "title": "コードレビュー",
-          "description": "ステージされた変更やGitHub PRに対応したルールベースのコードレビュー"
+          "description": "ステージされた変更やGitHub PRに対応したユニットベースのコードレビュー"
         }
       ]
     },
@@ -241,9 +241,9 @@
         "commands": [
           {
             "name": "/mneme:review",
-            "description": "ルールベースのコードレビュー",
+            "description": "ユニットベースのコードレビュー",
             "usage": "/mneme:review [options|PR-URL]",
-            "details": "dev-rules.json と review-guidelines.json に対してコードをレビューします。ローカルの変更と GitHub PR に対応しています。",
+            "details": "承認済みユニットに対してコードをレビューします。ローカルの変更と GitHub PR に対応しています。",
             "options": [
               {
                 "name": "--staged",
@@ -276,27 +276,6 @@
               {
                 "name": "PR-URL",
                 "description": "GitHub PR の URL（必須）"
-              }
-            ]
-          }
-        ]
-      },
-      "reporting": {
-        "title": "レポート",
-        "commands": [
-          {
-            "name": "/mneme:report",
-            "description": "週次レビューレポートを生成",
-            "usage": "/mneme:report [--from DATE --to DATE]",
-            "details": ".mneme/reviews/ のレビュー結果をサマリーレポートに集約します。",
-            "options": [
-              {
-                "name": "--from",
-                "description": "開始日（YYYY-MM-DD）"
-              },
-              {
-                "name": "--to",
-                "description": "終了日（YYYY-MM-DD）"
               }
             ]
           }
