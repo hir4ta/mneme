@@ -1422,6 +1422,127 @@ server.registerTool(
   },
 );
 
+// Tool: mneme_update_session_summary
+server.registerTool(
+  "mneme_update_session_summary",
+  {
+    description:
+      "Update session JSON file with summary data. " +
+      "MUST be called during /mneme:save Phase 3 to persist session metadata. " +
+      "Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
+    inputSchema: {
+      claudeSessionId: z
+        .string()
+        .min(8)
+        .describe("Full Claude Code session UUID (36 chars)"),
+      title: z.string().describe("Session title"),
+      summary: z
+        .object({
+          goal: z.string().describe("What the session aimed to accomplish"),
+          outcome: z.string().describe("What was actually accomplished"),
+          description: z
+            .string()
+            .optional()
+            .describe("Detailed description of the session"),
+        })
+        .describe("Session summary object"),
+      tags: z
+        .array(z.string())
+        .optional()
+        .describe("Semantic tags for the session"),
+      sessionType: z
+        .string()
+        .optional()
+        .describe(
+          "Session type (e.g. implementation, research, bugfix, refactor)",
+        ),
+    },
+  },
+  async ({ claudeSessionId, title, summary, tags, sessionType }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
+
+    const projectPath = getProjectPath();
+    const sessionsDir = path.join(projectPath, ".mneme", "sessions");
+    const shortId = claudeSessionId.slice(0, 8);
+
+    // Find existing session file
+    let sessionFile: string | null = null;
+    const searchDir = (dir: string): string | null => {
+      if (!fs.existsSync(dir)) return null;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const result = searchDir(fullPath);
+          if (result) return result;
+        } else if (entry.name === `${shortId}.json`) {
+          return fullPath;
+        }
+      }
+      return null;
+    };
+    sessionFile = searchDir(sessionsDir);
+
+    // Create session file if not found (SessionStart hook may not have run)
+    if (!sessionFile) {
+      const now = new Date();
+      const yearMonth = path.join(
+        sessionsDir,
+        String(now.getFullYear()),
+        String(now.getMonth() + 1).padStart(2, "0"),
+      );
+      if (!fs.existsSync(yearMonth)) {
+        fs.mkdirSync(yearMonth, { recursive: true });
+      }
+      sessionFile = path.join(yearMonth, `${shortId}.json`);
+      // Write minimal session JSON
+      const initial = {
+        id: shortId,
+        sessionId: claudeSessionId,
+        createdAt: now.toISOString(),
+        title: "",
+        tags: [],
+        context: {
+          projectDir: projectPath,
+          projectName: path.basename(projectPath),
+        },
+        metrics: {
+          userMessages: 0,
+          assistantResponses: 0,
+          thinkingBlocks: 0,
+          toolUsage: [],
+        },
+        files: [],
+        status: null,
+      };
+      fs.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
+    }
+
+    // Read, update, write
+    const data = readJsonFile<Record<string, unknown>>(sessionFile) ?? {};
+    data.title = title;
+    data.summary = summary;
+    data.updatedAt = new Date().toISOString();
+    if (tags) data.tags = tags;
+    if (sessionType) data.sessionType = sessionType;
+
+    fs.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+
+    return ok(
+      JSON.stringify(
+        {
+          success: true,
+          sessionFile: sessionFile.replace(projectPath, "."),
+          shortId,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);
+
 // Tool: mneme_mark_session_committed
 server.registerTool(
   "mneme_mark_session_committed",

@@ -45,6 +45,7 @@ interface UnitItem {
   tags: string[];
   sourceType: "decision" | "pattern" | "rule";
   sourceId: string;
+  sourceRefs: Array<{ type: "decision" | "pattern" | "rule"; id: string }>;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
   updatedAt: string;
@@ -271,11 +272,11 @@ function renderHtml(params: {
     {
       en:
         pendingUnits.length > 0
-          ? `Pending approvals remain (${pendingUnits.length}). Prioritize high-impact units first.`
-          : "No pending units. Approval queue is healthy.",
+          ? `Pending approvals remain (${pendingUnits.length}). Prioritize high-impact dev rules first.`
+          : "No pending dev rules. Approval queue is healthy.",
       ja:
         pendingUnits.length > 0
-          ? `承認待ちユニットが ${pendingUnits.length} 件あります。影響の大きいものから優先承認してください。`
+          ? `承認待ちの開発ルールが ${pendingUnits.length} 件あります。影響の大きいものから優先承認してください。`
           : "承認待ちはありません。承認キューは健全です。",
     },
     {
@@ -291,11 +292,11 @@ function renderHtml(params: {
     {
       en:
         newPatterns.length > 0
-          ? `New patterns detected (${newPatterns.length}). Promote stable ones to approved units.`
+          ? `New patterns detected (${newPatterns.length}). Promote stable ones to approved dev rules.`
           : "Low pattern capture. Run /mneme:save more frequently during debugging sessions.",
       ja:
         newPatterns.length > 0
-          ? `今週の新規パターンは ${newPatterns.length} 件です。安定したものは承認済みユニットへ昇格してください。`
+          ? `今週の新規パターンは ${newPatterns.length} 件です。安定したものは承認済み開発ルールへ昇格してください。`
           : "パターンの蓄積が少なめです。デバッグ中は /mneme:save をこまめに実行してください。",
     },
   ];
@@ -652,8 +653,8 @@ function renderHtml(params: {
             <span data-i18n="heroTitleJa">週次ナレッジスナップショット</span>
           </h1>
           <p>
-            <span data-i18n="heroDescEn">This week, your team captured and refined project knowledge across sessions, units, and source artifacts.</span>
-            <span data-i18n="heroDescJa">この1週間で、チームはセッション・ユニット・元データを通じて知見を蓄積し、整理しました。</span>
+            <span data-i18n="heroDescEn">This week, your team captured and refined project knowledge across sessions, development rules, and source artifacts.</span>
+            <span data-i18n="heroDescJa">この1週間で、チームはセッション・開発ルール・元データを通じて知見を蓄積し、整理しました。</span>
           </p>
           <div class="meta">
             <span data-i18n="metaEn">Period: ${formatDate(from)} to ${formatDate(to)} | Generated: ${generatedAt.toISOString()}</span>
@@ -671,9 +672,9 @@ function renderHtml(params: {
       <article class="kpi"><div class="label"><span data-i18n="kpiDecisionEn">New Decisions</span><span data-i18n="kpiDecisionJa">新規意思決定</span></div><div class="value">${newDecisions.length}</div></article>
       <article class="kpi"><div class="label"><span data-i18n="kpiPatternEn">New Patterns</span><span data-i18n="kpiPatternJa">新規パターン</span></div><div class="value">${newPatterns.length}</div></article>
       <article class="kpi"><div class="label"><span data-i18n="kpiRuleEn">Changed Rules</span><span data-i18n="kpiRuleJa">変更ルール</span></div><div class="value">${changedRules.length}</div></article>
-      <article class="kpi"><div class="label"><span data-i18n="kpiTouchedEn">Touched Units</span><span data-i18n="kpiTouchedJa">更新ユニット</span></div><div class="value">${touchedUnits.length}</div></article>
-      <article class="kpi"><div class="label"><span data-i18n="kpiApprovedEn">Approved Units</span><span data-i18n="kpiApprovedJa">承認済みユニット</span></div><div class="value">${approvedUnits.length}</div></article>
-      <article class="kpi"><div class="label"><span data-i18n="kpiPendingEn">Pending Units</span><span data-i18n="kpiPendingJa">承認待ちユニット</span></div><div class="value">${pendingUnits.length}</div></article>
+      <article class="kpi"><div class="label"><span data-i18n="kpiTouchedEn">Touched Dev Rules</span><span data-i18n="kpiTouchedJa">更新された開発ルール</span></div><div class="value">${touchedUnits.length}</div></article>
+      <article class="kpi"><div class="label"><span data-i18n="kpiApprovedEn">Approved Dev Rules</span><span data-i18n="kpiApprovedJa">承認済み開発ルール</span></div><div class="value">${approvedUnits.length}</div></article>
+      <article class="kpi"><div class="label"><span data-i18n="kpiPendingEn">Pending Dev Rules</span><span data-i18n="kpiPendingJa">承認待ち開発ルール</span></div><div class="value">${pendingUnits.length}</div></article>
     </section>
 
     <section class="section">
@@ -684,8 +685,8 @@ function renderHtml(params: {
           <div class="pulse-value">${approvalRate}%</div>
           <div class="meter"><i style="width:${approvalRate}%"></i></div>
           <div class="pulse-note">
-            <span data-i18n="pulseApprovalNoteEn">Among units touched this week, how many were approved.</span>
-            <span data-i18n="pulseApprovalNoteJa">今週更新されたユニットのうち、承認済みになった割合です。</span>
+            <span data-i18n="pulseApprovalNoteEn">Among dev rules touched this week, how many were approved.</span>
+            <span data-i18n="pulseApprovalNoteJa">今週更新された開発ルールのうち、承認済みになった割合です。</span>
           </div>
         </article>
         <article class="pulse">
@@ -702,8 +703,8 @@ function renderHtml(params: {
           <div class="pulse-value">${pendingUnits.length}</div>
           <div class="meter"><i style="width:${Math.min(100, pendingUnits.length * 10)}%"></i></div>
           <div class="pulse-note">
-            <span data-i18n="pulseQueueNoteEn">Units waiting for approval in the project-wide queue.</span>
-            <span data-i18n="pulseQueueNoteJa">プロジェクト全体で現在承認待ちのユニット件数です。</span>
+            <span data-i18n="pulseQueueNoteEn">Dev rules waiting for approval in the project-wide queue.</span>
+            <span data-i18n="pulseQueueNoteJa">プロジェクト全体で現在承認待ちの開発ルール件数です。</span>
           </div>
         </article>
       </div>

@@ -31378,6 +31378,98 @@ server.registerTool(
   }
 );
 server.registerTool(
+  "mneme_update_session_summary",
+  {
+    description: "Update session JSON file with summary data. MUST be called during /mneme:save Phase 3 to persist session metadata. Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
+    inputSchema: {
+      claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
+      title: external_exports3.string().describe("Session title"),
+      summary: external_exports3.object({
+        goal: external_exports3.string().describe("What the session aimed to accomplish"),
+        outcome: external_exports3.string().describe("What was actually accomplished"),
+        description: external_exports3.string().optional().describe("Detailed description of the session")
+      }).describe("Session summary object"),
+      tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
+      sessionType: external_exports3.string().optional().describe(
+        "Session type (e.g. implementation, research, bugfix, refactor)"
+      )
+    }
+  },
+  async ({ claudeSessionId, title, summary, tags, sessionType }) => {
+    if (!claudeSessionId.trim()) {
+      return fail("claudeSessionId must not be empty.");
+    }
+    const projectPath = getProjectPath();
+    const sessionsDir = path4.join(projectPath, ".mneme", "sessions");
+    const shortId = claudeSessionId.slice(0, 8);
+    let sessionFile = null;
+    const searchDir = (dir) => {
+      if (!fs4.existsSync(dir)) return null;
+      for (const entry of fs4.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path4.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          const result = searchDir(fullPath);
+          if (result) return result;
+        } else if (entry.name === `${shortId}.json`) {
+          return fullPath;
+        }
+      }
+      return null;
+    };
+    sessionFile = searchDir(sessionsDir);
+    if (!sessionFile) {
+      const now = /* @__PURE__ */ new Date();
+      const yearMonth = path4.join(
+        sessionsDir,
+        String(now.getFullYear()),
+        String(now.getMonth() + 1).padStart(2, "0")
+      );
+      if (!fs4.existsSync(yearMonth)) {
+        fs4.mkdirSync(yearMonth, { recursive: true });
+      }
+      sessionFile = path4.join(yearMonth, `${shortId}.json`);
+      const initial = {
+        id: shortId,
+        sessionId: claudeSessionId,
+        createdAt: now.toISOString(),
+        title: "",
+        tags: [],
+        context: {
+          projectDir: projectPath,
+          projectName: path4.basename(projectPath)
+        },
+        metrics: {
+          userMessages: 0,
+          assistantResponses: 0,
+          thinkingBlocks: 0,
+          toolUsage: []
+        },
+        files: [],
+        status: null
+      };
+      fs4.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
+    }
+    const data = readJsonFile(sessionFile) ?? {};
+    data.title = title;
+    data.summary = summary;
+    data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    if (tags) data.tags = tags;
+    if (sessionType) data.sessionType = sessionType;
+    fs4.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+    return ok(
+      JSON.stringify(
+        {
+          success: true,
+          sessionFile: sessionFile.replace(projectPath, "."),
+          shortId
+        },
+        null,
+        2
+      )
+    );
+  }
+);
+server.registerTool(
   "mneme_mark_session_committed",
   {
     description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",

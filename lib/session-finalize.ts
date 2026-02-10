@@ -151,20 +151,31 @@ async function sessionFinalize(
         const cleanupResult = cleanupUncommittedSession(sessionId, cwd);
 
         if (cleanupResult.deleted) {
+          // Truly uncommitted - clean up session file and link
           console.error(
             `[mneme] Session ended without /mneme:save - cleaned up ${cleanupResult.count} interactions`,
           );
+          fs.unlinkSync(sessionFile);
+          const linkFile = path.join(sessionLinksDir, `${sessionShortId}.json`);
+          if (fs.existsSync(linkFile)) {
+            fs.unlinkSync(linkFile);
+          }
+          console.error(
+            "[mneme] Session completed (not saved, cleaned up immediately)",
+          );
+        } else {
+          // is_committed=1 in SQLite but summary missing in JSON - keep the file
+          data.status = "complete";
+          data.endedAt = now;
+          data.updatedAt = now;
+          delete data.uncommitted;
+          delete data.interactions;
+          delete data.preCompactBackups;
+          safeWriteJson(sessionFile, data);
+          console.error(
+            "[mneme] Session completed (committed in SQLite, kept despite missing summary)",
+          );
         }
-
-        // Remove session file and link
-        fs.unlinkSync(sessionFile);
-        const linkFile = path.join(sessionLinksDir, `${sessionShortId}.json`);
-        if (fs.existsSync(linkFile)) {
-          fs.unlinkSync(linkFile);
-        }
-        console.error(
-          "[mneme] Session completed (not saved, cleaned up immediately)",
-        );
       } else if (cleanupPolicy === "never") {
         console.error(
           "[mneme] Session completed (not saved, kept as uncommitted)",

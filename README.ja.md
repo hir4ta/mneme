@@ -1,5 +1,7 @@
 # mneme
 
+![Version](https://img.shields.io/badge/version-0.22.1-blue)
+![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
 
@@ -24,7 +26,11 @@ Claude Codeの長期記憶を実現するプラグイン
 
 Claude Codeのセッションは終了やAuto-Compactで文脈が失われ、過去の判断が追えず、知見の再利用が困難です。
 
-**mnemeでの解決**: 自動保存と再開、毎プロンプトでの自動記憶検索、判断・パターン履歴の検索・ダッシュボード参照。`.mneme/` のJSONはGit管理可能で、チームでの知見共有にも対応します。
+**よくある問題**: セッション間での文脈喪失、同じミスの繰り返し、不透明な設計判断
+
+**mnemeでの解決**: 自動保存と再開、毎プロンプトでの自動記憶検索、判断・パターン履歴の検索
+
+**チームでの利点**: `.mneme/` のJSONファイルはGit管理され、判断やセッション履歴をチームで共有できます。
 
 ## インストール
 

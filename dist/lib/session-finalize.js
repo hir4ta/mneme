@@ -875,15 +875,26 @@ async function sessionFinalize(sessionId, cwd, transcriptPath, cleanupPolicy, gr
           console.error(
             `[mneme] Session ended without /mneme:save - cleaned up ${cleanupResult.count} interactions`
           );
+          fs3.unlinkSync(sessionFile);
+          const linkFile = path3.join(sessionLinksDir, `${sessionShortId}.json`);
+          if (fs3.existsSync(linkFile)) {
+            fs3.unlinkSync(linkFile);
+          }
+          console.error(
+            "[mneme] Session completed (not saved, cleaned up immediately)"
+          );
+        } else {
+          data.status = "complete";
+          data.endedAt = now;
+          data.updatedAt = now;
+          delete data.uncommitted;
+          delete data.interactions;
+          delete data.preCompactBackups;
+          safeWriteJson(sessionFile, data);
+          console.error(
+            "[mneme] Session completed (committed in SQLite, kept despite missing summary)"
+          );
         }
-        fs3.unlinkSync(sessionFile);
-        const linkFile = path3.join(sessionLinksDir, `${sessionShortId}.json`);
-        if (fs3.existsSync(linkFile)) {
-          fs3.unlinkSync(linkFile);
-        }
-        console.error(
-          "[mneme] Session completed (not saved, cleaned up immediately)"
-        );
       } else if (cleanupPolicy === "never") {
         console.error(
           "[mneme] Session completed (not saved, kept as uncommitted)"

@@ -41,11 +41,20 @@ Always render missing required fields as blocking errors before write.
 - Merge linked/resumed child sessions into the master session.
 
 2. **Interactions commit**
-- Save transcript interactions to `.mneme/local.db`.
-- Mark the Claude session committed.
+- Save transcript interactions to `.mneme/local.db` via `mneme_save_interactions`.
+- Do NOT call `mneme_mark_session_committed` yet (wait until after Phase 3).
 
-3. **Session summary extraction**
-- Update master session JSON (`title/goal/outcome/description/tags/sessionType`).
+3. **Session summary extraction (required MCP)**
+- Extract from the conversation: `title`, `goal`, `outcome`, `description`, `tags`, `sessionType`.
+- **MUST call `mneme_update_session_summary`** MCP tool with the extracted data.
+  This writes the summary to `.mneme/sessions/` JSON file, ensuring the session is preserved on SessionEnd.
+- **Then call `mneme_mark_session_committed`** to finalize the commit.
+
+<required>
+- Call `mneme_update_session_summary` with: `claudeSessionId`, `title`, `summary` (`goal`, `outcome`), `tags`, `sessionType`
+- Call `mneme_mark_session_committed` AFTER `mneme_update_session_summary` succeeds
+- Do NOT skip this step even for short/research sessions
+</required>
 
 4. **Decision extraction (source)**
 - Persist concrete choices and rationale to `decisions/YYYY/MM/*.json`.
