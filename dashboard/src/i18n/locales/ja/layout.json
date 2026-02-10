@@ -5,12 +5,9 @@
     "settings": "設定",
     "help": "ヘルプ",
     "sessions": "セッション",
-    "decisions": "意思決定",
-    "patterns": "パターン",
-    "units": "ユニット",
+    "devRules": "開発ルール",
     "statistics": "統計",
     "graph": "グラフ",
-    "rules": "ルール",
     "guide": "ガイド"
   }
 }

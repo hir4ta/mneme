@@ -43,10 +43,6 @@
         {
           "title": "Rule Management",
           "description": "Development rules and review guidelines are extracted and enforced"
-        },
-        {
-          "title": "Code Review",
-          "description": "Unit-based code review with support for staged changes and GitHub PRs"
         }
       ]
     },
@@ -64,7 +60,7 @@
         },
         {
           "title": "Save session data",
-          "description": "Run /mneme:save to extract source knowledge and refresh units from your session",
+          "description": "Run /mneme:save to extract decisions, patterns, and rules from your session",
           "code": "/mneme:save"
         },
         {
@@ -77,24 +73,13 @@
   },
   "workflow": {
     "title": "Recommended Workflow",
-    "subtitle": "plan → implement → save → review",
+    "subtitle": "implement → save → approve rules",
     "intro": "Follow this workflow to maximize the benefits of mneme's knowledge management.",
     "phases": [
       {
-        "name": "Plan",
-        "command": "/mneme:plan",
-        "description": "Start with memory-informed design. mneme searches past sessions and approved units to provide context.",
-        "benefits": [
-          "Automatically surfaces relevant approved units",
-          "Socratic questions clarify requirements",
-          "Task breakdown for organized implementation"
-        ],
-        "example": "/mneme:plan \"add authentication\""
-      },
-      {
         "name": "Implement",
         "command": null,
-        "description": "Follow your plan and implement the feature. mneme's auto-search provides relevant context as you work.",
+        "description": "Implement your feature. mneme's auto-search provides relevant context as you work.",
         "benefits": [
           "Past patterns guide implementation",
           "Error solutions are readily available",
@@ -108,21 +93,10 @@
         "description": "Extract and persist source knowledge from your session, then regenerate units.",
         "benefits": [
           "Decision/pattern/rule sources are preserved with rationale",
-          "Units are regenerated for review/planning",
+          "Units are regenerated for approval",
           "Approved guidance stays enforceable"
         ],
         "example": "/mneme:save"
-      },
-      {
-        "name": "Review",
-        "command": "/mneme:review",
-        "description": "Review code against approved units.",
-        "benefits": [
-          "Catches issues before commit",
-          "Enforces team standards",
-          "Supports staged changes and PR review"
-        ],
-        "example": "/mneme:review --staged"
       }
     ],
     "dataFlow": {
@@ -171,7 +145,7 @@
             "name": "/mneme:save",
             "description": "Save all session data",
             "usage": "/mneme:save",
-            "details": "Extracts and persists: interactions (to local.db), summary, decision/pattern/rule sources, and unit refresh inputs. Run anytime during or after a session.",
+            "details": "Extracts and persists: interactions (to local.db), summary, decisions, patterns, rules. Run anytime during or after a session.",
             "options": [],
             "phases": [
               "Phase 0: Master Session (merge child sessions)",
@@ -180,7 +154,7 @@
               "Phase 3: Decisions (source knowledge)",
               "Phase 4: Patterns (source knowledge)",
               "Phase 5: Rules (source knowledge)",
-              "Phase 6: Unit refresh (pending approval)"
+              "Phase 6: Development rules refresh (pending approval)"
             ]
           },
           {
@@ -193,29 +167,6 @@
                 "name": "session-id",
                 "description": "8-character session ID (optional)"
               }
-            ]
-          }
-        ]
-      },
-      "planning": {
-        "title": "Planning",
-        "commands": [
-          {
-            "name": "/mneme:plan",
-            "description": "Memory-informed design and planning",
-            "usage": "/mneme:plan [topic]",
-            "details": "Searches past knowledge, asks clarifying questions, presents approaches, and creates task breakdown.",
-            "options": [
-              {
-                "name": "topic",
-                "description": "Feature or task to plan (optional)"
-              }
-            ],
-            "phases": [
-              "Phase 1: Memory Search (find relevant past knowledge)",
-              "Phase 2: Socratic Questions (clarify requirements)",
-              "Phase 3: Design Decision (present approaches)",
-              "Phase 4: Task Breakdown (create actionable tasks)"
             ]
           }
         ]
@@ -237,37 +188,9 @@
           }
         ]
       },
-      "review": {
-        "title": "Code Review",
+      "knowledge": {
+        "title": "Knowledge",
         "commands": [
-          {
-            "name": "/mneme:review",
-            "description": "Unit-based code review",
-            "usage": "/mneme:review [options|PR-URL]",
-            "details": "Reviews code against approved units. Supports local changes and GitHub PRs.",
-            "options": [
-              {
-                "name": "--staged",
-                "description": "Review staged changes only"
-              },
-              {
-                "name": "--all",
-                "description": "Review all uncommitted changes"
-              },
-              {
-                "name": "--diff=branch",
-                "description": "Review diff against specified branch"
-              },
-              {
-                "name": "--full",
-                "description": "Two-stage review (quick + deep)"
-              },
-              {
-                "name": "PR-URL",
-                "description": "GitHub PR URL to review"
-              }
-            ]
-          },
           {
             "name": "/mneme:harvest",
             "description": "Extract knowledge from PR comments",
@@ -288,32 +211,6 @@
     "title": "Use Cases",
     "subtitle": "Real-world scenarios and how to use mneme",
     "cases": [
-      {
-        "title": "Starting a New Feature",
-        "scenario": "You need to implement a new authentication system",
-        "steps": [
-          {
-            "action": "Run /mneme:plan \"user authentication\"",
-            "result": "mneme searches past sessions for auth-related decisions and patterns"
-          },
-          {
-            "action": "Answer clarifying questions",
-            "result": "Requirements are clarified (OAuth vs JWT, session storage, etc.)"
-          },
-          {
-            "action": "Review suggested approaches",
-            "result": "Choose implementation approach based on past decisions"
-          },
-          {
-            "action": "Implement following task breakdown",
-            "result": "Organized, consistent implementation"
-          },
-          {
-            "action": "Run /mneme:save",
-            "result": "New decisions and patterns are captured for future reference"
-          }
-        ]
-      },
       {
         "title": "Debugging an Error",
         "scenario": "You encounter a cryptic error message",
@@ -351,28 +248,6 @@
           {
             "action": "Continue implementation",
             "result": "Seamless continuation with all context preserved"
-          }
-        ]
-      },
-      {
-        "title": "Pre-commit Code Review",
-        "scenario": "You want to review changes before committing",
-        "steps": [
-          {
-            "action": "Stage your changes with git add",
-            "result": "Changes are ready for review"
-          },
-          {
-            "action": "Run /mneme:review --staged",
-            "result": "Changes are reviewed against project rules"
-          },
-          {
-            "action": "Fix any issues found",
-            "result": "Code meets project standards"
-          },
-          {
-            "action": "Commit with confidence",
-            "result": "Clean, reviewed code is committed"
           }
         ]
       },

@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { Header } from "./header";
 import { Sidebar } from "./sidebar";
 
@@ -17,6 +18,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </main>
       </div>
+      <Toaster richColors />
     </div>
   );
 }

@@ -7,33 +7,13 @@
  * Uses Node.js built-in sqlite module (node:sqlite) for platform independence.
  */
 
+import "./suppress-sqlite-warning.js";
+
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Suppress Node.js SQLite experimental warning
-const originalEmit = process.emit;
-// @ts-expect-error - Suppressing experimental warning
-process.emit = (event, ...args) => {
-  if (
-    event === "warning" &&
-    typeof args[0] === "object" &&
-    args[0] !== null &&
-    "name" in args[0] &&
-    (args[0] as { name: string }).name === "ExperimentalWarning" &&
-    "message" in args[0] &&
-    typeof (args[0] as { message: string }).message === "string" &&
-    (args[0] as { message: string }).message.includes("SQLite")
-  ) {
-    return false;
-  }
-  return originalEmit.apply(process, [event, ...args] as unknown as Parameters<
-    typeof process.emit
-  >);
-};
-
-// Import after warning suppression is set up
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
 

@@ -1,6 +1,6 @@
 {
   "title": "開発ルール",
-  "subtitle": "/mneme:reviewで使用されるレビュー基準。/mneme:saveで抽出されます。",
+  "subtitle": "/mneme:saveで抽出される開発基準。",
   "count": "{{filtered}} / {{total}}",
   "searchPlaceholder": "ルールを検索...",
   "allPriority": "すべての優先度",
@@ -12,7 +12,7 @@
     "title": "ルールとは？",
     "devRules": "コーディング標準とアーキテクチャルール（例：N+1クエリを避ける）",
     "reviewGuidelines": "コードレビューチェックリスト項目（例：トランザクションを確認）",
-    "description": "<code>/mneme:save</code>を実行するとセッションからルールが抽出されます。<code>/mneme:review</code>でこれらのルールに基づいてコードをチェックできます。"
+    "description": "<code>/mneme:save</code>を実行するとセッションからルールが抽出されます。承認されたルールはMCP検索ツール経由でカスタムエージェントから利用できます。"
   },
   "fields": {
     "text": "タイトル",

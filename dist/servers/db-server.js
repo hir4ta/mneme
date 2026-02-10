@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path3) {
-      let input = path3;
+    function removeDotSegments(path5) {
+      let input = path5;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path3, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path3 && path3 !== "/" ? path3 : void 0;
+        const [path5, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6776,12 +6776,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs3, exportName) {
+    function addFormats(ajv, list, fs5, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs3[f]);
+        ajv.addFormat(f, fs5[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6789,10 +6789,19 @@ var require_dist = __commonJS({
   }
 });
 
+// lib/suppress-sqlite-warning.ts
+var originalEmit = process.emit;
+process.emit = (event, ...args) => {
+  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.apply(process, [event, ...args]);
+};
+
 // servers/db-server.ts
-import * as fs2 from "node:fs";
+import * as fs4 from "node:fs";
 import * as os from "node:os";
-import * as path2 from "node:path";
+import * as path4 from "node:path";
 import * as readline from "node:readline";
 
 // node_modules/zod/v3/helpers/util.js
@@ -7154,8 +7163,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path3, errorMaps, issueData } = params;
-  const fullPath = [...path3, ...issueData.path || []];
+  const { data, path: path5, errorMaps, issueData } = params;
+  const fullPath = [...path5, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7270,11 +7279,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path3, key) {
+  constructor(parent, value, path5, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path3;
+    this._path = path5;
     this._key = key;
   }
   get path() {
@@ -11197,10 +11206,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path3) {
-  if (!path3)
+function getElementAtPath(obj, path5) {
+  if (!path5)
     return obj;
-  return path3.reduce((acc, key) => acc?.[key], obj);
+  return path5.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11583,11 +11592,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path3, issues) {
+function prefixIssues(path5, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path3);
+    iss.path.unshift(path5);
     return iss;
   });
 }
@@ -11770,7 +11779,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path3 = []) => {
+  const processError = (error49, path5 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -11780,7 +11789,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path3, ...issue2.path];
+        const fullpath = [...path5, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11812,8 +11821,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path3 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path3) {
+  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path5) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -24219,13 +24228,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path3 = ref.slice(1).split("/").filter(Boolean);
-  if (path3.length === 0) {
+  const path5 = ref.slice(1).split("/").filter(Boolean);
+  if (path5.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path3[0] === defsKey) {
-    const key = path3[1];
+  if (path5[0] === defsKey) {
+    const key = path5[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -29945,16 +29954,243 @@ var StdioServerTransport = class {
 };
 
 // lib/search-core.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+
+// lib/fuzzy-search.ts
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
+
+// lib/utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
+function safeReadJson(filePath, fallback) {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return fallback;
+  }
+}
+function findJsonFiles(dir) {
+  const results = [];
+  if (!fs.existsSync(dir)) return results;
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+  for (const item of items) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      results.push(...findJsonFiles(fullPath));
+    } else if (item.name.endsWith(".json")) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+// lib/fuzzy-search.ts
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        // deletion
+        matrix[i][j - 1] + 1,
+        // insertion
+        matrix[i - 1][j - 1] + cost
+        // substitution
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+function expandAliases(query, tags) {
+  const results = /* @__PURE__ */ new Set([query]);
+  const lowerQuery = query.toLowerCase();
+  for (const tag of tags) {
+    const allTerms = [tag.id, tag.label, ...tag.aliases].map(
+      (t) => t.toLowerCase()
+    );
+    if (allTerms.includes(lowerQuery)) {
+      results.add(tag.id);
+      results.add(tag.label);
+      for (const alias of tag.aliases) {
+        results.add(alias);
+      }
+    }
+  }
+  return Array.from(results);
+}
+function calculateSimilarity(text, query) {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  if (lowerText === lowerQuery) return 10;
+  if (lowerText.includes(lowerQuery)) return 5;
+  if (lowerQuery.includes(lowerText)) return 3;
+  const distance = levenshtein(lowerText, lowerQuery);
+  if (distance <= 2) return 2;
+  if (distance <= 3) return 1;
+  return 0;
+}
+async function search(options) {
+  const {
+    query,
+    mnemeDir,
+    targets = ["sessions", "decisions"],
+    limit = 20,
+    timeout = 1e4
+  } = options;
+  const startTime = Date.now();
+  const results = [];
+  const tagsPath = path2.join(mnemeDir, "tags.json");
+  const tagsData = safeReadJson(tagsPath, { tags: [] });
+  const expandedQueries = expandAliases(query, tagsData.tags);
+  if (targets.includes("sessions")) {
+    const sessionsDir = path2.join(mnemeDir, "sessions");
+    if (fs2.existsSync(sessionsDir)) {
+      const files = findJsonFiles(sessionsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const session = safeReadJson(file2, {});
+        const score = scoreDocument(session, expandedQueries, [
+          "title",
+          "goal",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "session",
+            id: session.id || path2.basename(file2, ".json"),
+            score,
+            title: session.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("decisions")) {
+    const decisionsDir = path2.join(mnemeDir, "decisions");
+    if (fs2.existsSync(decisionsDir)) {
+      const files = findJsonFiles(decisionsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const decision = safeReadJson(file2, {});
+        const score = scoreDocument(decision, expandedQueries, [
+          "title",
+          "decision",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "decision",
+            id: decision.id || path2.basename(file2, ".json"),
+            score,
+            title: decision.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("patterns")) {
+    const patternsDir = path2.join(mnemeDir, "patterns");
+    if (fs2.existsSync(patternsDir)) {
+      const files = findJsonFiles(patternsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const pattern = safeReadJson(file2, {});
+        const patterns = pattern.patterns || [];
+        for (const p of patterns) {
+          const score = scoreDocument(p, expandedQueries, [
+            "description",
+            "errorPattern",
+            "tags"
+          ]);
+          if (score > 0) {
+            results.push({
+              type: "pattern",
+              id: `${path2.basename(file2, ".json")}-${p.type || "unknown"}`,
+              score,
+              title: p.description || "Untitled pattern",
+              highlights: []
+            });
+          }
+        }
+      }
+    }
+  }
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function scoreDocument(doc, queries, fields) {
+  let totalScore = 0;
+  for (const field of fields) {
+    const value = doc[field];
+    if (typeof value === "string") {
+      for (const q of queries) {
+        totalScore += calculateSimilarity(value, q);
+      }
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === "string") {
+          for (const q of queries) {
+            totalScore += calculateSimilarity(item, q);
+          }
+        }
+      }
+    }
+  }
+  return totalScore;
+}
+var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
+if (isMain && process.argv.length > 2) {
+  const args = process.argv.slice(2);
+  const queryIndex = args.indexOf("--query");
+  const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
+  const mnemeDir = `${process.cwd()}/.mneme`;
+  if (!query) {
+    console.error(JSON.stringify({ success: false, error: "Missing --query" }));
+    process.exit(0);
+  }
+  search({ query, mnemeDir }).then((results) => {
+    console.log(JSON.stringify({ success: true, results }));
+  }).catch((error48) => {
+    console.error(JSON.stringify({ success: false, error: String(error48) }));
+  });
+}
+
+// lib/search-core.ts
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+function countMatches(text, pattern) {
+  const matches = text.match(new RegExp(pattern.source, "gi"));
+  return matches ? matches.length : 0;
+}
+function fieldScore(text, pattern, baseScore) {
+  if (!text) return 0;
+  const count = countMatches(text, pattern);
+  if (count === 0) return 0;
+  return baseScore + (count > 1 ? Math.log2(count) * 0.5 : 0);
+}
+function isFuzzyMatch(word, target, maxDistance = 2) {
+  if (word.length < 4) return false;
+  const distance = levenshtein(word.toLowerCase(), target.toLowerCase());
+  const threshold = Math.min(maxDistance, Math.floor(word.length / 3));
+  return distance <= threshold;
+}
 function loadTags(mnemeDir) {
-  const tagsPath = path.join(mnemeDir, "tags.json");
-  if (!fs.existsSync(tagsPath)) return null;
+  const tagsPath = path3.join(mnemeDir, "tags.json");
+  if (!fs3.existsSync(tagsPath)) return null;
   try {
-    return JSON.parse(fs.readFileSync(tagsPath, "utf-8"));
+    return JSON.parse(fs3.readFileSync(tagsPath, "utf-8"));
   } catch {
     return null;
   }
@@ -30034,10 +30270,10 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
   }
 }
 function walkJsonFiles(dir, callback) {
-  if (!fs.existsSync(dir)) return;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  if (!fs3.existsSync(dir)) return;
+  const entries = fs3.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
+    const fullPath = path3.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkJsonFiles(fullPath, callback);
       continue;
@@ -30048,31 +30284,34 @@ function walkJsonFiles(dir, callback) {
   }
 }
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path.join(mnemeDir, "sessions");
+  const sessionsDir = path3.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs.readFileSync(filePath, "utf-8")
+        fs3.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
       const matchedFields = [];
-      if (title && pattern.test(title)) {
-        score += 3;
+      const titleScore = fieldScore(title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
       if (session.tags?.some((t) => pattern.test(t))) {
         score += 1;
         matchedFields.push("tags");
       }
-      if (session.summary?.goal && pattern.test(session.summary.goal)) {
-        score += 2;
+      const goalScore = fieldScore(session.summary?.goal, pattern, 2);
+      if (goalScore > 0) {
+        score += goalScore;
         matchedFields.push("summary.goal");
       }
-      if (session.summary?.description && pattern.test(session.summary.description)) {
-        score += 2;
+      const descScore = fieldScore(session.summary?.description, pattern, 2);
+      if (descScore > 0) {
+        score += descScore;
         matchedFields.push("summary.description");
       }
       if (session.discussions?.some(
@@ -30086,6 +30325,20 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
       )) {
         score += 2;
         matchedFields.push("errors");
+      }
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (title || "").toLowerCase().split(/\s+/);
+        const tagWords = session.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
       if (score > 0) {
         results.push({
@@ -30103,24 +30356,26 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 function searchUnits(mnemeDir, keywords, limit = 5) {
-  const unitsPath = path.join(mnemeDir, "units", "units.json");
+  const unitsPath = path3.join(mnemeDir, "units", "units.json");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
-  if (!fs.existsSync(unitsPath)) return results;
+  if (!fs3.existsSync(unitsPath)) return results;
   try {
-    const cards = JSON.parse(fs.readFileSync(unitsPath, "utf-8"));
+    const cards = JSON.parse(fs3.readFileSync(unitsPath, "utf-8"));
     const items = (cards.items || []).filter(
       (item) => item.status === "approved"
     );
     for (const item of items) {
       let score = 0;
       const matchedFields = [];
-      if (item.title && pattern.test(item.title)) {
-        score += 3;
+      const titleScore = fieldScore(item.title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
-      if (item.summary && pattern.test(item.summary)) {
-        score += 2;
+      const summaryScore = fieldScore(item.summary, pattern, 2);
+      if (summaryScore > 0) {
+        score += summaryScore;
         matchedFields.push("summary");
       }
       if (item.tags?.some((tag) => pattern.test(tag))) {
@@ -30130,6 +30385,20 @@ function searchUnits(mnemeDir, keywords, limit = 5) {
       if (item.sourceType && pattern.test(item.sourceType)) {
         score += 1;
         matchedFields.push("sourceType");
+      }
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
+        const tagWords = item.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
       if (score > 0) {
         results.push({
@@ -30199,13 +30468,6 @@ function searchKnowledge(options) {
 }
 
 // servers/db-server.ts
-var originalEmit = process.emit;
-process.emit = (event, ...args) => {
-  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
-    return false;
-  }
-  return originalEmit.apply(process, [event, ...args]);
-};
 var { DatabaseSync } = await import("node:sqlite");
 var LIST_LIMIT_MIN = 1;
 var LIST_LIMIT_MAX = 200;
@@ -30226,24 +30488,24 @@ function getProjectPath() {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 function getLocalDbPath() {
-  return path2.join(getProjectPath(), ".mneme", "local.db");
+  return path4.join(getProjectPath(), ".mneme", "local.db");
 }
 function getMnemeDir() {
-  return path2.join(getProjectPath(), ".mneme");
+  return path4.join(getProjectPath(), ".mneme");
 }
 function readJsonFile(filePath) {
-  if (!fs2.existsSync(filePath)) return null;
+  if (!fs4.existsSync(filePath)) return null;
   try {
-    return JSON.parse(fs2.readFileSync(filePath, "utf-8"));
+    return JSON.parse(fs4.readFileSync(filePath, "utf-8"));
   } catch {
     return null;
   }
 }
 function listJsonFiles(dir) {
-  if (!fs2.existsSync(dir)) return [];
-  const entries = fs2.readdirSync(dir, { withFileTypes: true });
+  if (!fs4.existsSync(dir)) return [];
+  const entries = fs4.readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
-    const fullPath = path2.join(dir, entry.name);
+    const fullPath = path4.join(dir, entry.name);
     if (entry.isDirectory()) {
       return listJsonFiles(fullPath);
     }
@@ -30251,7 +30513,7 @@ function listJsonFiles(dir) {
   });
 }
 function readUnits() {
-  const unitsPath = path2.join(getMnemeDir(), "units", "units.json");
+  const unitsPath = path4.join(getMnemeDir(), "units", "units.json");
   const parsed = readJsonFile(unitsPath);
   if (!parsed || !Array.isArray(parsed.items)) {
     return {
@@ -30263,26 +30525,26 @@ function readUnits() {
   return parsed;
 }
 function writeUnits(doc) {
-  const unitsPath = path2.join(getMnemeDir(), "units", "units.json");
-  fs2.mkdirSync(path2.dirname(unitsPath), { recursive: true });
-  fs2.writeFileSync(unitsPath, JSON.stringify(doc, null, 2));
+  const unitsPath = path4.join(getMnemeDir(), "units", "units.json");
+  fs4.mkdirSync(path4.dirname(unitsPath), { recursive: true });
+  fs4.writeFileSync(unitsPath, JSON.stringify(doc, null, 2));
 }
 function readRuleItems(ruleType) {
-  const filePath = path2.join(getMnemeDir(), "rules", `${ruleType}.json`);
+  const filePath = path4.join(getMnemeDir(), "rules", `${ruleType}.json`);
   const parsed = readJsonFile(filePath);
   const items = parsed?.items ?? parsed?.rules;
   return Array.isArray(items) ? items : [];
 }
 function readAuditEntries(options = {}) {
-  const auditDir = path2.join(getMnemeDir(), "audit");
-  if (!fs2.existsSync(auditDir)) return [];
-  const files = fs2.readdirSync(auditDir).filter((name) => name.endsWith(".jsonl")).sort();
+  const auditDir = path4.join(getMnemeDir(), "audit");
+  if (!fs4.existsSync(auditDir)) return [];
+  const files = fs4.readdirSync(auditDir).filter((name) => name.endsWith(".jsonl")).sort();
   const fromTime = options.from ? new Date(options.from).getTime() : null;
   const toTime = options.to ? new Date(options.to).getTime() : null;
   const entries = [];
   for (const name of files) {
-    const fullPath = path2.join(auditDir, name);
-    const lines = fs2.readFileSync(fullPath, "utf-8").split("\n");
+    const fullPath = path4.join(auditDir, name);
+    const lines = fs4.readFileSync(fullPath, "utf-8").split("\n");
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
@@ -30301,7 +30563,7 @@ function readAuditEntries(options = {}) {
   );
 }
 function readSessionsById() {
-  const sessionsDir = path2.join(getMnemeDir(), "sessions");
+  const sessionsDir = path4.join(getMnemeDir(), "sessions");
   const map2 = /* @__PURE__ */ new Map();
   for (const filePath of listJsonFiles(sessionsDir)) {
     const parsed = readJsonFile(filePath);
@@ -30387,7 +30649,7 @@ var db = null;
 function getDb() {
   if (db) return db;
   const dbPath = getLocalDbPath();
-  if (!fs2.existsSync(dbPath)) {
+  if (!fs4.existsSync(dbPath)) {
     return null;
   }
   try {
@@ -30621,17 +30883,17 @@ function crossProjectSearch(query, options = {}) {
 function getTranscriptPath(claudeSessionId) {
   const projectPath = getProjectPath();
   const encodedPath = projectPath.replace(/\//g, "-");
-  const transcriptPath = path2.join(
+  const transcriptPath = path4.join(
     os.homedir(),
     ".claude",
     "projects",
     encodedPath,
     `${claudeSessionId}.jsonl`
   );
-  return fs2.existsSync(transcriptPath) ? transcriptPath : null;
+  return fs4.existsSync(transcriptPath) ? transcriptPath : null;
 }
 async function parseTranscript(transcriptPath) {
-  const fileStream = fs2.createReadStream(transcriptPath);
+  const fileStream = fs4.createReadStream(transcriptPath);
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Number.POSITIVE_INFINITY
@@ -30930,7 +31192,7 @@ function markSessionCommitted(claudeSessionId) {
   }
 }
 function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT) {
-  const queryPath = path2.join(
+  const queryPath = path4.join(
     getProjectPath(),
     "scripts",
     "search-benchmark.queries.json"

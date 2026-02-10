@@ -1,0 +1,56 @@
+{
+  "title": "開発ルール",
+  "subtitle": "意思決定・パターン・ルールから生成された承認済みルール。",
+  "searchPlaceholder": "ルールを検索...",
+  "loading": "ルールを読み込み中...",
+  "noRules": "開発ルールがありません。既存のソースデータから生成してください。",
+  "noMatch": "条件に一致するルールがありません。",
+  "error": "開発ルールの読み込みに失敗しました。",
+  "selectAll": "すべて選択",
+  "deselectAll": "選択解除",
+  "ariaSelectItem": "{{title}} を選択",
+  "actions": {
+    "approve": "承認",
+    "approveAll": "一括承認",
+    "setPending": "保留に戻す",
+    "reject": "却下",
+    "rejectAll": "一括却下",
+    "delete": "削除",
+    "dismiss": "閉じる"
+  },
+  "stats": {
+    "total": "合計",
+    "approved": "承認済み",
+    "pending": "保留",
+    "rejected": "却下"
+  },
+  "status": {
+    "pending": "保留",
+    "approved": "承認済み",
+    "rejected": "却下"
+  },
+  "type": {
+    "decision": "Decision",
+    "pattern": "Pattern",
+    "rule": "Rule"
+  },
+  "filter": {
+    "allTypes": "すべてのタイプ",
+    "allStatus": "すべてのステータス"
+  },
+  "selected": "{{count}}件選択中",
+  "detail": {
+    "summary": "概要",
+    "status": "ステータス",
+    "source": "ソース",
+    "tags": "タグ",
+    "created": "作成日",
+    "updated": "更新日",
+    "reviewed": "レビュー日",
+    "reviewedBy": "レビュアー"
+  },
+  "deleteConfirm": {
+    "title": "ルールを削除",
+    "description": "この開発ルールを削除しますか？この操作は取り消せません。"
+  }
+}

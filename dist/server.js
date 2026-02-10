@@ -2879,11 +2879,7 @@ var cors = (options) => {
   };
 };
 
-// lib/db.ts
-import { execSync } from "node:child_process";
-import { existsSync as existsSync2, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join as join2 } from "node:path";
-import { fileURLToPath } from "node:url";
+// lib/suppress-sqlite-warning.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
   if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
@@ -2891,6 +2887,12 @@ process.emit = (event, ...args) => {
   }
   return originalEmit.apply(process, [event, ...args]);
 };
+
+// lib/db.ts
+import { execSync } from "node:child_process";
+import { existsSync as existsSync2, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join as join2 } from "node:path";
+import { fileURLToPath } from "node:url";
 var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
@@ -3613,23 +3615,30 @@ app.get("/api/sessions/graph", async (c) => {
       tags: session.tags || [],
       createdAt: session.createdAt
     }));
-    const edges = [];
-    for (let i = 0; i < filteredItems.length; i++) {
-      for (let j = i + 1; j < filteredItems.length; j++) {
-        const s1 = filteredItems[i];
-        const s2 = filteredItems[j];
-        const sharedTags = (s1.tags || []).filter(
-          (t) => (s2.tags || []).includes(t)
-        );
-        if (sharedTags.length > 0) {
-          edges.push({
-            source: s1.id,
-            target: s2.id,
-            weight: sharedTags.length
-          });
+    const tagToNodes = /* @__PURE__ */ new Map();
+    for (const item of filteredItems) {
+      for (const tag of item.tags || []) {
+        const list = tagToNodes.get(tag) || [];
+        list.push(item.id);
+        tagToNodes.set(tag, list);
+      }
+    }
+    const edgeMap = /* @__PURE__ */ new Map();
+    for (const [, nodeIds] of tagToNodes) {
+      for (let i = 0; i < nodeIds.length; i++) {
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const key = nodeIds[i] < nodeIds[j] ? `${nodeIds[i]}|${nodeIds[j]}` : `${nodeIds[j]}|${nodeIds[i]}`;
+          const existing = edgeMap.get(key);
+          if (existing) {
+            existing.weight++;
+          } else {
+            const [source, target] = key.split("|");
+            edgeMap.set(key, { source, target, weight: 1 });
+          }
         }
       }
     }
+    const edges = Array.from(edgeMap.values());
     return c.json({ nodes, edges });
   } catch (error) {
     console.error("Failed to build session graph:", error);
@@ -4871,10 +4880,25 @@ app.delete("/api/units/:id", async (c) => {
 });
 app.get("/api/knowledge-graph", async (c) => {
   try {
-    const sessionItems = readAllSessionIndexes(getMnemeDir()).items;
+    const mnemeDir2 = getMnemeDir();
+    const sessionItems = readAllSessionIndexes(mnemeDir2).items;
     const units = readUnits().items.filter(
       (item) => item.status === "approved"
     );
+    const sessionDataMap = /* @__PURE__ */ new Map();
+    for (const item of sessionItems.filter((i) => i.hasSummary)) {
+      try {
+        const sessionPath = path3.join(mnemeDir2, item.filePath);
+        const raw2 = fs4.readFileSync(sessionPath, "utf-8");
+        const session = JSON.parse(raw2);
+        if (session.resumedFrom) {
+          sessionDataMap.set(item.id, {
+            resumedFrom: session.resumedFrom
+          });
+        }
+      } catch {
+      }
+    }
     const nodes = [
       ...sessionItems.filter((item) => item.hasSummary).map((item) => ({
         id: `session:${item.id}`,
@@ -4882,7 +4906,13 @@ app.get("/api/knowledge-graph", async (c) => {
         entityId: item.id,
         title: item.title,
         tags: item.tags || [],
-        createdAt: item.createdAt
+        createdAt: item.createdAt,
+        branch: item.branch || null,
+        resumedFrom: sessionDataMap.get(item.id)?.resumedFrom || null,
+        unitSubtype: null,
+        sourceId: null,
+        appliedCount: null,
+        acceptedCount: null
       })),
       ...units.map((item) => ({
         id: `unit:${item.id}`,
@@ -4890,25 +4920,65 @@ app.get("/api/knowledge-graph", async (c) => {
         entityId: item.id,
         title: item.title,
         tags: item.tags || [],
-        createdAt: item.createdAt
+        createdAt: item.createdAt,
+        unitSubtype: item.type || null,
+        sourceId: item.sourceId || null,
+        appliedCount: null,
+        acceptedCount: null,
+        branch: null,
+        resumedFrom: null
       }))
     ];
-    const edges = [];
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const sharedTags = nodes[i].tags.filter(
-          (tag) => nodes[j].tags.includes(tag)
-        );
-        if (sharedTags.length > 0) {
-          edges.push({
-            source: nodes[i].id,
-            target: nodes[j].id,
-            weight: sharedTags.length,
-            sharedTags
+    const tagToNodes = /* @__PURE__ */ new Map();
+    for (const node of nodes) {
+      for (const tag of node.tags) {
+        const list = tagToNodes.get(tag) || [];
+        list.push(node.id);
+        tagToNodes.set(tag, list);
+      }
+    }
+    const edgeMap = /* @__PURE__ */ new Map();
+    for (const [tag, nodeIds] of tagToNodes) {
+      for (let i = 0; i < nodeIds.length; i++) {
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const key = nodeIds[i] < nodeIds[j] ? `${nodeIds[i]}|${nodeIds[j]}` : `${nodeIds[j]}|${nodeIds[i]}`;
+          const existing = edgeMap.get(key);
+          if (existing) {
+            existing.weight++;
+            existing.sharedTags.push(tag);
+          } else {
+            const [source, target] = key.split("|");
+            edgeMap.set(key, {
+              source,
+              target,
+              weight: 1,
+              sharedTags: [tag],
+              edgeType: "sharedTags",
+              directed: false
+            });
+          }
+        }
+      }
+    }
+    const tagEdges = Array.from(edgeMap.values());
+    const nodeIdSet = new Set(nodes.map((n) => n.id));
+    const resumedEdges = [];
+    for (const node of nodes) {
+      if (node.entityType === "session" && node.resumedFrom) {
+        const targetId = `session:${node.resumedFrom}`;
+        if (nodeIdSet.has(targetId)) {
+          resumedEdges.push({
+            source: targetId,
+            target: node.id,
+            weight: 1,
+            sharedTags: [],
+            edgeType: "resumedFrom",
+            directed: true
           });
         }
       }
     }
+    const edges = [...tagEdges, ...resumedEdges];
     return c.json({ nodes, edges });
   } catch (error) {
     console.error("Failed to build knowledge graph:", error);

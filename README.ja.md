@@ -9,43 +9,22 @@ Claude Codeの長期記憶を実現するプラグイン
 
 ## 機能
 
-### コア機能
-
 - **インクリメンタル保存**: 各ターン完了時に差分のみをSQLiteに保存（Node.js、高速）
 - **自動記憶検索**: プロンプトごとに関連する過去のセッション・判断を自動で注入
 - **PreCompact対応**: Auto-Compact前に未保存分をキャッチアップ（コンテキスト95%で発動）
 - **フルデータ抽出**: `/mneme:save` で要約・判断・パターン・ルールを一括保存
-- **記憶参照プランニング**: `/mneme:plan` で過去の知見を活用した設計・計画
 - **セッション再開**: `/mneme:resume` で過去のセッションを再開（チェーン追跡付き）
 - **セッション提案**: セッション開始時に最新3件を提案
-- **ユニットベースレビュー**: 承認済みユニットに基づくレビュー
-- **GitHub PRレビュー**: `/mneme:review <PR URL>` でGitHub PRをレビュー
 - **知見の抽出**: `/mneme:harvest` でPRコメントから decision/pattern/rule の元データを抽出
-- **Webダッシュボード**: セッション・元データ・ユニットの閲覧
-- **ユニット + 承認キュー**: 統合ユニットを生成し、承認/却下で運用
-- **知識グラフ層**: セッションと承認済みユニットを一つのグラフで可視化
+- **Webダッシュボード**: セッション・元データ・開発ルールの閲覧
+- **開発ルール + 承認**: 意思決定・パターン・ルールから開発ルールを生成し、インラインで承認/却下
+- **知識グラフ層**: セッションと承認済み開発ルールを一つのグラフで可視化
 
-## 課題と解決（導入メリット）
+## 課題と解決
 
-### Claude Code 開発で起きがちな課題
+Claude Codeのセッションは終了やAuto-Compactで文脈が失われ、過去の判断が追えず、知見の再利用が困難です。
 
-- **コンテキストの消失**: セッション終了やAuto-Compactで会話の文脈が失われる
-- **判断の不透明化**: 「なぜこの設計にしたのか」が後から追えない
-- **同じミスの繰り返し**: 同じエラーを何度も解決（学習されない）
-- **知見の再利用が難しい**: 過去のやり取りや決定を検索・参照しづらい
-
-### mneme でできること
-
-- **自動保存 + 再開**で、セッションを跨いだ文脈の継続が可能
-- **自動記憶検索**で、関連する過去の知見が常に会話に反映される
-- **判断・パターン記録**で、理由やエラー解決策を後から追跡
-- **検索とダッシュボード**で、過去の記録を素早く参照
-- **レビュー機能**で、リポジトリ固有の観点に基づいて指摘
-
-### チーム利用のメリット
-
-- `.mneme/` のJSONファイルは**Git管理可能**なので、判断や会話の履歴をチームで共有できる
-- オンボーディングやレビュー時に「背景・経緯」を短時間で把握できる
+**mnemeでの解決**: 自動保存と再開、毎プロンプトでの自動記憶検索、判断・パターン履歴の検索・ダッシュボード参照。`.mneme/` のJSONはGit管理可能で、チームでの知見共有にも対応します。
 
 ## インストール
 
@@ -121,77 +100,29 @@ Claude Codeを再起動
 
 ## 使い方
 
-### インクリメンタル保存
-
-**会話ログは各ターン完了時に自動保存**されます（Node.jsでストリーミング処理）。設定不要。
-
-- **Stop hook**: 各アシスタント応答完了時に差分のみを保存
-- **PreCompact hook**: Auto-Compact前に未保存分をキャッチアップ
-- **SessionEnd hook**: 軽量な終了処理のみ（重い処理なし）
-
-`/mneme:save`を実行しない場合、セッションは`uncommitted`として一時保持されます。デフォルトでは7日間の猶予後に古い未コミットセッションがクリーンアップされます。
-
-### 自動記憶検索
-
-**プロンプトごとに**、mnemeは自動で：
-
-1. メッセージからキーワードを抽出
-2. sessions/承認済みユニットを検索
-3. 関連情報をClaudeに注入
-
-手動で検索しなくても、過去の知見が常に活用されます。
-
-### セッション提案
-
-セッション開始時に最新3件が表示されます：
-
-```
-**Recent sessions:**
-  1. [abc123] JWT認証の実装 (2026-01-27, main)
-  2. [def456] ダッシュボードUI (2026-01-26, main)
-  3. [ghi789] バグ修正 (2026-01-25, main)
-
-Continue from a previous session? Use `/mneme:resume <id>`
-```
-
 ### コマンド
 
-| コマンド                                                 | 説明                                       |
-| -------------------------------------------------------- | ------------------------------------------ |
-| `/init-mneme`                                            | プロジェクトでmnemeを初期化                |
-| `/mneme:save`                                            | 全データ抽出: 要約・判断・パターン・ルール |
-| `/mneme:plan [トピック]`                                 | 記憶参照 + ソクラティック質問 + タスク分割 |
-| `/mneme:resume [id]`                                     | セッションを再開（ID省略で一覧表示）       |
-| `/mneme:search "クエリ"`                                 | セッションと承認済みユニットを検索         |
-| `/mneme:review [--staged\|--all\|--diff=branch\|--full]` | ユニットベースでレビュー                   |
-| `/mneme:review <PR URL>`                                 | GitHub PRをレビュー                        |
-| `/mneme:harvest <PR URL>`                                | PRレビューコメントから知見を抽出           |
+| コマンド                   | 説明                                       |
+| -------------------------- | ------------------------------------------ |
+| `/init-mneme`              | プロジェクトでmnemeを初期化                |
+| `/mneme:save`              | 全データ抽出: 要約・判断・パターン・ルール |
+| `/mneme:resume [id]`       | セッションを再開（ID省略で一覧表示）       |
+| `/mneme:search "クエリ"`   | セッションと承認済み開発ルールを検索       |
+| `/mneme:harvest <PR URL>`  | PRレビューコメントから知見を抽出           |
 
 ### 推奨ワークフロー
 
 ```
-plan → implement → save → review
+implement → save → approve rules
 ```
 
-1. **plan**: 記憶参照 + ソクラティック質問 + タスク分割
-2. **implement**: 計画に沿って実装
-3. **save**: 元データを抽出してユニット更新
-4. **validate**: `npm run validate:sources` で必須項目/priority/tags を検証
-5. **review**: 計画準拠と承認済みユニットでレビュー
+1. **implement**: コードを実装
+2. **save**: 元データを抽出して開発ルール候補を生成
+3. **validate**: `npm run validate:sources` で必須項目/priority/tags を検証
+4. **approve rules**: 生成された開発ルールをインラインで確認・承認/却下
 
 ランタイム詳細（Hook分岐、未保存終了、Auto-Compact）は以下:
 - `docs/mneme-runtime-flow.md`
-
-### 週次ナレッジHTML出力
-
-直近7日間の知見活動を共有用HTMLとして出力できます:
-
-```bash
-npm run export:weekly-html
-```
-
-出力先:
-- `.mneme/exports/weekly-knowledge-YYYY-MM-DD.html`
 
 ### ダッシュボード
 
@@ -212,239 +143,39 @@ npx @hir4ta/mneme --dashboard --port 8080
 #### 画面一覧
 
 - **Sessions**: セッション一覧・詳細
-- **Decisions**: 技術的な判断の一覧・詳細
-- **Rules**: 開発ルール・レビュー観点の閲覧
-- **Patterns**: 学習済みパターンの閲覧（グッドパターン、アンチパターン、エラー解決策）
+- **開発ルール**: 意思決定・パターン・ルールから生成されたルールの確認・承認
 - **Statistics**: アクティビティチャート・セッション統計の表示
 - **Graph**: タグ共有によるセッション関連性の可視化
-- **Units**: 承認待ちユニットを確認し、承認/却下/削除
 
 #### 言語切り替え
 
 ダッシュボードは日本語と英語に対応しています。ヘッダーの言語切り替えボタン（EN/JA）をクリックして切り替えできます。設定はlocalStorageに保存されます。
 
-### MCPツール
+### 週次ナレッジHTML出力
 
-mnemeはMCPサーバーを提供し、Claude Codeから直接呼び出せる検索・データベースツールを提供：
+直近7日間の知見活動を共有用HTMLとして出力できます:
 
-| サーバー     | ツール                                | 説明                                  |
-| ------------ | ------------------------------------- | ------------------------------------- |
-| mneme-search | `mneme_search`                        | 統合検索（FTS5、タグエイリアス解決）  |
-| mneme-search | `mneme_get_session`                   | セッション詳細取得                    |
-| mneme-search | `mneme_get_unit`                      | ユニット詳細取得                      |
-| mneme-db     | `mneme_list_projects`                 | 全プロジェクト一覧                    |
-| mneme-db     | `mneme_list_sessions`                 | セッション一覧                        |
-| mneme-db     | `mneme_get_interactions`              | セッションの会話履歴取得              |
-| mneme-db     | `mneme_stats`                         | 統計情報取得                          |
-| mneme-db     | `mneme_cross_project_search`          | クロスプロジェクト検索                |
-| mneme-db     | `mneme_unit_queue_list_pending`       | 承認待ちユニット一覧                  |
-| mneme-db     | `mneme_unit_queue_update_status`      | ユニット承認状態を一括更新            |
-| mneme-db     | `mneme_unit_apply_suggest_for_diff`   | diffに対するユニット候補提案          |
-| mneme-db     | `mneme_unit_apply_explain_match`      | ユニット一致理由の説明                |
-| mneme-db     | `mneme_session_timeline`              | セッション時系列/再開チェーン復元     |
-| mneme-db     | `mneme_rule_linter`                   | ルール品質・必須項目のlint            |
-| mneme-db     | `mneme_graph_insights`                | 中心ユニット・クラスタ・孤立ユニット解析 |
-| mneme-db     | `mneme_search_eval`                   | 検索ベンチ実行/比較                   |
-| mneme-db     | `mneme_audit_query`                   | ユニット監査ログ検索                  |
-
-### サブエージェント
-
-| エージェント     | 説明                                             |
-| ---------------- | ------------------------------------------------ |
-| `mneme-reviewer` | ユニットベースのコードレビュー（独立コンテキスト） |
-
-## 仕組み
-
-```mermaid
-flowchart TB
-    subgraph incremental [インクリメンタル保存]
-        A[各ターン] --> B[Stop Hook]
-        B --> C[Node.js ストリーミング]
-        C --> D[差分のみ保存]
-    end
-
-    subgraph autosearch [自動記憶検索]
-        E[ユーザープロンプト] --> F[UserPromptSubmit Hook]
-        F --> G[sessions/承認済みユニット検索]
-        G --> H[関連コンテキスト注入]
-    end
-
-    subgraph precompact [PreCompact キャッチアップ]
-        I[コンテキスト95%] --> J[PreCompact Hook]
-        J --> K[未保存分をキャッチアップ]
-    end
-
-    subgraph sessionend [セッション終了]
-        L[終了] --> M[SessionEnd Hook]
-        M --> N{コミット済み?}
-        N -->|Yes| O[interactions保持]
-        N -->|No| P[uncommittedにマーク + 猶予後クリーンアップ]
-    end
-
-    subgraph manual [手動アクション]
-        Q["mneme:save"] --> R[decisions + patterns + rules抽出]
-        R --> S[セッションをコミット済みに]
-        T["mneme:plan"] --> U[記憶参照 + タスク分割]
-    end
-
-    subgraph resume [セッション再開]
-        V["mneme:resume"] --> W[一覧から選択]
-        W --> X[コンテキスト復元 + resumedFrom設定]
-    end
-
-    subgraph review [レビュー]
-        Y["mneme:review"] --> Z[ユニットベース指摘]
-        Z --> AA[レビュー結果保存]
-    end
-
-    subgraph dashboard [ダッシュボード]
-        AB["npx @hir4ta/mneme -d"] --> AC[ブラウザで開く]
-        AC --> AD[全データ閲覧]
-    end
-
-    D --> Q
-    H --> Q
-    S --> AB
-    AA --> AB
+```bash
+npm run export:weekly-html
 ```
+
+出力先:
+- `.mneme/exports/weekly-knowledge-YYYY-MM-DD.html`
 
 ## データ保存
 
-mnemeは**ハイブリッドストレージ**方式でプライバシーと共有を両立：
+mnemeは**ハイブリッドストレージ**方式でプライバシーと共有を両立：JSON（Git管理）でチーム共有、SQLite（gitignored）で会話をプライベートに保存。
 
 | ストレージ | 場所              | 用途                         | 共有                       |
 | ---------- | ----------------- | ---------------------------- | -------------------------- |
 | **JSON**   | `.mneme/`         | 要約、決定、パターン、ルール | Git管理（チーム共有）      |
 | **SQLite** | `.mneme/local.db` | 会話履歴、バックアップ       | ローカル専用（gitignored） |
 
-**なぜハイブリッド？**
+会話ログは各ターン完了時に自動保存されます。設定不要。
 
-- **プライバシー**: 会話履歴（interactions）はローカルのみ（gitignored）
-- **軽量化**: JSONファイルが100KB+から約5KBに軽量化（interactions除外）
-- **将来対応**: セマンティック検索用のembeddingsテーブル準備済み
+自動記憶検索はプロンプトごとに実行され、キーワード抽出 → 過去のセッション/開発ルール検索 → 関連コンテキスト注入を自動で行います。
 
-### ディレクトリ構成
-
-**プロジェクト内** (`.mneme/`):
-
-```text
-.mneme/
-├── local.db          # SQLite（会話履歴）- gitignored
-├── tags.json         # タグマスターファイル（93タグ、表記揺れ防止）
-├── sessions/         # セッションメタデータ - Git管理
-│   └── YYYY/MM/
-│       └── {id}.json # メタデータのみ（interactionsはlocal.db）
-├── decisions/        # 技術的な判断（/saveから）- Git管理
-│   └── YYYY/MM/
-│       └── {id}.json
-├── patterns/         # エラーパターン（/saveから）- Git管理
-│   └── {user}.json
-├── rules/            # 開発ルール / レビュー観点 - Git管理
-├── reviews/          # レビュー結果 (YYYY/MM) - Git管理
-└── audit/            # 監査ログ (JSONL)
-```
-
-`local.db` は `.mneme/.gitignore` に追加され、会話はプライベートに保たれます。
-
-### セッションJSONスキーマ
-
-セッションメタデータはJSONに保存（interactionsはプライバシー保護のためSQLiteに保存）：
-
-```json
-{
-  "id": "abc12345",
-  "sessionId": "claude-code-からの-full-uuid",
-  "createdAt": "2026-01-27T10:00:00Z",
-  "endedAt": "2026-01-27T12:00:00Z",
-  "title": "JWT認証機能の実装",
-  "tags": ["auth", "jwt"],
-  "context": {
-    "branch": "feature/auth",
-    "projectDir": "/path/to/project",
-    "user": { "name": "tanaka", "email": "tanaka@example.com" }
-  },
-  "metrics": {
-    "userMessages": 5,
-    "assistantResponses": 5,
-    "thinkingBlocks": 5,
-    "toolUsage": [
-      { "name": "Edit", "count": 3 },
-      { "name": "Write", "count": 2 }
-    ]
-  },
-  "files": [{ "path": "src/auth/jwt.ts", "action": "create" }],
-  "resumedFrom": "def45678",
-  "status": "complete",
-
-  "summary": {
-    "title": "JWT認証機能の実装",
-    "goal": "JWTベースの認証機能を実装",
-    "outcome": "success",
-    "description": "RS256署名でJWT認証を実装",
-    "sessionType": "implementation"
-  },
-
-  "plan": {
-    "tasks": [
-      "[x] JWT署名方式の選定",
-      "[x] ミドルウェア実装",
-      "[ ] テスト追加"
-    ],
-    "remaining": ["テスト追加"]
-  },
-
-  "discussions": [
-    {
-      "topic": "署名方式",
-      "decision": "RS256を採用",
-      "reasoning": "本番環境でのセキュリティを考慮",
-      "alternatives": ["HS256（シンプルだが秘密鍵共有が必要）"]
-    }
-  ],
-
-  "errors": [
-    {
-      "error": "secretOrPrivateKey must be asymmetric",
-      "cause": "HS256用の秘密鍵をRS256で使用",
-      "solution": "RS256用のキーペアを生成"
-    }
-  ],
-
-  "handoff": {
-    "stoppedReason": "テスト作成は次回に持ち越し",
-    "notes": ["vitest設定済み", "モック用のキーペアは test/fixtures/ に配置"],
-    "nextSteps": ["jwt.test.ts を作成", "E2Eテスト追加"]
-  },
-
-  "references": [
-    { "url": "https://jwt.io/introduction", "title": "JWT Introduction" }
-  ]
-}
-```
-
-### セッションタイプ
-
-`sessionType` フィールドはセッションの種類を分類します。
-
-| タイプ           | 説明                                       |
-| ---------------- | ------------------------------------------ |
-| `decision`       | 決定サイクルあり（設計判断、技術選択など） |
-| `implementation` | コード変更あり                             |
-| `research`       | リサーチ・学習・キャッチアップ             |
-| `exploration`    | コードベース探索                           |
-| `discussion`     | 議論・相談のみ                             |
-| `debug`          | デバッグ・調査                             |
-| `review`         | コードレビュー                             |
-
-### タグ
-
-タグは `.mneme/tags.json` から選択され、表記揺れを防止します（例: 「フロント」→「frontend」）。マスターファイルには11カテゴリ93タグが含まれています：
-
-- **domain**: frontend, backend, api, db, infra, mobile, cli
-- **phase**: feature, bugfix, refactor, test, docs
-- **ai**: llm, ai-agent, mcp, rag, vector-db, embedding
-- **cloud**: serverless, microservices, edge, wasm
-- その他...
+セッション開始時に最新3件が表示されるので、`/mneme:resume <id>` ですぐに再開できます。
 
 ## セキュリティとプライバシー
 
@@ -457,12 +188,6 @@ mnemeは**完全にローカルで動作**し、外部サーバーへのデー�
 | **会話履歴**   | `local.db` に保存され、自動的にgitignore（Git共有されません） |
 | **使用ツール** | bash, Node.js, jq, sqlite3（外部依存なし）                    |
 | **コード**     | オープンソース - すべてのコードは監査可能です                 |
-
-### プライバシー設計
-
-- **会話内容（interactions）はローカル専用**: SQLite（`local.db`）に保存され、`.gitignore`に自動追加
-- **メタデータのみGit共有可能**: セッション要約、決定、パターンなどはJSONでチーム共有可能
-- **テレメトリなし**: 使用状況の追跡や外部送信は行いません
 
 ## ライセンス
 

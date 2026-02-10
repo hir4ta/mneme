@@ -30,7 +30,7 @@ export function GuideNav() {
             className={cn(
               "px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
               isActive
-                ? "bg-stone-800 text-white dark:bg-stone-700"
+                ? "bg-stone-700 text-white dark:bg-stone-700"
                 : "text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800",
             )}
           >

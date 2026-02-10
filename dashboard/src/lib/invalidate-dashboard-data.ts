@@ -1,9 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 const DASHBOARD_QUERY_KEYS = [
-  ["decisions"],
-  ["patterns"],
-  ["patterns", "stats"],
   ["units"],
   ["units", "rules-availability"],
   ["approval-queue"],

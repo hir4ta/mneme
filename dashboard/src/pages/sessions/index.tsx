@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { SessionCardSkeletonList } from "@/components/ui/session-card-skeleton";
 import { useSessions, useTags } from "@/hooks/use-sessions";
+import { formatDate } from "@/lib/format-date";
 import type { Session, SessionType, Tag } from "@/lib/types";
 
 const SESSION_TYPES: SessionType[] = [
@@ -30,10 +31,8 @@ const SESSION_TYPES: SessionType[] = [
 ];
 
 function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
-  const { t, i18n } = useTranslation("sessions");
-  const date = new Date(session.createdAt).toLocaleDateString(
-    i18n.language === "ja" ? "ja-JP" : "en-US",
-  );
+  const { t } = useTranslation("sessions");
+  const date = formatDate(session.createdAt);
 
   // Get tag color from tags.json
   const getTagColor = (tagId: string) => {

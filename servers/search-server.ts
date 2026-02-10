@@ -1,32 +1,13 @@
 #!/usr/bin/env node
 
+import "../lib/suppress-sqlite-warning.js";
+
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { type SearchType, searchKnowledge } from "../lib/search-core.js";
-
-// Suppress Node.js SQLite experimental warning.
-const originalEmit = process.emit;
-// @ts-expect-error - runtime patch for warning suppression.
-process.emit = (event, ...args) => {
-  if (
-    event === "warning" &&
-    typeof args[0] === "object" &&
-    args[0] !== null &&
-    "name" in args[0] &&
-    (args[0] as { name: string }).name === "ExperimentalWarning" &&
-    "message" in args[0] &&
-    typeof (args[0] as { message: string }).message === "string" &&
-    (args[0] as { message: string }).message.includes("SQLite")
-  ) {
-    return false;
-  }
-  return originalEmit.apply(process, [event, ...args] as unknown as Parameters<
-    typeof process.emit
-  >);
-};
 
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;

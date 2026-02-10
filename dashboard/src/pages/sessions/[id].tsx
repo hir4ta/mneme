@@ -28,19 +28,8 @@ import {
   getTags,
   type InteractionFromSQLite,
 } from "@/lib/api";
+import { formatDateTime } from "@/lib/format-date";
 import type { Session, Tag } from "@/lib/types";
-
-// Format date as YYYY/M/D HH:MM:SS with leading zeros for time
-function formatTimestamp(dateStr: string): string {
-  const d = new Date(dateStr);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  const seconds = String(d.getSeconds()).padStart(2, "0");
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
-}
 
 // Parse command message format from Claude Code
 // e.g., "<command-name>/release</command-name><command-args>0.12.9</command-args>"
@@ -92,7 +81,7 @@ function CompactSummaryCard({
 }) {
   const { t } = useTranslation("sessions");
   const [isExpanded, setIsExpanded] = useState(false);
-  const timestamp = formatTimestamp(interaction.timestamp);
+  const timestamp = formatDateTime(interaction.timestamp);
 
   return (
     <div className="space-y-3">
@@ -145,7 +134,7 @@ function InteractionCard({
   const [showToolResults, setShowToolResults] = useState(false);
   const [showProgressEvents, setShowProgressEvents] = useState(false);
 
-  const timestamp = formatTimestamp(interaction.timestamp);
+  const timestamp = formatDateTime(interaction.timestamp);
   const hasThinking =
     interaction.thinking && interaction.thinking.trim() !== "";
   const hasToolDetails =
@@ -603,7 +592,7 @@ function ContextRestorationCard({ session }: { session: Session }) {
 }
 
 export function SessionDetailPage() {
-  const { t, i18n } = useTranslation("sessions");
+  const { t } = useTranslation("sessions");
   const { t: tc } = useTranslation("common");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -687,9 +676,7 @@ export function SessionDetailPage() {
     );
   }
 
-  const date = new Date(session.createdAt).toLocaleString(
-    i18n.language === "ja" ? "ja-JP" : "en-US",
-  );
+  const date = formatDateTime(session.createdAt);
   // Check both context.user.name and top-level user.name for backwards compatibility
   const userName =
     session.context.user?.name ||

@@ -447,28 +447,39 @@ app.get("/api/sessions/graph", async (c) => {
       createdAt: session.createdAt,
     }));
 
-    // Build edges based on shared tags
-    const edges: { source: string; target: string; weight: number }[] = [];
+    // Build inverted tag index for efficient edge computation
+    const tagToNodes = new Map<string, string[]>();
+    for (const item of filteredItems) {
+      for (const tag of item.tags || []) {
+        const list = tagToNodes.get(tag) || [];
+        list.push(item.id);
+        tagToNodes.set(tag, list);
+      }
+    }
 
-    for (let i = 0; i < filteredItems.length; i++) {
-      for (let j = i + 1; j < filteredItems.length; j++) {
-        const s1 = filteredItems[i];
-        const s2 = filteredItems[j];
-
-        // Count shared tags
-        const sharedTags = (s1.tags || []).filter((t) =>
-          (s2.tags || []).includes(t),
-        );
-
-        if (sharedTags.length > 0) {
-          edges.push({
-            source: s1.id,
-            target: s2.id,
-            weight: sharedTags.length,
-          });
+    const edgeMap = new Map<
+      string,
+      { source: string; target: string; weight: number }
+    >();
+    for (const [, nodeIds] of tagToNodes) {
+      for (let i = 0; i < nodeIds.length; i++) {
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const key =
+            nodeIds[i] < nodeIds[j]
+              ? `${nodeIds[i]}|${nodeIds[j]}`
+              : `${nodeIds[j]}|${nodeIds[i]}`;
+          const existing = edgeMap.get(key);
+          if (existing) {
+            existing.weight++;
+          } else {
+            const [source, target] = key.split("|");
+            edgeMap.set(key, { source, target, weight: 1 });
+          }
         }
       }
     }
+
+    const edges = Array.from(edgeMap.values());
 
     return c.json({ nodes, edges });
   } catch (error) {
@@ -2129,53 +2140,132 @@ app.delete("/api/units/:id", async (c) => {
 
 app.get("/api/knowledge-graph", async (c) => {
   try {
-    const sessionItems = readAllSessionIndexes(getMnemeDir()).items;
+    const mnemeDir = getMnemeDir();
+    const sessionItems = readAllSessionIndexes(mnemeDir).items;
     const units = readUnits().items.filter(
       (item) => item.status === "approved",
     );
+
+    // Read full sessions to get resumedFrom
+    const sessionDataMap = new Map<string, { resumedFrom?: string }>();
+    for (const item of sessionItems.filter((i) => i.hasSummary)) {
+      try {
+        const sessionPath = path.join(mnemeDir, item.filePath);
+        const raw = fs.readFileSync(sessionPath, "utf-8");
+        const session = JSON.parse(raw);
+        if (session.resumedFrom) {
+          sessionDataMap.set(item.id, {
+            resumedFrom: session.resumedFrom,
+          });
+        }
+      } catch {
+        // Skip sessions that cannot be read
+      }
+    }
 
     const nodes = [
       ...sessionItems
         .filter((item) => item.hasSummary)
         .map((item) => ({
           id: `session:${item.id}`,
-          entityType: "session",
+          entityType: "session" as const,
           entityId: item.id,
           title: item.title,
           tags: item.tags || [],
           createdAt: item.createdAt,
+          branch: item.branch || null,
+          resumedFrom: sessionDataMap.get(item.id)?.resumedFrom || null,
+          unitSubtype: null,
+          sourceId: null,
+          appliedCount: null,
+          acceptedCount: null,
         })),
       ...units.map((item) => ({
         id: `unit:${item.id}`,
-        entityType: "unit",
+        entityType: "unit" as const,
         entityId: item.id,
         title: item.title,
         tags: item.tags || [],
         createdAt: item.createdAt,
+        unitSubtype: (item.type as string) || null,
+        sourceId: item.sourceId || null,
+        appliedCount: null,
+        acceptedCount: null,
+        branch: null,
+        resumedFrom: null,
       })),
     ];
 
-    const edges: Array<{
-      source: string;
-      target: string;
-      weight: number;
-      sharedTags: string[];
-    }> = [];
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const sharedTags = nodes[i].tags.filter((tag) =>
-          nodes[j].tags.includes(tag),
-        );
-        if (sharedTags.length > 0) {
-          edges.push({
-            source: nodes[i].id,
-            target: nodes[j].id,
-            weight: sharedTags.length,
-            sharedTags,
+    // Build inverted tag index for efficient edge computation
+    const tagToNodes = new Map<string, string[]>();
+    for (const node of nodes) {
+      for (const tag of node.tags) {
+        const list = tagToNodes.get(tag) || [];
+        list.push(node.id);
+        tagToNodes.set(tag, list);
+      }
+    }
+
+    // Build shared tag edges from inverted index
+    const edgeMap = new Map<
+      string,
+      {
+        source: string;
+        target: string;
+        weight: number;
+        sharedTags: string[];
+        edgeType: "sharedTags" | "resumedFrom" | "derivedFrom";
+        directed: boolean;
+      }
+    >();
+    for (const [tag, nodeIds] of tagToNodes) {
+      for (let i = 0; i < nodeIds.length; i++) {
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const key =
+            nodeIds[i] < nodeIds[j]
+              ? `${nodeIds[i]}|${nodeIds[j]}`
+              : `${nodeIds[j]}|${nodeIds[i]}`;
+          const existing = edgeMap.get(key);
+          if (existing) {
+            existing.weight++;
+            existing.sharedTags.push(tag);
+          } else {
+            const [source, target] = key.split("|");
+            edgeMap.set(key, {
+              source,
+              target,
+              weight: 1,
+              sharedTags: [tag],
+              edgeType: "sharedTags",
+              directed: false,
+            });
+          }
+        }
+      }
+    }
+
+    const tagEdges = Array.from(edgeMap.values());
+
+    // Build resumedFrom edges
+    const nodeIdSet = new Set(nodes.map((n) => n.id));
+    const resumedEdges: typeof tagEdges = [];
+    for (const node of nodes) {
+      if (node.entityType === "session" && node.resumedFrom) {
+        const targetId = `session:${node.resumedFrom}`;
+        if (nodeIdSet.has(targetId)) {
+          resumedEdges.push({
+            source: targetId,
+            target: node.id,
+            weight: 1,
+            sharedTags: [],
+            edgeType: "resumedFrom",
+            directed: true,
           });
         }
       }
     }
+
+    const edges = [...tagEdges, ...resumedEdges];
 
     return c.json({ nodes, edges });
   } catch (error) {

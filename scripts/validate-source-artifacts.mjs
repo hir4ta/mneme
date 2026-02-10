@@ -90,6 +90,20 @@ function validatePatterns(mnemeDir, issues) {
           message: "Invalid type (good|bad|error-solution required)",
         });
       }
+      if (item.type === "error-solution") {
+        if (!hasText(item.errorPattern)) {
+          issues.push({
+            file: pointer,
+            message: "error-solution pattern missing errorPattern",
+          });
+        }
+        if (!hasText(item.solution)) {
+          issues.push({
+            file: pointer,
+            message: "error-solution pattern missing solution",
+          });
+        }
+      }
       if (!hasText(item.title) && !hasText(item.description)) {
         issues.push({
           file: pointer,
@@ -191,6 +205,146 @@ function validateRules(mnemeDir, issues) {
   );
 }
 
+function validateIdUniqueness(mnemeDir, issues) {
+  const idMap = new Map(); // id -> [file, ...]
+
+  // Collect decision IDs
+  const decisionDir = path.join(mnemeDir, "decisions");
+  for (const file of listJsonFiles(decisionDir)) {
+    try {
+      const parsed = readJson(file);
+      if (parsed.id) {
+        const existing = idMap.get(parsed.id) || [];
+        existing.push(file);
+        idMap.set(parsed.id, existing);
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Collect pattern IDs
+  const patternDir = path.join(mnemeDir, "patterns");
+  for (const file of listJsonFiles(patternDir)) {
+    try {
+      const parsed = readJson(file);
+      const items = parsed.items || parsed.patterns || [];
+      for (const item of items) {
+        if (item.id) {
+          const existing = idMap.get(item.id) || [];
+          existing.push(`${file}#${item.id}`);
+          idMap.set(item.id, existing);
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Collect rule IDs
+  for (const ruleFile of ["dev-rules", "review-guidelines"]) {
+    const file = path.join(mnemeDir, "rules", `${ruleFile}.json`);
+    if (!fs.existsSync(file)) continue;
+    try {
+      const parsed = readJson(file);
+      const items = parsed.items || parsed.rules || [];
+      for (const item of items) {
+        if (item.id) {
+          const existing = idMap.get(item.id) || [];
+          existing.push(`${file}#${item.id}`);
+          idMap.set(item.id, existing);
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Report duplicates
+  for (const [id, files] of idMap) {
+    if (files.length > 1) {
+      issues.push({
+        file: files.join(", "),
+        message: `Duplicate ID "${id}" found in ${files.length} locations`,
+      });
+    }
+  }
+}
+
+function validateTagExistence(mnemeDir, issues) {
+  const tagsPath = path.join(mnemeDir, "tags.json");
+  if (!fs.existsSync(tagsPath)) return; // No master tags file, skip
+
+  let masterTags;
+  try {
+    masterTags = readJson(tagsPath);
+  } catch {
+    return;
+  }
+
+  const validTagIds = new Set((masterTags.tags || []).map((t) => t.id));
+  if (validTagIds.size === 0) return;
+
+  // Check decisions
+  for (const file of listJsonFiles(path.join(mnemeDir, "decisions"))) {
+    try {
+      const parsed = readJson(file);
+      for (const tag of parsed.tags || []) {
+        if (!validTagIds.has(tag)) {
+          issues.push({
+            file,
+            message: `Unknown tag "${tag}" (not in tags.json)`,
+          });
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Check patterns
+  for (const file of listJsonFiles(path.join(mnemeDir, "patterns"))) {
+    try {
+      const parsed = readJson(file);
+      const items = parsed.items || parsed.patterns || [];
+      for (const item of items) {
+        for (const tag of item.tags || []) {
+          if (!validTagIds.has(tag)) {
+            issues.push({
+              file: `${file}#${item.id || "?"}`,
+              message: `Unknown tag "${tag}" (not in tags.json)`,
+            });
+          }
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Check rules
+  for (const ruleFile of ["dev-rules", "review-guidelines"]) {
+    const file = path.join(mnemeDir, "rules", `${ruleFile}.json`);
+    if (!fs.existsSync(file)) continue;
+    try {
+      const parsed = readJson(file);
+      const items = parsed.items || parsed.rules || [];
+      for (const item of items) {
+        for (const tag of item.tags || []) {
+          if (!validTagIds.has(tag)) {
+            issues.push({
+              file: `${file}#${item.id || "?"}`,
+              message: `Unknown tag "${tag}" (not in tags.json)`,
+            });
+          }
+        }
+      }
+    } catch {
+      /* skip */
+    }
+  }
+}
+
 function main() {
   const projectRoot = process.env.MNEME_PROJECT_ROOT || process.cwd();
   const mnemeDir = path.join(projectRoot, ".mneme");
@@ -206,6 +360,8 @@ function main() {
   validateDecisions(mnemeDir, issues);
   validatePatterns(mnemeDir, issues);
   validateRules(mnemeDir, issues);
+  validateIdUniqueness(mnemeDir, issues);
+  validateTagExistence(mnemeDir, issues);
 
   if (issues.length === 0) {
     console.log("OK: source artifacts are valid (or no artifacts found)");

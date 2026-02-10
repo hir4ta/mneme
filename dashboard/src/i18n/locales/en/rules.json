@@ -1,6 +1,6 @@
 {
   "title": "Development Rules",
-  "subtitle": "Review criteria used by /mneme:review. Extracted via /mneme:save.",
+  "subtitle": "Development standards extracted via /mneme:save.",
   "count": "{{filtered}} / {{total}}",
   "searchPlaceholder": "Search rules...",
   "allPriority": "All Priority",
@@ -12,7 +12,7 @@
     "title": "What are Rules?",
     "devRules": "Coding standards and architecture rules (e.g., avoid N+1 queries)",
     "reviewGuidelines": "Code review checklist items (e.g., verify transactions)",
-    "description": "Rules are extracted from sessions when you run <code>/mneme:save</code>. Use <code>/mneme:review</code> to check code against these rules."
+    "description": "Rules are extracted from sessions when you run <code>/mneme:save</code>. Approved rules are available to MCP search tools for use by custom agents."
   },
   "fields": {
     "text": "Title",

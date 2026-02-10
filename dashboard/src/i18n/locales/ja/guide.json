@@ -43,10 +43,6 @@
         {
           "title": "ルール管理",
           "description": "開発ルールとレビューガイドラインが抽出され、適用されます"
-        },
-        {
-          "title": "コードレビュー",
-          "description": "ステージされた変更やGitHub PRに対応したユニットベースのコードレビュー"
         }
       ]
     },
@@ -77,24 +73,13 @@
   },
   "workflow": {
     "title": "推奨ワークフロー",
-    "subtitle": "plan → implement → save → review",
+    "subtitle": "implement → save → approve rules",
     "intro": "このワークフローに従うことで、mneme のナレッジ管理の利点を最大化できます。",
     "phases": [
       {
-        "name": "Plan（計画）",
-        "command": "/mneme:plan",
-        "description": "記憶に基づいた設計から始めます。mneme は過去のセッションと決定を検索してコンテキストを提供します。",
-        "benefits": [
-          "関連する過去の決定が自動的に表示される",
-          "ソクラティック質問で要件が明確になる",
-          "タスク分割で整理された実装が可能"
-        ],
-        "example": "/mneme:plan \"認証機能を追加\""
-      },
-      {
         "name": "Implement（実装）",
         "command": null,
-        "description": "計画に従って機能を実装します。mneme の自動検索が作業中に関連するコンテキストを提供します。",
+        "description": "機能を実装します。mneme の自動検索が作業中に関連するコンテキストを提供します。",
         "benefits": [
           "過去のパターンが実装をガイドする",
           "エラー解決策がすぐに利用可能",
@@ -112,17 +97,6 @@
           "将来の適用のためにルールが抽出される"
         ],
         "example": "/mneme:save"
-      },
-      {
-        "name": "Review（レビュー）",
-        "command": "/mneme:review",
-        "description": "リポジトリ固有のルールとガイドラインに対してコードをレビューします。",
-        "benefits": [
-          "コミット前に問題を検出",
-          "チーム標準を適用",
-          "ステージされた変更とPRレビューに対応"
-        ],
-        "example": "/mneme:review --staged"
       }
     ],
     "dataFlow": {
@@ -179,7 +153,8 @@
               "Phase 2: サマリー（タイトル、目標、結果）",
               "Phase 3: 決定（技術的選択）",
               "Phase 4: パターン（エラー解決策）",
-              "Phase 5: ルール（開発ルール、レビューガイドライン）"
+              "Phase 5: ルール（開発ルール、レビューガイドライン）",
+              "Phase 6: 開発ルールの更新（承認待ち）"
             ]
           },
           {
@@ -192,29 +167,6 @@
                 "name": "session-id",
                 "description": "8文字のセッションID（オプション）"
               }
-            ]
-          }
-        ]
-      },
-      "planning": {
-        "title": "計画",
-        "commands": [
-          {
-            "name": "/mneme:plan",
-            "description": "記憶に基づいた設計と計画",
-            "usage": "/mneme:plan [topic]",
-            "details": "過去の知識を検索し、質問で要件を明確にし、アプローチを提示し、タスク分割を作成します。",
-            "options": [
-              {
-                "name": "topic",
-                "description": "計画する機能またはタスク（オプション）"
-              }
-            ],
-            "phases": [
-              "Phase 1: 記憶検索（関連する過去の知識を検索）",
-              "Phase 2: ソクラティック質問（要件を明確化）",
-              "Phase 3: 設計決定（アプローチを提示）",
-              "Phase 4: タスク分割（実行可能なタスクを作成）"
             ]
           }
         ]
@@ -236,37 +188,9 @@
           }
         ]
       },
-      "review": {
-        "title": "コードレビュー",
+      "knowledge": {
+        "title": "ナレッジ",
         "commands": [
-          {
-            "name": "/mneme:review",
-            "description": "ユニットベースのコードレビュー",
-            "usage": "/mneme:review [options|PR-URL]",
-            "details": "承認済みユニットに対してコードをレビューします。ローカルの変更と GitHub PR に対応しています。",
-            "options": [
-              {
-                "name": "--staged",
-                "description": "ステージされた変更のみレビュー"
-              },
-              {
-                "name": "--all",
-                "description": "すべてのコミットされていない変更をレビュー"
-              },
-              {
-                "name": "--diff=branch",
-                "description": "指定したブランチとの差分をレビュー"
-              },
-              {
-                "name": "--full",
-                "description": "二段階レビュー（クイック + ディープ）"
-              },
-              {
-                "name": "PR-URL",
-                "description": "レビューする GitHub PR の URL"
-              }
-            ]
-          },
           {
             "name": "/mneme:harvest",
             "description": "PR コメントから知識を抽出",
@@ -287,32 +211,6 @@
     "title": "ユースケース",
     "subtitle": "実際のシナリオと mneme の使い方",
     "cases": [
-      {
-        "title": "新機能の開始",
-        "scenario": "新しい認証システムを実装する必要がある",
-        "steps": [
-          {
-            "action": "/mneme:plan \"ユーザー認証\" を実行",
-            "result": "mneme が認証関連の決定とパターンを検索"
-          },
-          {
-            "action": "質問に回答",
-            "result": "要件が明確になる（OAuth vs JWT、セッションストレージなど）"
-          },
-          {
-            "action": "提案されたアプローチを確認",
-            "result": "過去の決定に基づいて実装アプローチを選択"
-          },
-          {
-            "action": "タスク分割に従って実装",
-            "result": "整理された一貫性のある実装"
-          },
-          {
-            "action": "/mneme:save を実行",
-            "result": "新しい決定とパターンが将来の参照用にキャプチャされる"
-          }
-        ]
-      },
       {
         "title": "エラーのデバッグ",
         "scenario": "不可解なエラーメッセージに遭遇した",
@@ -350,28 +248,6 @@
           {
             "action": "実装を続行",
             "result": "すべてのコンテキストが保持されたシームレスな継続"
-          }
-        ]
-      },
-      {
-        "title": "コミット前のコードレビュー",
-        "scenario": "コミット前に変更をレビューしたい",
-        "steps": [
-          {
-            "action": "git add で変更をステージ",
-            "result": "変更がレビュー準備完了"
-          },
-          {
-            "action": "/mneme:review --staged を実行",
-            "result": "プロジェクトのルールに対して変更がレビューされる"
-          },
-          {
-            "action": "見つかった問題を修正",
-            "result": "コードがプロジェクト標準を満たす"
-          },
-          {
-            "action": "自信を持ってコミット",
-            "result": "クリーンでレビュー済みのコードがコミットされる"
           }
         ]
       },

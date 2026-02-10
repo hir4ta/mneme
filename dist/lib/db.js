@@ -1,8 +1,4 @@
-// lib/db.ts
-import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+// lib/suppress-sqlite-warning.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
   if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
@@ -10,6 +6,12 @@ process.emit = (event, ...args) => {
   }
   return originalEmit.apply(process, [event, ...args]);
 };
+
+// lib/db.ts
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);

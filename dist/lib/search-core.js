@@ -1,14 +1,241 @@
 // lib/search-core.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+
+// lib/fuzzy-search.ts
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
+
+// lib/utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
+function safeReadJson(filePath, fallback) {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return fallback;
+  }
+}
+function findJsonFiles(dir) {
+  const results = [];
+  if (!fs.existsSync(dir)) return results;
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+  for (const item of items) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      results.push(...findJsonFiles(fullPath));
+    } else if (item.name.endsWith(".json")) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+// lib/fuzzy-search.ts
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        // deletion
+        matrix[i][j - 1] + 1,
+        // insertion
+        matrix[i - 1][j - 1] + cost
+        // substitution
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+function expandAliases(query, tags) {
+  const results = /* @__PURE__ */ new Set([query]);
+  const lowerQuery = query.toLowerCase();
+  for (const tag of tags) {
+    const allTerms = [tag.id, tag.label, ...tag.aliases].map(
+      (t) => t.toLowerCase()
+    );
+    if (allTerms.includes(lowerQuery)) {
+      results.add(tag.id);
+      results.add(tag.label);
+      for (const alias of tag.aliases) {
+        results.add(alias);
+      }
+    }
+  }
+  return Array.from(results);
+}
+function calculateSimilarity(text, query) {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  if (lowerText === lowerQuery) return 10;
+  if (lowerText.includes(lowerQuery)) return 5;
+  if (lowerQuery.includes(lowerText)) return 3;
+  const distance = levenshtein(lowerText, lowerQuery);
+  if (distance <= 2) return 2;
+  if (distance <= 3) return 1;
+  return 0;
+}
+async function search(options) {
+  const {
+    query,
+    mnemeDir,
+    targets = ["sessions", "decisions"],
+    limit = 20,
+    timeout = 1e4
+  } = options;
+  const startTime = Date.now();
+  const results = [];
+  const tagsPath = path2.join(mnemeDir, "tags.json");
+  const tagsData = safeReadJson(tagsPath, { tags: [] });
+  const expandedQueries = expandAliases(query, tagsData.tags);
+  if (targets.includes("sessions")) {
+    const sessionsDir = path2.join(mnemeDir, "sessions");
+    if (fs2.existsSync(sessionsDir)) {
+      const files = findJsonFiles(sessionsDir);
+      for (const file of files) {
+        if (Date.now() - startTime > timeout) break;
+        const session = safeReadJson(file, {});
+        const score = scoreDocument(session, expandedQueries, [
+          "title",
+          "goal",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "session",
+            id: session.id || path2.basename(file, ".json"),
+            score,
+            title: session.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("decisions")) {
+    const decisionsDir = path2.join(mnemeDir, "decisions");
+    if (fs2.existsSync(decisionsDir)) {
+      const files = findJsonFiles(decisionsDir);
+      for (const file of files) {
+        if (Date.now() - startTime > timeout) break;
+        const decision = safeReadJson(file, {});
+        const score = scoreDocument(decision, expandedQueries, [
+          "title",
+          "decision",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "decision",
+            id: decision.id || path2.basename(file, ".json"),
+            score,
+            title: decision.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("patterns")) {
+    const patternsDir = path2.join(mnemeDir, "patterns");
+    if (fs2.existsSync(patternsDir)) {
+      const files = findJsonFiles(patternsDir);
+      for (const file of files) {
+        if (Date.now() - startTime > timeout) break;
+        const pattern = safeReadJson(file, {});
+        const patterns = pattern.patterns || [];
+        for (const p of patterns) {
+          const score = scoreDocument(p, expandedQueries, [
+            "description",
+            "errorPattern",
+            "tags"
+          ]);
+          if (score > 0) {
+            results.push({
+              type: "pattern",
+              id: `${path2.basename(file, ".json")}-${p.type || "unknown"}`,
+              score,
+              title: p.description || "Untitled pattern",
+              highlights: []
+            });
+          }
+        }
+      }
+    }
+  }
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function scoreDocument(doc, queries, fields) {
+  let totalScore = 0;
+  for (const field of fields) {
+    const value = doc[field];
+    if (typeof value === "string") {
+      for (const q of queries) {
+        totalScore += calculateSimilarity(value, q);
+      }
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === "string") {
+          for (const q of queries) {
+            totalScore += calculateSimilarity(item, q);
+          }
+        }
+      }
+    }
+  }
+  return totalScore;
+}
+var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
+if (isMain && process.argv.length > 2) {
+  const args = process.argv.slice(2);
+  const queryIndex = args.indexOf("--query");
+  const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
+  const mnemeDir = `${process.cwd()}/.mneme`;
+  if (!query) {
+    console.error(JSON.stringify({ success: false, error: "Missing --query" }));
+    process.exit(0);
+  }
+  search({ query, mnemeDir }).then((results) => {
+    console.log(JSON.stringify({ success: true, results }));
+  }).catch((error) => {
+    console.error(JSON.stringify({ success: false, error: String(error) }));
+  });
+}
+
+// lib/search-core.ts
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+function countMatches(text, pattern) {
+  const matches = text.match(new RegExp(pattern.source, "gi"));
+  return matches ? matches.length : 0;
+}
+function fieldScore(text, pattern, baseScore) {
+  if (!text) return 0;
+  const count = countMatches(text, pattern);
+  if (count === 0) return 0;
+  return baseScore + (count > 1 ? Math.log2(count) * 0.5 : 0);
+}
+function isFuzzyMatch(word, target, maxDistance = 2) {
+  if (word.length < 4) return false;
+  const distance = levenshtein(word.toLowerCase(), target.toLowerCase());
+  const threshold = Math.min(maxDistance, Math.floor(word.length / 3));
+  return distance <= threshold;
+}
 function loadTags(mnemeDir) {
-  const tagsPath = path.join(mnemeDir, "tags.json");
-  if (!fs.existsSync(tagsPath)) return null;
+  const tagsPath = path3.join(mnemeDir, "tags.json");
+  if (!fs3.existsSync(tagsPath)) return null;
   try {
-    return JSON.parse(fs.readFileSync(tagsPath, "utf-8"));
+    return JSON.parse(fs3.readFileSync(tagsPath, "utf-8"));
   } catch {
     return null;
   }
@@ -88,10 +315,10 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
   }
 }
 function walkJsonFiles(dir, callback) {
-  if (!fs.existsSync(dir)) return;
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  if (!fs3.existsSync(dir)) return;
+  const entries = fs3.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
+    const fullPath = path3.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkJsonFiles(fullPath, callback);
       continue;
@@ -102,31 +329,34 @@ function walkJsonFiles(dir, callback) {
   }
 }
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path.join(mnemeDir, "sessions");
+  const sessionsDir = path3.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs.readFileSync(filePath, "utf-8")
+        fs3.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
       const matchedFields = [];
-      if (title && pattern.test(title)) {
-        score += 3;
+      const titleScore = fieldScore(title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
       if (session.tags?.some((t) => pattern.test(t))) {
         score += 1;
         matchedFields.push("tags");
       }
-      if (session.summary?.goal && pattern.test(session.summary.goal)) {
-        score += 2;
+      const goalScore = fieldScore(session.summary?.goal, pattern, 2);
+      if (goalScore > 0) {
+        score += goalScore;
         matchedFields.push("summary.goal");
       }
-      if (session.summary?.description && pattern.test(session.summary.description)) {
-        score += 2;
+      const descScore = fieldScore(session.summary?.description, pattern, 2);
+      if (descScore > 0) {
+        score += descScore;
         matchedFields.push("summary.description");
       }
       if (session.discussions?.some(
@@ -140,6 +370,20 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
       )) {
         score += 2;
         matchedFields.push("errors");
+      }
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (title || "").toLowerCase().split(/\s+/);
+        const tagWords = session.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
       if (score > 0) {
         results.push({
@@ -157,24 +401,26 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 function searchUnits(mnemeDir, keywords, limit = 5) {
-  const unitsPath = path.join(mnemeDir, "units", "units.json");
+  const unitsPath = path3.join(mnemeDir, "units", "units.json");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
-  if (!fs.existsSync(unitsPath)) return results;
+  if (!fs3.existsSync(unitsPath)) return results;
   try {
-    const cards = JSON.parse(fs.readFileSync(unitsPath, "utf-8"));
+    const cards = JSON.parse(fs3.readFileSync(unitsPath, "utf-8"));
     const items = (cards.items || []).filter(
       (item) => item.status === "approved"
     );
     for (const item of items) {
       let score = 0;
       const matchedFields = [];
-      if (item.title && pattern.test(item.title)) {
-        score += 3;
+      const titleScore = fieldScore(item.title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
-      if (item.summary && pattern.test(item.summary)) {
-        score += 2;
+      const summaryScore = fieldScore(item.summary, pattern, 2);
+      if (summaryScore > 0) {
+        score += summaryScore;
         matchedFields.push("summary");
       }
       if (item.tags?.some((tag) => pattern.test(tag))) {
@@ -184,6 +430,20 @@ function searchUnits(mnemeDir, keywords, limit = 5) {
       if (item.sourceType && pattern.test(item.sourceType)) {
         score += 1;
         matchedFields.push("sourceType");
+      }
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
+        const tagWords = item.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
       if (score > 0) {
         results.push({

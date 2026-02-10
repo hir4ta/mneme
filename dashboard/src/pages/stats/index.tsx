@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatShortDate } from "@/lib/format-date";
 
 interface OverviewStats {
   sessions: { total: number; byType: Record<string, number> };
@@ -108,7 +109,7 @@ const COLORS = {
 };
 
 export function StatsPage() {
-  const { t, i18n } = useTranslation("stats");
+  const { t } = useTranslation("stats");
 
   const {
     data: overview,
@@ -157,13 +158,7 @@ export function StatsPage() {
         .sort((a, b) => b.value - a.value)
     : [];
 
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return i18n.language === "ja"
-      ? `${date.getMonth() + 1}/${date.getDate()}`
-      : `${date.getMonth() + 1}/${date.getDate()}`;
-  };
+  // Format date for display - uses imported formatShortDate
 
   return (
     <div className="space-y-4">
@@ -247,7 +242,7 @@ export function StatsPage() {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  tickFormatter={formatDate}
+                  tickFormatter={formatShortDate}
                   axisLine={{ stroke: "hsl(var(--border))" }}
                   tickLine={false}
                 />
@@ -265,7 +260,7 @@ export function StatsPage() {
                     fontSize: "12px",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   }}
-                  labelFormatter={formatDate}
+                  labelFormatter={formatShortDate}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}

@@ -1,4 +1,4 @@
-import type { Decision, Session, TagsFile } from "./types";
+import type { Session, TagsFile } from "./types";
 
 const API_BASE = "/api";
 
@@ -36,14 +36,6 @@ export interface SessionsQueryParams {
   tag?: string;
   type?: string;
   project?: string;
-  search?: string;
-  paginate?: boolean;
-}
-
-export interface DecisionsQueryParams {
-  page?: number;
-  limit?: number;
-  tag?: string;
   search?: string;
   paginate?: boolean;
 }
@@ -112,42 +104,6 @@ export async function getSessionMarkdown(id: string): Promise<SessionMarkdown> {
   return res.json();
 }
 
-// Decisions
-export async function getDecisions(): Promise<Decision[]> {
-  const res = await fetch(`${API_BASE}/decisions?paginate=false`);
-  if (!res.ok) throw new Error("Failed to fetch decisions");
-  return res.json();
-}
-
-export async function getDecisionsPaginated(
-  params: DecisionsQueryParams = {},
-): Promise<PaginatedResponse<Decision>> {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.set("page", String(params.page));
-  if (params.limit) searchParams.set("limit", String(params.limit));
-  if (params.tag) searchParams.set("tag", params.tag);
-  if (params.search) searchParams.set("search", params.search);
-  searchParams.set("paginate", "true");
-
-  const res = await fetch(`${API_BASE}/decisions?${searchParams}`);
-  if (!res.ok) throw new Error("Failed to fetch decisions");
-  return res.json();
-}
-
-export async function getDecision(id: string): Promise<Decision> {
-  const res = await fetch(`${API_BASE}/decisions/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch decision");
-  return res.json();
-}
-
-export async function deleteDecision(
-  id: string,
-): Promise<{ deleted: number; id: string }> {
-  const res = await fetch(`${API_BASE}/decisions/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete decision");
-  return res.json();
-}
-
 // Project info
 export async function getProjectInfo(): Promise<{
   projectRoot: string;
@@ -163,29 +119,6 @@ export async function getProjectInfo(): Promise<{
 export async function getTags(): Promise<TagsFile> {
   const res = await fetch(`${API_BASE}/tags`);
   if (!res.ok) throw new Error("Failed to fetch tags");
-  return res.json();
-}
-
-export async function deletePattern(
-  id: string,
-  sourceFile: string,
-): Promise<{ deleted: number; id: string; sourceFile: string }> {
-  const params = new URLSearchParams({ source: sourceFile });
-  const res = await fetch(`${API_BASE}/patterns/${id}?${params}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete pattern");
-  return res.json();
-}
-
-export async function deleteRule(
-  ruleType: "dev-rules" | "review-guidelines",
-  ruleId: string,
-): Promise<{ deleted: number; id: string; ruleType: string }> {
-  const res = await fetch(`${API_BASE}/rules/${ruleType}/${ruleId}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete rule");
   return res.json();
 }
 

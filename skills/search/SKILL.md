@@ -29,7 +29,7 @@ Search sessions + approved units.
 
 ## Execution
 
-1. Call `mneme_search`.
+1. Call `mneme_search` with `$ARGUMENTS` as the query (or prompt user if empty).
 2. Show scored results.
 3. If response includes `page.nextOffset`, allow paging:
    - next call: `mneme_search({ ..., offset: page.nextOffset })`

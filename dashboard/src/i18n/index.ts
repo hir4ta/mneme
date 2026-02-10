@@ -3,39 +3,33 @@ import { initReactI18next } from "react-i18next";
 
 // English translations
 import enCommon from "./locales/en/common.json";
-import enDecisions from "./locales/en/decisions.json";
+import enDevRules from "./locales/en/devRules.json";
 import enErrors from "./locales/en/errors.json";
 import enGraph from "./locales/en/graph.json";
 import enGuide from "./locales/en/guide.json";
 import enLayout from "./locales/en/layout.json";
-import enPatterns from "./locales/en/patterns.json";
 import enRules from "./locales/en/rules.json";
 import enSessions from "./locales/en/sessions.json";
 import enStats from "./locales/en/stats.json";
-import enUnits from "./locales/en/units.json";
 
 // Japanese translations
 import jaCommon from "./locales/ja/common.json";
-import jaDecisions from "./locales/ja/decisions.json";
+import jaDevRules from "./locales/ja/devRules.json";
 import jaErrors from "./locales/ja/errors.json";
 import jaGraph from "./locales/ja/graph.json";
 import jaGuide from "./locales/ja/guide.json";
 import jaLayout from "./locales/ja/layout.json";
-import jaPatterns from "./locales/ja/patterns.json";
 import jaRules from "./locales/ja/rules.json";
 import jaSessions from "./locales/ja/sessions.json";
 import jaStats from "./locales/ja/stats.json";
-import jaUnits from "./locales/ja/units.json";
 
 const resources = {
   en: {
     common: enCommon,
     layout: enLayout,
-    units: enUnits,
+    devRules: enDevRules,
     sessions: enSessions,
-    decisions: enDecisions,
     rules: enRules,
-    patterns: enPatterns,
     stats: enStats,
     graph: enGraph,
     errors: enErrors,
@@ -44,11 +38,9 @@ const resources = {
   ja: {
     common: jaCommon,
     layout: jaLayout,
-    units: jaUnits,
+    devRules: jaDevRules,
     sessions: jaSessions,
-    decisions: jaDecisions,
     rules: jaRules,
-    patterns: jaPatterns,
     stats: jaStats,
     graph: jaGraph,
     errors: jaErrors,
@@ -74,11 +66,9 @@ i18n.use(initReactI18next).init({
   ns: [
     "common",
     "layout",
-    "units",
+    "devRules",
     "sessions",
-    "decisions",
     "rules",
-    "patterns",
     "stats",
     "graph",
     "errors",

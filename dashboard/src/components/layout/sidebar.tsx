@@ -20,10 +20,7 @@ const navGroups: NavGroup[] = [
     labelKey: "nav.platform",
     items: [
       { href: "/", labelKey: "nav.sessions", icon: "folder" },
-      { href: "/units", labelKey: "nav.units", icon: "cards" },
-      { href: "/decisions", labelKey: "nav.decisions", icon: "lightbulb" },
-      { href: "/patterns", labelKey: "nav.patterns", icon: "pattern" },
-      { href: "/rules", labelKey: "nav.rules", icon: "check" },
+      { href: "/dev-rules", labelKey: "nav.devRules", icon: "cards" },
       { href: "/stats", labelKey: "nav.statistics", icon: "chart" },
       { href: "/graph", labelKey: "nav.graph", icon: "graph" },
     ],
@@ -48,38 +45,6 @@ const icons: Record<string, React.ReactNode> = {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-      />
-    </svg>
-  ),
-  lightbulb: (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <title>Decisions</title>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-      />
-    </svg>
-  ),
-  check: (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <title>Rules</title>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"
       />
     </svg>
   ),
@@ -115,22 +80,6 @@ const icons: Record<string, React.ReactNode> = {
       />
     </svg>
   ),
-  pattern: (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <title>Patterns</title>
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-      />
-    </svg>
-  ),
   cards: (
     <svg
       className="h-4 w-4"
@@ -138,7 +87,7 @@ const icons: Record<string, React.ReactNode> = {
       stroke="currentColor"
       viewBox="0 0 24 24"
     >
-      <title>Units</title>
+      <title>Development Rules</title>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"

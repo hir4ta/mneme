@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { levenshtein } from "./fuzzy-search.js";
 
 export type SearchType = "session" | "unit" | "interaction";
 
@@ -69,6 +70,31 @@ export type QueryableDb = {
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function countMatches(text: string, pattern: RegExp): number {
+  const matches = text.match(new RegExp(pattern.source, "gi"));
+  return matches ? matches.length : 0;
+}
+
+function fieldScore(
+  text: string | undefined,
+  pattern: RegExp,
+  baseScore: number,
+): number {
+  if (!text) return 0;
+  const count = countMatches(text, pattern);
+  if (count === 0) return 0;
+  // Diminishing returns for multiple matches: base + log2(count) * 0.5
+  return baseScore + (count > 1 ? Math.log2(count) * 0.5 : 0);
+}
+
+function isFuzzyMatch(word: string, target: string, maxDistance = 2): boolean {
+  if (word.length < 4) return false; // Don't fuzzy match very short words
+  const distance = levenshtein(word.toLowerCase(), target.toLowerCase());
+  // Allow distance proportional to word length, max 2
+  const threshold = Math.min(maxDistance, Math.floor(word.length / 3));
+  return distance <= threshold;
 }
 
 function loadTags(mnemeDir: string): TagsFile | null {
@@ -214,23 +240,23 @@ function searchSessions(mnemeDir: string, keywords: string[], limit = 5) {
       let score = 0;
       const matchedFields: string[] = [];
 
-      if (title && pattern.test(title)) {
-        score += 3;
+      const titleScore = fieldScore(title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
       if (session.tags?.some((t) => pattern.test(t))) {
         score += 1;
         matchedFields.push("tags");
       }
-      if (session.summary?.goal && pattern.test(session.summary.goal)) {
-        score += 2;
+      const goalScore = fieldScore(session.summary?.goal, pattern, 2);
+      if (goalScore > 0) {
+        score += goalScore;
         matchedFields.push("summary.goal");
       }
-      if (
-        session.summary?.description &&
-        pattern.test(session.summary.description)
-      ) {
-        score += 2;
+      const descScore = fieldScore(session.summary?.description, pattern, 2);
+      if (descScore > 0) {
+        score += descScore;
         matchedFields.push("summary.description");
       }
       if (
@@ -248,6 +274,22 @@ function searchSessions(mnemeDir: string, keywords: string[], limit = 5) {
       ) {
         score += 2;
         matchedFields.push("errors");
+      }
+
+      // Fuzzy matching fallback for short queries
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (title || "").toLowerCase().split(/\s+/);
+        const tagWords = session.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
 
       if (score > 0) {
@@ -282,12 +324,14 @@ function searchUnits(mnemeDir: string, keywords: string[], limit = 5) {
     for (const item of items) {
       let score = 0;
       const matchedFields: string[] = [];
-      if (item.title && pattern.test(item.title)) {
-        score += 3;
+      const titleScore = fieldScore(item.title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
         matchedFields.push("title");
       }
-      if (item.summary && pattern.test(item.summary)) {
-        score += 2;
+      const summaryScore = fieldScore(item.summary, pattern, 2);
+      if (summaryScore > 0) {
+        score += summaryScore;
         matchedFields.push("summary");
       }
       if (item.tags?.some((tag) => pattern.test(tag))) {
@@ -297,6 +341,22 @@ function searchUnits(mnemeDir: string, keywords: string[], limit = 5) {
       if (item.sourceType && pattern.test(item.sourceType)) {
         score += 1;
         matchedFields.push("sourceType");
+      }
+
+      // Fuzzy matching fallback for short queries
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
+        const tagWords = item.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
       }
 
       if (score > 0) {

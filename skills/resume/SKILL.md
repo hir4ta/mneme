@@ -5,6 +5,7 @@ description: |
   Use when: (1) continuing work from a previous session, (2) reviewing past session details,
   (3) picking up where you left off after a break.
 argument-hint: "[session-id]"
+disable-model-invocation: true
 ---
 
 # /mneme:resume
@@ -58,19 +59,20 @@ Multiple filters can be combined:
 
 ## Execution Steps
 
-1. Read all JSON files under `.mneme/sessions/` (including year/month folders)
-2. Apply filters if specified:
+1. Parse `$ARGUMENTS` to extract session ID or filter flags (e.g. `--type=implementation --days=7`).
+2. Read all JSON files under `.mneme/sessions/` (including year/month folders).
+3. Apply filters if specified:
    - `--type`: Match `summary.sessionType` or `sessionType` field
    - `--tag`: Match any tag in `tags` array
    - `--days`: Compare `createdAt` with current date
    - `--branch`: Match `context.branch` field
-3. Sort by `createdAt` descending (most recent first)
-4. Display filtered session list
-5. If session ID specified, read the JSON file and get details
-6. **Create session-link file** (new master session support)
-7. **Update master session JSON with `workPeriods` entry**
-8. **Update current session JSON with `resumedFrom` field** (legacy, for backwards compatibility)
-9. Load session context to resume work
+4. Sort by `createdAt` descending (most recent first)
+5. Display filtered session list
+6. If session ID specified, read the JSON file and get details
+7. **Create session-link file** (new master session support)
+8. **Update master session JSON with `workPeriods` entry**
+9. **Update current session JSON with `resumedFrom` field** (legacy, for backwards compatibility)
+10. Load session context to resume work
 
 ### File Operations
 

@@ -11,6 +11,9 @@
 
 set -euo pipefail
 
+# Source shared helpers
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
+
 input_json=$(cat)
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -39,32 +42,19 @@ if [ ${#prompt} -gt 4000 ]; then
   prompt="${prompt:0:4000}"
 fi
 
-mneme_dir="${cwd}/.mneme"
-if [ ! -d "$mneme_dir" ]; then
+if ! validate_mneme "$cwd"; then
   exit 0
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PLUGIN_ROOT="$(get_plugin_root)"
 
-search_script=""
-runner=""
-if [ -f "${PLUGIN_ROOT}/dist/lib/prompt-search.js" ]; then
-  search_script="${PLUGIN_ROOT}/dist/lib/prompt-search.js"
-  runner="node"
-elif [ -f "${PLUGIN_ROOT}/lib/prompt-search.ts" ]; then
-  search_script="${PLUGIN_ROOT}/lib/prompt-search.ts"
-  runner="tsx"
-else
+search_script=$(find_script "$PLUGIN_ROOT" "prompt-search")
+if [ -z "$search_script" ]; then
   exit 0
 fi
 
-search_output=""
-if [ "$runner" = "tsx" ]; then
-  search_output=$(npx tsx "$search_script" --query "$prompt" --project "$cwd" --limit 5 2>/dev/null || echo "")
-else
-  search_output=$(node "$search_script" --query "$prompt" --project "$cwd" --limit 5 2>/dev/null || echo "")
-fi
+search_output=$(invoke_node "$search_script" \
+  --query "$prompt" --project "$cwd" --limit 5 2>/dev/null || echo "")
 
 if [ -z "$search_output" ]; then
   exit 0

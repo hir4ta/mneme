@@ -1,14 +1,15 @@
 ---
 name: save
 description: |
-  Extract and persist session outputs, then refresh unit sources (decision/pattern/rule).
+  Extract and persist session outputs, then generate development rule candidates (decision/pattern/rule).
   Use when: (1) finishing meaningful implementation work, (2) capturing reusable guidance,
   (3) before ending a long session.
+disable-model-invocation: true
 ---
 
 # /mneme:save
 
-Save session outputs and refresh source artifacts for unit generation.
+Save session outputs and generate development rule candidates for approval.
 
 ## Core intent
 
@@ -18,7 +19,7 @@ Save session outputs and refresh source artifacts for unit generation.
 - `patterns/`
 - `rules/`
 
-Then units should be regenerated and reviewed.
+Then development rule candidates should be generated and reviewed inline.
 
 ## Required emphasis format (Claude Code safe)
 
@@ -62,15 +63,24 @@ Always render missing required fields as blocking errors before write.
 - `priority` must be one of: `p0`, `p1`, `p2`
 </required>
 
-7. **Unit refresh trigger (required)**
-- Regenerate units from updated sources.
-- Present pending units for approval.
-- Note: planning/review should use only approved units.
+7. **開発ルール生成 + インライン承認 (required)**
+- Generate development rule candidates from updated sources.
+- Display candidates with type badges ([Decision], [Pattern], [Rule]).
+- Ask user to approve or reject each candidate inline:
+  ```
+  Generated development rule candidates:
+    1. [Decision] Use JWT with RS256  → Approve? (Y/n)
+    2. [Pattern] Wrap DB calls in try/catch  → Approve? (Y/n)
+    3. [Rule] p0 security check required  → Approve? (Y/n)
+  ```
+- Set approved items to `status: "approved"`.
+- Set rejected items to `status: "rejected"`.
+- Note: approved rules are available to MCP search tools for use by custom agents.
 
 8. **Auto quality checks (required MCP)**
-- Run `mcp__mneme-db__mneme_rule_linter` (`ruleType: "all"`).
-- Run `mcp__mneme-db__mneme_search_eval` (`mode: "run"`).
-- Run `mcp__mneme-db__mneme_unit_queue_list_pending` to surface pending approvals.
+- Run `mneme_rule_linter` (`ruleType: "all"`).
+- Run `mneme_search_eval` (`mode: "run"`).
+- Run `mneme_unit_queue_list_pending` to surface pending approvals.
 
 ## Source definitions (must follow)
 
@@ -101,7 +111,7 @@ Recommended controlled tags:
 
 ## Validation gate (must pass)
 
-After writing sources and before unit generation, run:
+After writing sources and before rule generation, run:
 
 ```bash
 npm run validate:sources
@@ -117,5 +127,5 @@ Report at minimum:
 - validation result (`validate:sources`)
 - rule linter result (`mneme_rule_linter`)
 - search benchmark result (`mneme_search_eval`)
-- units regenerated count
-- pending units count
+- development rules generated count
+- pending rules count

@@ -3,7 +3,7 @@ name: init-mneme
 description: |
   Initialize mneme in the current project by creating .mneme directory structure.
   Use when: (1) setting up mneme in a new project, (2) the project doesn't have .mneme yet.
-user-invocable: true
+disable-model-invocation: true
 ---
 
 # Initialize mneme

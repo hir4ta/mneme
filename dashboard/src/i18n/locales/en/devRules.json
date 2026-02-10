@@ -1,0 +1,56 @@
+{
+  "title": "Development Rules",
+  "subtitle": "Approved rules generated from decisions, patterns, and rules.",
+  "searchPlaceholder": "Search rules...",
+  "loading": "Loading rules...",
+  "noRules": "No development rules yet. Generate from existing source artifacts.",
+  "noMatch": "No rules match the current filters.",
+  "error": "Failed to load development rules.",
+  "selectAll": "Select all",
+  "deselectAll": "Deselect all",
+  "ariaSelectItem": "Select {{title}}",
+  "actions": {
+    "approve": "Approve",
+    "approveAll": "Approve All",
+    "setPending": "Set Pending",
+    "reject": "Reject",
+    "rejectAll": "Reject All",
+    "delete": "Delete",
+    "dismiss": "Dismiss"
+  },
+  "stats": {
+    "total": "Total",
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected"
+  },
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "type": {
+    "decision": "Decision",
+    "pattern": "Pattern",
+    "rule": "Rule"
+  },
+  "filter": {
+    "allTypes": "All Types",
+    "allStatus": "All Status"
+  },
+  "selected": "{{count}} selected",
+  "detail": {
+    "summary": "Summary",
+    "status": "Status",
+    "source": "Source",
+    "tags": "Tags",
+    "created": "Created",
+    "updated": "Updated",
+    "reviewed": "Reviewed",
+    "reviewedBy": "Reviewed By"
+  },
+  "deleteConfirm": {
+    "title": "Delete Rule",
+    "description": "Are you sure you want to delete this development rule? This action cannot be undone."
+  }
+}

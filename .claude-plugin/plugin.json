@@ -1,7 +1,7 @@
 {
   "name": "mneme",
   "description": "A plugin that provides long-term memory for Claude Code. It automatically saves context lost during auto-compact, offering features for session restoration, recording technical decisions, and learning developer patterns.",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "author": {
     "name": "hir4ta"
   },
@@ -12,10 +12,7 @@
   "mcpServers": {
     "mneme-search": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/search-server.js"],
-      "env": {
-        "MNEME_DATA_DIR": "${MNEME_DATA_DIR:-}"
-      }
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/servers/search-server.js"]
     },
     "mneme-db": {
       "command": "node",

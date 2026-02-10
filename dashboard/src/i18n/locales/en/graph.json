@@ -42,7 +42,18 @@
     "depthValue": "Depth {{value}}",
     "focusSelected": "Focus selected",
     "clearFocus": "Clear focus",
-    "tagsAll": "All Tags"
+    "tagsAll": "All Tags",
+    "layout": "Layout",
+    "layouts": {
+      "force": "Force",
+      "flow": "Top-Down Flow"
+    },
+    "branch": "Branch",
+    "branches": {
+      "all": "All Branches"
+    },
+    "play": "Play",
+    "pause": "Pause"
   },
   "topTags": {
     "title": "Top Shared Tags",
@@ -77,6 +88,12 @@
       "pitfall": "Pitfall",
       "playbook": "Playbook"
     }
+  },
+  "gaps": {
+    "title": "Structural Gaps",
+    "empty": "No gaps detected",
+    "weakConnection": "Weak: {{actual}}/{{possible}} connections",
+    "bridgeHint": "Consider creating sessions to bridge these topics."
   },
   "types": {
     "session": "session",

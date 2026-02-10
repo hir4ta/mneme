@@ -5,6 +5,7 @@ description: |
   Use when: (1) PR discussion has reusable guidance, (2) team review feedback should be retained,
   (3) merged PRs contain operational lessons.
 argument-hint: "<PR-URL>"
+disable-model-invocation: true
 ---
 
 # /mneme:harvest
@@ -55,7 +56,7 @@ Use explicit section markers and XML-style tags for hard constraints:
 
 ## Flow
 
-1. Parse PR URL.
+1. Parse PR URL from `$ARGUMENTS`.
 2. Fetch review + issue comments via `gh`.
 3. Classify comments into decision/pattern/rule sources.
 4. Deduplicate/conflict-check against existing sources.

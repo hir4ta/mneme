@@ -5,12 +5,9 @@
     "settings": "Settings",
     "help": "Help",
     "sessions": "Sessions",
-    "decisions": "Decisions",
-    "patterns": "Patterns",
-    "units": "Units",
+    "devRules": "Dev Rules",
     "statistics": "Statistics",
     "graph": "Graph",
-    "rules": "Rules",
     "guide": "Guide"
   }
 }
