@@ -1,9 +1,9 @@
 {
   "title": "Development Rules",
-  "subtitle": "Approved rules generated from decisions, patterns, and rules.",
+  "subtitle": "Decisions, patterns, and rules overview",
   "searchPlaceholder": "Search rules...",
   "loading": "Loading rules...",
-  "noRules": "No development rules yet. Generate from existing source artifacts.",
+  "noRules": "No development rules yet. Save data to decisions / patterns / rules.",
   "noMatch": "No rules match the current filters.",
   "error": "Failed to load development rules.",
   "selectAll": "Select all",
@@ -12,7 +12,6 @@
   "actions": {
     "approve": "Approve",
     "approveAll": "Approve All",
-    "setPending": "Set Pending",
     "reject": "Reject",
     "rejectAll": "Reject All",
     "delete": "Delete",
@@ -21,11 +20,9 @@
   "stats": {
     "total": "Total",
     "approved": "Approved",
-    "pending": "Pending",
     "rejected": "Rejected"
   },
   "status": {
-    "pending": "Pending",
     "approved": "Approved",
     "rejected": "Rejected"
   },
@@ -42,12 +39,10 @@
   "detail": {
     "summary": "Summary",
     "status": "Status",
-    "source": "Source",
+    "source": "Source File",
     "tags": "Tags",
     "created": "Created",
-    "updated": "Updated",
-    "reviewed": "Reviewed",
-    "reviewedBy": "Reviewed By"
+    "updated": "Updated"
   },
   "deleteConfirm": {
     "title": "Delete Rule",

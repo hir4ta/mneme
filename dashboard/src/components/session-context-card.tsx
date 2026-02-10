@@ -112,13 +112,8 @@ function SummarySection({
         <div>
           <span className="text-muted-foreground">
             {t("context.fields.outcome")}:
-          </span>{" "}
-          <Badge
-            variant={summary.outcome === "success" ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {summary.outcome}
-          </Badge>
+          </span>
+          <p className="mt-1 whitespace-pre-wrap">{summary.outcome}</p>
         </div>
       )}
       {summary.description && (
@@ -495,23 +490,11 @@ export function SessionContextCard({
           {t("context.sections", { count: sections })}
         </Badge>
       </div>
-      {session.summary && (
+      {session.summary?.sessionType && (
         <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
-          {session.summary.outcome && (
-            <Badge
-              variant={
-                session.summary.outcome === "success" ? "default" : "outline"
-              }
-              className="text-xs"
-            >
-              {session.summary.outcome}
-            </Badge>
-          )}
-          {session.summary.sessionType && (
-            <Badge variant="outline" className="text-xs">
-              {session.summary.sessionType}
-            </Badge>
-          )}
+          <Badge variant="outline" className="text-xs">
+            {session.summary.sessionType}
+          </Badge>
         </div>
       )}
     </>
@@ -520,7 +503,9 @@ export function SessionContextCard({
   const contentSections = (
     <div className="space-y-3">
       {session.summary &&
-        (session.summary.goal || session.summary.description) && (
+        (session.summary.goal ||
+          session.summary.outcome ||
+          session.summary.description) && (
           <SectionCard
             sectionKey="summary"
             label={t("context.sectionLabels.summary")}
@@ -610,23 +595,11 @@ export function SessionContextCard({
             {t("context.sections", { count: sections })}
           </Badge>
         </CardTitle>
-        {session.summary && (
+        {session.summary?.sessionType && (
           <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
-            {session.summary.outcome && (
-              <Badge
-                variant={
-                  session.summary.outcome === "success" ? "default" : "outline"
-                }
-                className="text-xs"
-              >
-                {session.summary.outcome}
-              </Badge>
-            )}
-            {session.summary.sessionType && (
-              <Badge variant="outline" className="text-xs">
-                {session.summary.sessionType}
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs">
+              {session.summary.sessionType}
+            </Badge>
           </div>
         )}
       </CardHeader>

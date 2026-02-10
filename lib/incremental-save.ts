@@ -545,7 +545,7 @@ async function parseTranscriptIncremental(
                   : null,
         }));
 
-      if (!thinking && !text) return null;
+      if (!thinking && !text && toolDetails.length === 0) return null;
 
       return {
         timestamp: e.timestamp,
@@ -567,7 +567,7 @@ async function parseTranscriptIncremental(
 
     // Collect all assistant responses between this user message and next
     const turnResponses = assistantMessages.filter(
-      (a) => a.timestamp > user.timestamp && a.timestamp < nextUserTs,
+      (a) => a.timestamp >= user.timestamp && a.timestamp < nextUserTs,
     );
 
     if (turnResponses.length > 0) {

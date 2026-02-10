@@ -72,22 +72,7 @@
     "noSummary": "No summary available",
     "relatedNodes": "Related Nodes",
     "focusThisNode": "Focus this node",
-    "sharedTagsCount": "Shared tags: {{count}}",
-    "unitType": {
-      "decision": "Decision",
-      "pattern": "Pattern",
-      "rule": "Rule"
-    },
-    "unitStatus": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "rejected": "Rejected"
-    },
-    "unitKind": {
-      "policy": "Policy",
-      "pitfall": "Pitfall",
-      "playbook": "Playbook"
-    }
+    "sharedTagsCount": "Shared tags: {{count}}"
   },
   "gaps": {
     "title": "Structural Gaps",
@@ -97,7 +82,7 @@
   },
   "types": {
     "session": "session",
-    "unit": "unit",
+    "rule": "rule",
     "unknown": "unknown"
   }
 }

@@ -331,7 +331,7 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
       name: c.name ?? "",
       detail: c.name === "Bash" ? c.input?.command : c.name === "Read" || c.name === "Edit" || c.name === "Write" ? c.input?.file_path : c.name === "Glob" || c.name === "Grep" ? c.input?.pattern : null
     }));
-    if (!thinking && !text) return null;
+    if (!thinking && !text && toolDetails.length === 0) return null;
     return {
       timestamp: e.timestamp,
       thinking,
@@ -344,7 +344,7 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     const user = userMessages[i];
     const nextUserTs = i + 1 < userMessages.length ? userMessages[i + 1].timestamp : "9999-12-31T23:59:59Z";
     const turnResponses = assistantMessages.filter(
-      (a) => a.timestamp > user.timestamp && a.timestamp < nextUserTs
+      (a) => a.timestamp >= user.timestamp && a.timestamp < nextUserTs
     );
     if (turnResponses.length > 0) {
       const allToolDetails = turnResponses.flatMap((r) => r.toolDetails);

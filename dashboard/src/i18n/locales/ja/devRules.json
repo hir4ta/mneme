@@ -1,9 +1,9 @@
 {
   "title": "開発ルール",
-  "subtitle": "意思決定・パターン・ルールから生成された承認済みルール。",
+  "subtitle": "意思決定・パターン・ルールの一覧",
   "searchPlaceholder": "ルールを検索...",
   "loading": "ルールを読み込み中...",
-  "noRules": "開発ルールがありません。既存のソースデータから生成してください。",
+  "noRules": "開発ルールがありません。decisions / patterns / rules にデータを保存してください。",
   "noMatch": "条件に一致するルールがありません。",
   "error": "開発ルールの読み込みに失敗しました。",
   "selectAll": "すべて選択",
@@ -12,7 +12,6 @@
   "actions": {
     "approve": "承認",
     "approveAll": "一括承認",
-    "setPending": "保留に戻す",
     "reject": "却下",
     "rejectAll": "一括却下",
     "delete": "削除",
@@ -21,11 +20,9 @@
   "stats": {
     "total": "合計",
     "approved": "承認済み",
-    "pending": "保留",
     "rejected": "却下"
   },
   "status": {
-    "pending": "保留",
     "approved": "承認済み",
     "rejected": "却下"
   },
@@ -42,12 +39,10 @@
   "detail": {
     "summary": "概要",
     "status": "ステータス",
-    "source": "ソース",
+    "source": "ソースファイル",
     "tags": "タグ",
     "created": "作成日",
-    "updated": "更新日",
-    "reviewed": "レビュー日",
-    "reviewedBy": "レビュアー"
+    "updated": "更新日"
   },
   "deleteConfirm": {
     "title": "ルールを削除",

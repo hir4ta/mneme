@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSession, getUnitById } from "@/lib/api";
+import { getDevRules, getSession } from "@/lib/api";
 import { formatDateTime } from "@/lib/format-date";
 import type { GraphEdge, GraphNode } from "./types";
 
@@ -38,8 +38,10 @@ export function GraphDetailDialog(props: GraphDetailDialogProps) {
       if (!selectedNode) return null;
       if (selectedNode.entityType === "session")
         return getSession(selectedNode.entityId);
-      if (selectedNode.entityType === "unit")
-        return getUnitById(selectedNode.entityId);
+      if (selectedNode.entityType === "rule") {
+        const res = await getDevRules();
+        return res.items.find((i) => i.id === selectedNode.entityId) || null;
+      }
       return null;
     },
   });
@@ -178,7 +180,7 @@ export function GraphDetailDialog(props: GraphDetailDialogProps) {
                 </div>
               )}
 
-            {selectedNode.entityType === "unit" && selectedNodeDetail.data && (
+            {selectedNode.entityType === "rule" && selectedNodeDetail.data && (
               <div className="space-y-2.5 text-sm">
                 <p className="text-muted-foreground">
                   {t("detail.createdAt")}:{" "}
@@ -186,37 +188,10 @@ export function GraphDetailDialog(props: GraphDetailDialogProps) {
                 </p>
                 <div className="flex flex-wrap gap-1">
                   <Badge variant="outline">
-                    {t(
-                      `detail.unitType.${
-                        (
-                          selectedNodeDetail.data as {
-                            type: string;
-                          }
-                        ).type
-                      }`,
-                    )}
+                    {(selectedNodeDetail.data as { type: string }).type}
                   </Badge>
                   <Badge variant="outline">
-                    {t(
-                      `detail.unitStatus.${
-                        (
-                          selectedNodeDetail.data as {
-                            status: string;
-                          }
-                        ).status
-                      }`,
-                    )}
-                  </Badge>
-                  <Badge variant="outline">
-                    {t(
-                      `detail.unitKind.${
-                        (
-                          selectedNodeDetail.data as {
-                            kind: string;
-                          }
-                        ).kind
-                      }`,
-                    )}
+                    {(selectedNodeDetail.data as { status: string }).status}
                   </Badge>
                 </div>
                 <p className="font-medium">{t("detail.summary")}</p>

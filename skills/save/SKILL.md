@@ -72,24 +72,15 @@ Always render missing required fields as blocking errors before write.
 - `priority` must be one of: `p0`, `p1`, `p2`
 </required>
 
-7. **開発ルール生成 + インライン承認 (required)**
-- Generate development rule candidates from updated sources.
-- Display candidates with type badges ([Decision], [Pattern], [Rule]).
-- Ask user to approve or reject each candidate inline:
-  ```
-  Generated development rule candidates:
-    1. [Decision] Use JWT with RS256  → Approve? (Y/n)
-    2. [Pattern] Wrap DB calls in try/catch  → Approve? (Y/n)
-    3. [Rule] p0 security check required  → Approve? (Y/n)
-  ```
-- Set approved items to `status: "approved"`.
-- Set rejected items to `status: "rejected"`.
-- Note: approved rules are available to MCP search tools for use by custom agents.
+7. **開発ルール候補のレポート**
+- 保存した decisions/patterns/rules の内容をユーザーに一覧表示。
+- status は設定不要（デフォルトで approved）。
+- エンジニアがダッシュボードで適用・解除を判断する。
+- インライン承認は行わない。
 
 8. **Auto quality checks (required MCP)**
 - Run `mneme_rule_linter` (`ruleType: "all"`).
 - Run `mneme_search_eval` (`mode: "run"`).
-- Run `mneme_unit_queue_list_pending` to surface pending approvals.
 
 ## Source definitions (must follow)
 
@@ -136,5 +127,4 @@ Report at minimum:
 - validation result (`validate:sources`)
 - rule linter result (`mneme_rule_linter`)
 - search benchmark result (`mneme_search_eval`)
-- development rules generated count
-- pending rules count
+- saved decisions/patterns/rules summary

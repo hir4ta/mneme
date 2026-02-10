@@ -406,66 +406,6 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function searchUnits(mnemeDir, keywords, limit = 5) {
-  const unitsPath = path3.join(mnemeDir, "units", "units.json");
-  const results = [];
-  const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
-  if (!fs3.existsSync(unitsPath)) return results;
-  try {
-    const cards = JSON.parse(fs3.readFileSync(unitsPath, "utf-8"));
-    const items = (cards.items || []).filter(
-      (item) => item.status === "approved"
-    );
-    for (const item of items) {
-      let score = 0;
-      const matchedFields = [];
-      const titleScore = fieldScore(item.title, pattern, 3);
-      if (titleScore > 0) {
-        score += titleScore;
-        matchedFields.push("title");
-      }
-      const summaryScore = fieldScore(item.summary, pattern, 2);
-      if (summaryScore > 0) {
-        score += summaryScore;
-        matchedFields.push("summary");
-      }
-      if (item.tags?.some((tag) => pattern.test(tag))) {
-        score += 1;
-        matchedFields.push("tags");
-      }
-      if (item.sourceType && pattern.test(item.sourceType)) {
-        score += 1;
-        matchedFields.push("sourceType");
-      }
-      if (score === 0 && keywords.length <= 2) {
-        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
-        const tagWords = item.tags || [];
-        for (const keyword of keywords) {
-          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
-            score += 1;
-            matchedFields.push("title~fuzzy");
-          }
-          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
-            score += 0.5;
-            matchedFields.push("tags~fuzzy");
-          }
-        }
-      }
-      if (score > 0) {
-        results.push({
-          type: "unit",
-          id: item.id,
-          title: item.title || item.id,
-          snippet: item.summary || "",
-          score,
-          matchedFields
-        });
-      }
-    }
-  } catch {
-  }
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
 function normalizeRequestedTypes(types) {
   const normalized = /* @__PURE__ */ new Set();
   for (const type of types) {
@@ -479,7 +419,7 @@ function searchKnowledge(options) {
     mnemeDir,
     projectPath,
     database = null,
-    types = ["session", "unit", "interaction"],
+    types = ["session", "interaction"],
     limit = 10,
     offset = 0
   } = options;
@@ -495,9 +435,6 @@ function searchKnowledge(options) {
   const normalizedTypes = normalizeRequestedTypes(types);
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
-  }
-  if (normalizedTypes.has("unit")) {
-    results.push(...searchUnits(mnemeDir, expandedKeywords, fetchLimit));
   }
   if (normalizedTypes.has("interaction")) {
     results.push(

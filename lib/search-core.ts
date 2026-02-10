@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { levenshtein } from "./fuzzy-search.js";
 
-export type SearchType = "session" | "unit" | "interaction";
+export type SearchType = "session" | "interaction";
 
-type CanonicalSearchType = "session" | "unit" | "interaction";
+type CanonicalSearchType = "session" | "interaction";
 
 export interface SearchResult {
   type: CanonicalSearchType;
@@ -44,20 +44,6 @@ interface SessionFile {
     cause?: string;
     solution?: string;
   }>;
-}
-
-interface UnitItem {
-  id: string;
-  title?: string;
-  summary?: string;
-  tags?: string[];
-  sourceId?: string;
-  sourceType?: "decision" | "pattern" | "rule";
-  status?: "pending" | "approved" | "rejected";
-}
-
-interface UnitFile {
-  items?: UnitItem[];
 }
 
 type StatementLike = {
@@ -310,73 +296,6 @@ function searchSessions(mnemeDir: string, keywords: string[], limit = 5) {
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
-function searchUnits(mnemeDir: string, keywords: string[], limit = 5) {
-  const unitsPath = path.join(mnemeDir, "units", "units.json");
-  const results: SearchResult[] = [];
-  const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
-  if (!fs.existsSync(unitsPath)) return results;
-
-  try {
-    const cards = JSON.parse(fs.readFileSync(unitsPath, "utf-8")) as UnitFile;
-    const items = (cards.items || []).filter(
-      (item) => item.status === "approved",
-    );
-    for (const item of items) {
-      let score = 0;
-      const matchedFields: string[] = [];
-      const titleScore = fieldScore(item.title, pattern, 3);
-      if (titleScore > 0) {
-        score += titleScore;
-        matchedFields.push("title");
-      }
-      const summaryScore = fieldScore(item.summary, pattern, 2);
-      if (summaryScore > 0) {
-        score += summaryScore;
-        matchedFields.push("summary");
-      }
-      if (item.tags?.some((tag) => pattern.test(tag))) {
-        score += 1;
-        matchedFields.push("tags");
-      }
-      if (item.sourceType && pattern.test(item.sourceType)) {
-        score += 1;
-        matchedFields.push("sourceType");
-      }
-
-      // Fuzzy matching fallback for short queries
-      if (score === 0 && keywords.length <= 2) {
-        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
-        const tagWords = item.tags || [];
-        for (const keyword of keywords) {
-          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
-            score += 1;
-            matchedFields.push("title~fuzzy");
-          }
-          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
-            score += 0.5;
-            matchedFields.push("tags~fuzzy");
-          }
-        }
-      }
-
-      if (score > 0) {
-        results.push({
-          type: "unit",
-          id: item.id,
-          title: item.title || item.id,
-          snippet: item.summary || "",
-          score,
-          matchedFields,
-        });
-      }
-    }
-  } catch {
-    // Skip invalid JSON.
-  }
-
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
-
 function normalizeRequestedTypes(
   types: SearchType[],
 ): Set<CanonicalSearchType> {
@@ -401,7 +320,7 @@ export function searchKnowledge(options: {
     mnemeDir,
     projectPath,
     database = null,
-    types = ["session", "unit", "interaction"],
+    types = ["session", "interaction"],
     limit = 10,
     offset = 0,
   } = options;
@@ -426,9 +345,6 @@ export function searchKnowledge(options: {
 
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
-  }
-  if (normalizedTypes.has("unit")) {
-    results.push(...searchUnits(mnemeDir, expandedKeywords, fetchLimit));
   }
   if (normalizedTypes.has("interaction")) {
     results.push(

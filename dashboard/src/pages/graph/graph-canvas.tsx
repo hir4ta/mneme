@@ -210,7 +210,7 @@ export function GraphCanvas({
 
               // Effectiveness ring for units with applied count
               if (
-                n.entityType === "unit" &&
+                n.entityType === "rule" &&
                 n.appliedCount &&
                 n.appliedCount > 0
               ) {

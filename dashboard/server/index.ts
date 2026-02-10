@@ -118,77 +118,21 @@ function writeAuditLog(entry: {
   }
 }
 
-type UnitStatus = "pending" | "approved" | "rejected";
-type UnitType = "decision" | "pattern" | "rule";
-type RuleKind = "policy" | "pitfall" | "playbook";
+// Dev rule item type (replaces former Unit concept)
+type DevRuleStatus = "approved" | "rejected";
+type DevRuleType = "decision" | "pattern" | "rule";
 
-interface RuleSourceRef {
-  type: UnitType;
+interface DevRuleItem {
   id: string;
-}
-
-interface Unit {
-  id: string;
-  type: UnitType;
-  kind: RuleKind;
+  type: DevRuleType;
   title: string;
   summary: string;
   tags: string[];
-  sourceId: string;
-  sourceType: UnitType;
-  sourceRefs: RuleSourceRef[];
-  status: UnitStatus;
+  status: DevRuleStatus;
+  priority?: string;
+  sourceFile: string;
   createdAt: string;
-  updatedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
-}
-
-interface UnitsFile {
-  schemaVersion: number;
-  updatedAt: string;
-  items: Unit[];
-}
-
-const getUnitsPath = () => path.join(getMnemeDir(), "units", "units.json");
-
-function readUnits(): UnitsFile {
-  const filePath = getUnitsPath();
-  if (!fs.existsSync(filePath)) {
-    return {
-      schemaVersion: 1,
-      updatedAt: new Date().toISOString(),
-      items: [],
-    };
-  }
-
-  const parsed = safeParseJsonFile<UnitsFile>(filePath);
-  if (!parsed || !Array.isArray(parsed.items)) {
-    return {
-      schemaVersion: 1,
-      updatedAt: new Date().toISOString(),
-      items: [],
-    };
-  }
-  return parsed;
-}
-
-function writeUnits(doc: UnitsFile) {
-  const filePath = getUnitsPath();
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(doc, null, 2));
-}
-
-function makeUnitId(sourceType: UnitType, sourceId: string): string {
-  const safe = sourceId.replace(/[^a-zA-Z0-9_-]/g, "-");
-  return `mc-${sourceType}-${safe}`;
-}
-
-function getPatternKind(type: string | undefined): RuleKind {
-  if (type === "error-solution" || type === "bad") {
-    return "pitfall";
-  }
-  return "playbook";
+  updatedAt?: string;
 }
 
 const listDatedJsonFiles = (dir: string): string[] => {
@@ -1879,270 +1823,257 @@ app.delete("/api/patterns/:id", async (c) => {
   }
 });
 
-app.get("/api/units", async (c) => {
-  const status = c.req.query("status") as UnitStatus | undefined;
-  const doc = readUnits();
-  const items =
-    status && ["pending", "approved", "rejected"].includes(status)
-      ? doc.items.filter((item) => item.status === status)
-      : doc.items;
-  return c.json({
-    ...doc,
-    items: items.sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    ),
-  });
-});
+// --- Dev Rules API (reads directly from decisions/patterns/rules source files) ---
 
-app.get("/api/units/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  if (!id) {
-    return c.json({ error: "Invalid unit id" }, 400);
-  }
-  const doc = readUnits();
-  const item = doc.items.find((unit) => unit.id === id);
-  if (!item) {
-    return c.json({ error: "Unit not found" }, 404);
-  }
-  return c.json(item);
-});
+function collectDevRules(): DevRuleItem[] {
+  const items: DevRuleItem[] = [];
 
-app.get("/api/approval-queue", async (c) => {
-  const doc = readUnits();
-  const pending = doc.items.filter((item) => item.status === "pending");
-  return c.json({
-    pending,
-    totalPending: pending.length,
-    byType: pending.reduce(
-      (acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ),
-  });
-});
-
-app.post("/api/units/generate", async (c) => {
-  const now = new Date().toISOString();
-  const existing = readUnits();
-  const bySourceKey = new Map(
-    existing.items.map((item) => [`${item.sourceType}:${item.sourceId}`, item]),
+  // Decisions (dated JSON files, may be flat object or {schemaVersion, items:[...]})
+  const decisionFiles = listDatedJsonFiles(
+    path.join(getMnemeDir(), "decisions"),
   );
-  const generated: Unit[] = [];
+  for (const filePath of decisionFiles) {
+    const sourceName = path.basename(filePath, ".json");
+    const raw = safeParseJsonFile<Record<string, unknown>>(filePath);
+    if (!raw) continue;
 
-  try {
-    const decisionFiles = listDatedJsonFiles(
-      path.join(getMnemeDir(), "decisions"),
-    );
-    for (const filePath of decisionFiles) {
-      const decision = safeParseJsonFile<Record<string, unknown>>(filePath);
-      if (!decision) continue;
-      const sourceId = String(decision.id || "");
-      if (!sourceId) continue;
-      const sourceType: UnitType = "decision";
-      const key = `${sourceType}:${sourceId}`;
-      const previous = bySourceKey.get(key);
-      generated.push({
-        id: previous?.id || makeUnitId(sourceType, sourceId),
+    const entries: Array<Record<string, unknown>> = [];
+    if (Array.isArray(raw.items)) {
+      entries.push(...(raw.items as Array<Record<string, unknown>>));
+    } else if (raw.id) {
+      entries.push(raw);
+    }
+
+    for (const entry of entries) {
+      const id = String(entry.id || "");
+      if (!id) continue;
+      items.push({
+        id,
         type: "decision",
-        kind: "policy",
-        title: String(decision.title || sourceId),
+        title: String(entry.title || entry.text || id),
         summary: String(
-          decision.decision || decision.reasoning || decision.title || "",
+          entry.text || entry.decision || entry.reasoning || entry.title || "",
         ),
-        tags: Array.isArray(decision.tags)
-          ? decision.tags.map((tag) => String(tag))
-          : [],
-        sourceId,
-        sourceType,
-        sourceRefs: [{ type: sourceType, id: sourceId }],
-        status: previous?.status || "pending",
-        createdAt: previous?.createdAt || now,
-        updatedAt: now,
-        reviewedAt: previous?.reviewedAt,
-        reviewedBy: previous?.reviewedBy,
+        tags: Array.isArray(entry.tags) ? entry.tags.map((t) => String(t)) : [],
+        status: (entry.status as DevRuleStatus) || "approved",
+        priority: entry.priority ? String(entry.priority) : undefined,
+        sourceFile: sourceName,
+        createdAt: String(entry.createdAt || raw.createdAt || ""),
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
       });
     }
+  }
 
-    const ruleFiles = ["dev-rules", "review-guidelines"];
-    for (const ruleFile of ruleFiles) {
-      const filePath = path.join(rulesDir(), `${ruleFile}.json`);
-      const doc = safeParseJsonFile<{ items?: Array<Record<string, unknown>> }>(
-        filePath,
-      );
-      if (!doc || !Array.isArray(doc.items)) continue;
-      for (const rule of doc.items) {
-        const ruleId = String(rule.id || "");
-        if (!ruleId) continue;
-        const sourceType: UnitType = "rule";
-        const sourceId = `${ruleFile}:${ruleId}`;
-        const key = `${sourceType}:${sourceId}`;
-        const previous = bySourceKey.get(key);
-        const title =
-          String(rule.text || rule.title || rule.rule || ruleId) || ruleId;
-        const summary =
-          String(rule.rationale || rule.description || "") || title;
-        generated.push({
-          id: previous?.id || makeUnitId(sourceType, sourceId),
-          type: "rule",
-          kind: "policy",
-          title,
-          summary,
-          tags: Array.isArray(rule.tags)
-            ? rule.tags.map((tag) => String(tag))
-            : [ruleFile],
-          sourceId,
-          sourceType,
-          sourceRefs: [{ type: sourceType, id: sourceId }],
-          status: previous?.status || "pending",
-          createdAt: previous?.createdAt || now,
-          updatedAt: now,
-          reviewedAt: previous?.reviewedAt,
-          reviewedBy: previous?.reviewedBy,
-        });
-      }
+  // Patterns (flat JSON files with items or patterns array)
+  const patternFiles = listJsonFiles(patternsDir());
+  for (const filePath of patternFiles) {
+    const sourceName = path.basename(filePath, ".json");
+    const doc = safeParseJsonFile<{
+      items?: Array<Record<string, unknown>>;
+      patterns?: Array<Record<string, unknown>>;
+    }>(filePath);
+    const entries = doc?.items || doc?.patterns || [];
+    for (const entry of entries) {
+      const id = String(entry.id || "");
+      if (!id) continue;
+      items.push({
+        id,
+        type: "pattern",
+        title: String(
+          entry.title || entry.errorPattern || entry.description || id,
+        ),
+        summary: String(
+          entry.solution || entry.description || entry.errorPattern || "",
+        ),
+        tags: Array.isArray(entry.tags)
+          ? entry.tags.map((t) => String(t))
+          : [sourceName],
+        status: (entry.status as DevRuleStatus) || "approved",
+        priority: entry.priority ? String(entry.priority) : undefined,
+        sourceFile: sourceName,
+        createdAt: String(entry.createdAt || ""),
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
+      });
     }
+  }
 
-    const patternFiles = listJsonFiles(patternsDir());
-    for (const patternFile of patternFiles) {
-      const sourceName = path.basename(patternFile, ".json");
-      const doc = safeParseJsonFile<{
-        items?: Array<Record<string, unknown>>;
-        patterns?: Array<Record<string, unknown>>;
-      }>(patternFile);
-      const items = doc?.items || doc?.patterns || [];
-      for (const pattern of items) {
-        const patternId = String(pattern.id || "");
-        if (!patternId) continue;
-        const sourceType: UnitType = "pattern";
-        const sourceId = `${sourceName}:${patternId}`;
-        const key = `${sourceType}:${sourceId}`;
-        const previous = bySourceKey.get(key);
-        const title = String(
-          pattern.title ||
-            pattern.errorPattern ||
-            pattern.description ||
-            patternId,
-        );
-        const summary = String(
-          pattern.solution || pattern.description || pattern.errorPattern || "",
-        );
-        generated.push({
-          id: previous?.id || makeUnitId(sourceType, sourceId),
-          type: "pattern",
-          kind: getPatternKind(String(pattern.type || "")),
-          title,
-          summary,
-          tags: Array.isArray(pattern.tags)
-            ? pattern.tags.map((tag) => String(tag))
-            : [sourceName],
-          sourceId,
-          sourceType,
-          sourceRefs: [{ type: sourceType, id: sourceId }],
-          status: previous?.status || "pending",
-          createdAt: previous?.createdAt || now,
-          updatedAt: now,
-          reviewedAt: previous?.reviewedAt,
-          reviewedBy: previous?.reviewedBy,
-        });
-      }
+  // Rules (dev-rules.json, review-guidelines.json)
+  const ruleFileNames = ["dev-rules", "review-guidelines"];
+  for (const ruleFile of ruleFileNames) {
+    const filePath = path.join(rulesDir(), `${ruleFile}.json`);
+    const doc = safeParseJsonFile<{ items?: Array<Record<string, unknown>> }>(
+      filePath,
+    );
+    if (!doc || !Array.isArray(doc.items)) continue;
+    for (const entry of doc.items) {
+      const id = String(entry.id || "");
+      if (!id) continue;
+      items.push({
+        id,
+        type: "rule",
+        title: String(entry.text || entry.title || entry.rule || id),
+        summary: String(entry.rationale || entry.description || ""),
+        tags: Array.isArray(entry.tags)
+          ? entry.tags.map((t) => String(t))
+          : [ruleFile],
+        status: (entry.status as DevRuleStatus) || "approved",
+        priority: entry.priority ? String(entry.priority) : undefined,
+        sourceFile: ruleFile,
+        createdAt: String(entry.createdAt || ""),
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
+      });
     }
+  }
 
-    const next: UnitsFile = {
-      schemaVersion: 1,
-      updatedAt: now,
-      items: generated.sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    };
-    writeUnits(next);
-    writeAuditLog({
-      entity: "unit",
-      action: "create",
-      targetId: "units",
-      detail: { count: generated.length },
-    });
+  return items;
+}
+
+app.get("/api/dev-rules", async (c) => {
+  try {
+    const status = c.req.query("status") as DevRuleStatus | undefined;
+    const items = collectDevRules();
+    const filtered =
+      status && ["approved", "rejected"].includes(status)
+        ? items.filter((item) => item.status === status)
+        : items;
     return c.json({
-      generated: generated.length,
-      pending: generated.filter((item) => item.status === "pending").length,
-      updatedAt: now,
+      items: filtered,
+      updatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to generate units:", error);
-    return c.json({ error: "Failed to generate units" }, 500);
+    console.error("Failed to read dev rules:", error);
+    return c.json({ error: "Failed to read dev rules" }, 500);
   }
 });
 
-app.patch("/api/units/:id/status", async (c) => {
+app.patch("/api/dev-rules/:type/:sourceFile/:id/status", async (c) => {
+  const type = c.req.param("type") as DevRuleType;
+  const sourceFile = c.req.param("sourceFile");
   const id = sanitizeId(c.req.param("id"));
-  const body = (await c.req.json()) as { status?: UnitStatus };
-  if (!id) {
-    return c.json({ error: "Invalid unit id" }, 400);
+  const body = (await c.req.json()) as { status?: DevRuleStatus };
+
+  if (!id || !sourceFile) {
+    return c.json({ error: "Invalid parameters" }, 400);
   }
-  if (
-    !body.status ||
-    !["pending", "approved", "rejected"].includes(body.status)
-  ) {
+  if (!body.status || !["approved", "rejected"].includes(body.status)) {
     return c.json({ error: "Invalid status" }, 400);
   }
 
-  const doc = readUnits();
-  const index = doc.items.findIndex((item) => item.id === id);
-  if (index === -1) {
-    return c.json({ error: "Unit not found" }, 404);
+  try {
+    let filePath: string;
+    if (type === "decision") {
+      const found = findJsonFileById(
+        path.join(getMnemeDir(), "decisions"),
+        sourceFile,
+      );
+      if (!found) return c.json({ error: "Source file not found" }, 404);
+      filePath = found;
+    } else if (type === "pattern") {
+      filePath = path.join(patternsDir(), `${sourceFile}.json`);
+    } else {
+      filePath = path.join(rulesDir(), `${sourceFile}.json`);
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return c.json({ error: "Source file not found" }, 404);
+    }
+
+    const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const items: Array<Record<string, unknown>> =
+      raw.items || raw.patterns || (raw.id ? [raw] : []);
+    const target = items.find((item) => String(item.id) === id);
+    if (!target) {
+      return c.json({ error: "Item not found" }, 404);
+    }
+
+    target.status = body.status;
+    target.updatedAt = new Date().toISOString();
+
+    // Write back - handle flat object vs container format
+    if (!raw.items && !raw.patterns && raw.id) {
+      Object.assign(raw, target);
+    }
+    fs.writeFileSync(filePath, `${JSON.stringify(raw, null, 2)}\n`);
+
+    writeAuditLog({
+      entity: "dev-rule",
+      action: "update",
+      targetId: id,
+      detail: { type, sourceFile, status: body.status },
+    });
+
+    return c.json({ id, type, sourceFile, status: body.status });
+  } catch (error) {
+    console.error("Failed to update dev rule status:", error);
+    return c.json({ error: "Failed to update status" }, 500);
   }
-
-  const now = new Date().toISOString();
-  const actor = getCurrentUser();
-  const nextItem: Unit = {
-    ...doc.items[index],
-    status: body.status,
-    updatedAt: now,
-    reviewedAt: now,
-    reviewedBy: actor,
-  };
-  doc.items[index] = nextItem;
-  doc.updatedAt = now;
-  writeUnits(doc);
-  writeAuditLog({
-    entity: "unit",
-    action: "update",
-    targetId: id,
-    detail: { status: body.status },
-  });
-
-  return c.json(nextItem);
 });
 
-app.delete("/api/units/:id", async (c) => {
+app.delete("/api/dev-rules/:type/:sourceFile/:id", async (c) => {
+  const type = c.req.param("type") as DevRuleType;
+  const sourceFile = c.req.param("sourceFile");
   const id = sanitizeId(c.req.param("id"));
-  if (!id) {
-    return c.json({ error: "Invalid unit id" }, 400);
+
+  if (!id || !sourceFile) {
+    return c.json({ error: "Invalid parameters" }, 400);
   }
-  const doc = readUnits();
-  const nextItems = doc.items.filter((item) => item.id !== id);
-  if (nextItems.length === doc.items.length) {
-    return c.json({ error: "Unit not found" }, 404);
+
+  try {
+    let filePath: string;
+    if (type === "decision") {
+      const found = findJsonFileById(
+        path.join(getMnemeDir(), "decisions"),
+        sourceFile,
+      );
+      if (!found) return c.json({ error: "Source file not found" }, 404);
+      filePath = found;
+    } else if (type === "pattern") {
+      filePath = path.join(patternsDir(), `${sourceFile}.json`);
+    } else {
+      filePath = path.join(rulesDir(), `${sourceFile}.json`);
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return c.json({ error: "Source file not found" }, 404);
+    }
+
+    const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const arrayKey = raw.items ? "items" : raw.patterns ? "patterns" : null;
+
+    if (arrayKey) {
+      const before = raw[arrayKey].length;
+      raw[arrayKey] = raw[arrayKey].filter(
+        (item: Record<string, unknown>) => String(item.id) !== id,
+      );
+      if (raw[arrayKey].length === before) {
+        return c.json({ error: "Item not found" }, 404);
+      }
+      fs.writeFileSync(filePath, `${JSON.stringify(raw, null, 2)}\n`);
+    } else if (raw.id && String(raw.id) === id) {
+      fs.unlinkSync(filePath);
+    } else {
+      return c.json({ error: "Item not found" }, 404);
+    }
+
+    writeAuditLog({
+      entity: "dev-rule",
+      action: "delete",
+      targetId: id,
+      detail: { type, sourceFile },
+    });
+
+    return c.json({ deleted: 1, id });
+  } catch (error) {
+    console.error("Failed to delete dev rule:", error);
+    return c.json({ error: "Failed to delete dev rule" }, 500);
   }
-  doc.items = nextItems;
-  doc.updatedAt = new Date().toISOString();
-  writeUnits(doc);
-  writeAuditLog({
-    entity: "unit",
-    action: "delete",
-    targetId: id,
-  });
-  return c.json({ deleted: 1, id });
 });
 
 app.get("/api/knowledge-graph", async (c) => {
   try {
     const mnemeDir = getMnemeDir();
     const sessionItems = readAllSessionIndexes(mnemeDir).items;
-    const units = readUnits().items.filter(
+    const devRules = collectDevRules().filter(
       (item) => item.status === "approved",
     );
 
@@ -2180,15 +2111,15 @@ app.get("/api/knowledge-graph", async (c) => {
           appliedCount: null,
           acceptedCount: null,
         })),
-      ...units.map((item) => ({
-        id: `unit:${item.id}`,
-        entityType: "unit" as const,
+      ...devRules.map((item) => ({
+        id: `rule:${item.type}:${item.id}`,
+        entityType: "rule" as const,
         entityId: item.id,
         title: item.title,
         tags: item.tags || [],
         createdAt: item.createdAt,
         unitSubtype: (item.type as string) || null,
-        sourceId: item.sourceId || null,
+        sourceId: item.sourceFile || null,
         appliedCount: null,
         acceptedCount: null,
         branch: null,

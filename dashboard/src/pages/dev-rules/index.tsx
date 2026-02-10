@@ -24,20 +24,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { deleteUnit, getUnits, type Unit, updateUnitStatus } from "@/lib/api";
+import {
+  type DevRuleItem,
+  deleteDevRule,
+  getDevRules,
+  updateDevRuleStatus,
+} from "@/lib/api";
 import { formatDate } from "@/lib/format-date";
 import { invalidateDashboardData } from "@/lib/invalidate-dashboard-data";
 
-type UnitStatus = Unit["status"];
+type DevRuleStatus = DevRuleItem["status"];
 
 const ITEMS_PER_PAGE = 20;
 
-const statusVariant: Record<
-  UnitStatus,
-  "default" | "secondary" | "destructive"
-> = {
+const statusVariant: Record<DevRuleStatus, "default" | "destructive"> = {
   approved: "default",
-  pending: "secondary",
   rejected: "destructive",
 };
 
@@ -72,10 +73,10 @@ function RuleItem({
   selected,
   onSelect,
 }: {
-  item: Unit;
-  onStatusChange: (id: string, status: UnitStatus) => Promise<void>;
-  onRequestDelete: (id: string) => void;
-  onClick: (item: Unit) => void;
+  item: DevRuleItem;
+  onStatusChange: (item: DevRuleItem, status: DevRuleStatus) => Promise<void>;
+  onRequestDelete: (item: DevRuleItem) => void;
+  onClick: (item: DevRuleItem) => void;
   selected: boolean;
   onSelect: (id: string, checked: boolean) => void;
 }) {
@@ -104,7 +105,7 @@ function RuleItem({
                   {item.summary}
                 </p>
               </div>
-              <Badge variant={statusVariant[item.status] || "secondary"}>
+              <Badge variant={statusVariant[item.status] || "default"}>
                 {t(`status.${item.status}`, item.status)}
               </Badge>
             </div>
@@ -130,7 +131,7 @@ function RuleItem({
               onClick={async () => {
                 setProcessing(true);
                 try {
-                  await onStatusChange(item.id, "approved");
+                  await onStatusChange(item, "approved");
                 } finally {
                   setProcessing(false);
                 }
@@ -140,27 +141,12 @@ function RuleItem({
             </Button>
             <Button
               size="sm"
-              variant="outline"
-              disabled={processing || item.status === "pending"}
-              onClick={async () => {
-                setProcessing(true);
-                try {
-                  await onStatusChange(item.id, "pending");
-                } finally {
-                  setProcessing(false);
-                }
-              }}
-            >
-              {t("actions.setPending")}
-            </Button>
-            <Button
-              size="sm"
               variant="secondary"
               disabled={processing || item.status === "rejected"}
               onClick={async () => {
                 setProcessing(true);
                 try {
-                  await onStatusChange(item.id, "rejected");
+                  await onStatusChange(item, "rejected");
                 } finally {
                   setProcessing(false);
                 }
@@ -173,7 +159,7 @@ function RuleItem({
               variant="outline"
               className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
               disabled={processing}
-              onClick={() => onRequestDelete(item.id)}
+              onClick={() => onRequestDelete(item)}
             >
               {t("actions.delete")}
             </Button>
@@ -189,7 +175,7 @@ function RuleDetailDialog({
   open,
   onOpenChange,
 }: {
-  item: Unit | null;
+  item: DevRuleItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -217,18 +203,18 @@ function RuleDetailDialog({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
               {t("detail.status")}
             </p>
-            <Badge variant={statusVariant[item.status] || "secondary"}>
+            <Badge variant={statusVariant[item.status] || "default"}>
               {t(`status.${item.status}`, item.status)}
             </Badge>
           </div>
 
-          {item.sourceId && (
+          {item.sourceFile && (
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
                 {t("detail.source")}
               </p>
               <p className="text-sm font-mono text-muted-foreground">
-                {item.sourceType}: {item.sourceId}
+                {item.type}: {item.sourceFile}
               </p>
             </div>
           )}
@@ -255,26 +241,12 @@ function RuleDetailDialog({
               </p>
               <p>{formatDate(item.createdAt)}</p>
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide mb-1">
-                {t("detail.updated")}
-              </p>
-              <p>{formatDate(item.updatedAt)}</p>
-            </div>
-            {item.reviewedAt && (
+            {item.updatedAt && (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide mb-1">
-                  {t("detail.reviewed")}
+                  {t("detail.updated")}
                 </p>
-                <p>{formatDate(item.reviewedAt)}</p>
-              </div>
-            )}
-            {item.reviewedBy && (
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide mb-1">
-                  {t("detail.reviewedBy")}
-                </p>
-                <p>{item.reviewedBy}</p>
+                <p>{formatDate(item.updatedAt)}</p>
               </div>
             )}
           </div>
@@ -293,18 +265,18 @@ export function DevRulesPage() {
     search: parseAsString.withDefault(""),
     page: parseAsInteger.withDefault(1),
   });
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DevRuleItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [detailItem, setDetailItem] = useState<Unit | null>(null);
+  const [detailItem, setDetailItem] = useState<DevRuleItem | null>(null);
 
   const deferredSearch = useDeferredValue(filters.search);
 
-  const unitsQuery = useQuery({
-    queryKey: ["units"],
-    queryFn: () => getUnits(),
+  const devRulesQuery = useQuery({
+    queryKey: ["dev-rules"],
+    queryFn: () => getDevRules(),
   });
 
-  const allItems = unitsQuery.data?.items || [];
+  const allItems = devRulesQuery.data?.items || [];
 
   const filtered = useMemo(() => {
     return allItems.filter((item) => {
@@ -340,9 +312,21 @@ export function DevRulesPage() {
     await invalidateDashboardData(queryClient);
   };
 
+  // Build a lookup for items by id for bulk operations
+  const itemById = useMemo(() => {
+    const map = new Map<string, DevRuleItem>();
+    for (const item of allItems) map.set(item.id, item);
+    return map;
+  }, [allItems]);
+
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: UnitStatus }) =>
-      updateUnitStatus(id, status),
+    mutationFn: ({
+      item,
+      status,
+    }: {
+      item: DevRuleItem;
+      status: DevRuleStatus;
+    }) => updateDevRuleStatus(item.type, item.sourceFile, item.id, status),
     onSuccess: () => {
       toast.success(t("actions.approve"));
       return refresh();
@@ -351,9 +335,10 @@ export function DevRulesPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteUnit(id),
+    mutationFn: (item: DevRuleItem) =>
+      deleteDevRule(item.type, item.sourceFile, item.id),
     onSuccess: () => {
-      setDeleteTargetId(null);
+      setDeleteTarget(null);
       toast.success(t("actions.delete"));
       return refresh();
     },
@@ -361,9 +346,14 @@ export function DevRulesPage() {
   });
 
   const bulkMutation = useMutation({
-    mutationFn: (status: UnitStatus) =>
+    mutationFn: (status: DevRuleStatus) =>
       Promise.all(
-        Array.from(selectedIds).map((id) => updateUnitStatus(id, status)),
+        Array.from(selectedIds)
+          .map((id) => itemById.get(id))
+          .filter((item): item is DevRuleItem => !!item)
+          .map((item) =>
+            updateDevRuleStatus(item.type, item.sourceFile, item.id, status),
+          ),
       ),
     onSuccess: () => {
       setSelectedIds(new Set());
@@ -373,14 +363,13 @@ export function DevRulesPage() {
     onError: () => toast.error(t("error")),
   });
 
-  if (unitsQuery.error) {
+  if (devRulesQuery.error) {
     return (
       <div className="text-center py-12 text-destructive">{t("error")}</div>
     );
   }
 
   const approvedCount = allItems.filter((i) => i.status === "approved").length;
-  const pendingCount = allItems.filter((i) => i.status === "pending").length;
   const rejectedCount = allItems.filter((i) => i.status === "rejected").length;
 
   return (
@@ -392,7 +381,7 @@ export function DevRulesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("stats.total")}</CardTitle>
@@ -407,14 +396,6 @@ export function DevRulesPage() {
           </CardHeader>
           <CardContent className="text-2xl font-bold">
             {approvedCount}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("stats.pending")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">
-            {pendingCount}
           </CardContent>
         </Card>
         <Card>
@@ -475,7 +456,6 @@ export function DevRulesPage() {
           <SelectContent>
             <SelectItem value="all">{t("filter.allStatus")}</SelectItem>
             <SelectItem value="approved">{t("status.approved")}</SelectItem>
-            <SelectItem value="pending">{t("status.pending")}</SelectItem>
             <SelectItem value="rejected">{t("status.rejected")}</SelectItem>
           </SelectContent>
         </Select>
@@ -542,7 +522,7 @@ export function DevRulesPage() {
       </div>
 
       {/* List */}
-      {unitsQuery.isLoading ? (
+      {devRulesQuery.isLoading ? (
         <div className="text-sm text-muted-foreground">
           <Spinner label={t("loading")} />
         </div>
@@ -558,10 +538,13 @@ export function DevRulesPage() {
             <RuleItem
               key={item.id}
               item={item}
-              onStatusChange={async (id, status) => {
-                await statusMutation.mutateAsync({ id, status });
+              onStatusChange={async (ruleItem, status) => {
+                await statusMutation.mutateAsync({
+                  item: ruleItem,
+                  status,
+                });
               }}
-              onRequestDelete={setDeleteTargetId}
+              onRequestDelete={setDeleteTarget}
               onClick={setDetailItem}
               selected={selectedIds.has(item.id)}
               onSelect={(id, checked) => {
@@ -598,13 +581,13 @@ export function DevRulesPage() {
 
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
-        open={!!deleteTargetId}
-        onOpenChange={(open) => !open && setDeleteTargetId(null)}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
         title={t("deleteConfirm.title")}
         description={t("deleteConfirm.description")}
         onConfirm={async () => {
-          if (!deleteTargetId) return;
-          await deleteMutation.mutateAsync(deleteTargetId);
+          if (!deleteTarget) return;
+          await deleteMutation.mutateAsync(deleteTarget);
         }}
       />
     </div>

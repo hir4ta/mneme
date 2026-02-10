@@ -306,7 +306,7 @@
           },
           {
             "question": "When should I run /mneme:save?",
-            "answer": "Run it after important work or before ending a long session. Interactions are auto-saved at session end; source knowledge extraction and unit refresh require /mneme:save."
+            "answer": "Run it after important work or before ending a long session. Interactions are auto-saved at session end; source knowledge extraction requires /mneme:save."
           },
           {
             "question": "Can I use mneme across multiple projects?",

@@ -75,7 +75,7 @@ export function GraphControls(props: GraphControlsProps) {
               <SelectContent>
                 <SelectItem value="all">{t("controls.types.all")}</SelectItem>
                 <SelectItem value="session">{t("types.session")}</SelectItem>
-                <SelectItem value="unit">{t("types.unit")}</SelectItem>
+                <SelectItem value="rule">{t("types.rule")}</SelectItem>
               </SelectContent>
             </Select>
           </div>

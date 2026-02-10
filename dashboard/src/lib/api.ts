@@ -180,93 +180,62 @@ export interface SessionInteractionsResponse {
   count: number;
 }
 
-export interface Unit {
+export interface DevRuleItem {
   id: string;
   type: "decision" | "pattern" | "rule";
-  kind: "policy" | "pitfall" | "playbook";
   title: string;
   summary: string;
   tags: string[];
-  sourceId: string;
-  sourceType: "decision" | "pattern" | "rule";
-  sourceRefs: Array<{
-    type: "decision" | "pattern" | "rule";
-    id: string;
-  }>;
-  status: "pending" | "approved" | "rejected";
+  status: "approved" | "rejected";
+  priority?: string;
+  sourceFile: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DevRulesResponse {
+  items: DevRuleItem[];
   updatedAt: string;
-  reviewedAt?: string;
-  reviewedBy?: string;
 }
 
-export interface UnitsResponse {
-  schemaVersion: number;
-  updatedAt: string;
-  items: Unit[];
-}
-
-export interface ApprovalQueueResponse {
-  pending: Unit[];
-  totalPending: number;
-  byType: Record<string, number>;
-}
-
-export async function getUnits(
-  status?: "pending" | "approved" | "rejected",
-): Promise<UnitsResponse> {
+export async function getDevRules(
+  status?: "approved" | "rejected",
+): Promise<DevRulesResponse> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
   const query = params.toString();
-  const res = await fetch(`${API_BASE}/units${query ? `?${query}` : ""}`);
-  if (!res.ok) throw new Error("Failed to fetch units");
+  const res = await fetch(`${API_BASE}/dev-rules${query ? `?${query}` : ""}`);
+  if (!res.ok) throw new Error("Failed to fetch dev rules");
   return res.json();
 }
 
-export async function getUnitById(id: string): Promise<Unit> {
-  const res = await fetch(`${API_BASE}/units/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch unit");
-  return res.json();
-}
-
-export async function generateUnits(): Promise<{
-  generated: number;
-  pending: number;
-  updatedAt: string;
-}> {
-  const res = await fetch(`${API_BASE}/units/generate`, {
-    method: "POST",
-  });
-  if (!res.ok) throw new Error("Failed to generate units");
-  return res.json();
-}
-
-export async function updateUnitStatus(
+export async function updateDevRuleStatus(
+  type: DevRuleItem["type"],
+  sourceFile: string,
   id: string,
-  status: "pending" | "approved" | "rejected",
-): Promise<Unit> {
-  const res = await fetch(`${API_BASE}/units/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
-  });
-  if (!res.ok) throw new Error("Failed to update unit status");
+  status: "approved" | "rejected",
+): Promise<{ id: string; type: string; sourceFile: string; status: string }> {
+  const res = await fetch(
+    `${API_BASE}/dev-rules/${type}/${sourceFile}/${id}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  );
+  if (!res.ok) throw new Error("Failed to update dev rule status");
   return res.json();
 }
 
-export async function deleteUnit(
+export async function deleteDevRule(
+  type: DevRuleItem["type"],
+  sourceFile: string,
   id: string,
 ): Promise<{ deleted: number; id: string }> {
-  const res = await fetch(`${API_BASE}/units/${id}`, {
+  const res = await fetch(`${API_BASE}/dev-rules/${type}/${sourceFile}/${id}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Failed to delete unit");
-  return res.json();
-}
-
-export async function getApprovalQueue(): Promise<ApprovalQueueResponse> {
-  const res = await fetch(`${API_BASE}/approval-queue`);
-  if (!res.ok) throw new Error("Failed to fetch approval queue");
+  if (!res.ok) throw new Error("Failed to delete dev rule");
   return res.json();
 }
 

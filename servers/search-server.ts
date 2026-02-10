@@ -33,18 +33,6 @@ interface SessionFile {
   }>;
 }
 
-interface UnitFile {
-  items?: Array<{
-    id: string;
-    title?: string;
-    summary?: string;
-    tags?: string[];
-    sourceType?: "decision" | "pattern" | "rule";
-    sourceId?: string;
-    status?: "pending" | "approved" | "rejected";
-  }>;
-}
-
 const SEARCH_LIMIT_MIN = 1;
 const SEARCH_LIMIT_MAX = 100;
 const SEARCH_OFFSET_MIN = 0;
@@ -131,17 +119,6 @@ function getSession(sessionId: string): SessionFile | null {
   return findSession(sessionsDir);
 }
 
-function getUnit(unitId: string) {
-  const unitsPath = path.join(getMnemeDir(), "units", "units.json");
-  if (!fs.existsSync(unitsPath)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(unitsPath, "utf-8")) as UnitFile;
-    return (data.items || []).find((item) => item.id === unitId) || null;
-  } catch {
-    return null;
-  }
-}
-
 const server = new McpServer({
   name: "mneme-search",
   version: "0.1.0",
@@ -151,16 +128,16 @@ server.registerTool(
   "mneme_search",
   {
     description:
-      "Search mneme's knowledge base for sessions, approved units, and interactions. Returns scored results with matched fields.",
+      "Search mneme's knowledge base for sessions and interactions. Returns scored results with matched fields.",
     inputSchema: {
       query: z
         .string()
         .max(QUERY_MAX_LENGTH)
         .describe("Search query (keywords)"),
       types: z
-        .array(z.enum(["session", "unit", "interaction"]))
+        .array(z.enum(["session", "interaction"]))
         .optional()
-        .describe("Types to search (default: session/unit/interaction)."),
+        .describe("Types to search (default: session/interaction)."),
       limit: z
         .number()
         .int()
@@ -229,26 +206,6 @@ server.registerTool(
       return fail(`Session not found: ${sessionId}`);
     }
     return ok(JSON.stringify(session, null, 2));
-  },
-);
-
-server.registerTool(
-  "mneme_get_unit",
-  {
-    description: "Get full details of a specific approved unit by ID",
-    inputSchema: {
-      unitId: z.string().describe("Unit ID"),
-    },
-  },
-  async ({ unitId }) => {
-    if (!unitId.trim()) {
-      return fail("unitId must not be empty.");
-    }
-    const unit = getUnit(unitId);
-    if (!unit) {
-      return fail(`Unit not found: ${unitId}`);
-    }
-    return ok(JSON.stringify(unit, null, 2));
   },
 );
 

@@ -30355,66 +30355,6 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function searchUnits(mnemeDir, keywords, limit = 5) {
-  const unitsPath = path3.join(mnemeDir, "units", "units.json");
-  const results = [];
-  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
-  if (!fs3.existsSync(unitsPath)) return results;
-  try {
-    const cards = JSON.parse(fs3.readFileSync(unitsPath, "utf-8"));
-    const items = (cards.items || []).filter(
-      (item) => item.status === "approved"
-    );
-    for (const item of items) {
-      let score = 0;
-      const matchedFields = [];
-      const titleScore = fieldScore(item.title, pattern, 3);
-      if (titleScore > 0) {
-        score += titleScore;
-        matchedFields.push("title");
-      }
-      const summaryScore = fieldScore(item.summary, pattern, 2);
-      if (summaryScore > 0) {
-        score += summaryScore;
-        matchedFields.push("summary");
-      }
-      if (item.tags?.some((tag) => pattern.test(tag))) {
-        score += 1;
-        matchedFields.push("tags");
-      }
-      if (item.sourceType && pattern.test(item.sourceType)) {
-        score += 1;
-        matchedFields.push("sourceType");
-      }
-      if (score === 0 && keywords.length <= 2) {
-        const titleWords = (item.title || "").toLowerCase().split(/\s+/);
-        const tagWords = item.tags || [];
-        for (const keyword of keywords) {
-          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
-            score += 1;
-            matchedFields.push("title~fuzzy");
-          }
-          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
-            score += 0.5;
-            matchedFields.push("tags~fuzzy");
-          }
-        }
-      }
-      if (score > 0) {
-        results.push({
-          type: "unit",
-          id: item.id,
-          title: item.title || item.id,
-          snippet: item.summary || "",
-          score,
-          matchedFields
-        });
-      }
-    }
-  } catch {
-  }
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
 function normalizeRequestedTypes(types) {
   const normalized = /* @__PURE__ */ new Set();
   for (const type of types) {
@@ -30428,7 +30368,7 @@ function searchKnowledge(options) {
     mnemeDir,
     projectPath,
     database = null,
-    types = ["session", "unit", "interaction"],
+    types = ["session", "interaction"],
     limit = 10,
     offset = 0
   } = options;
@@ -30444,9 +30384,6 @@ function searchKnowledge(options) {
   const normalizedTypes = normalizeRequestedTypes(types);
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
-  }
-  if (normalizedTypes.has("unit")) {
-    results.push(...searchUnits(mnemeDir, expandedKeywords, fetchLimit));
   }
   if (normalizedTypes.has("interaction")) {
     results.push(
@@ -30473,7 +30410,6 @@ var LIST_LIMIT_MIN = 1;
 var LIST_LIMIT_MAX = 200;
 var INTERACTION_OFFSET_MIN = 0;
 var QUERY_MAX_LENGTH = 500;
-var UNIT_LIMIT_MAX = 500;
 var SEARCH_EVAL_DEFAULT_LIMIT = 5;
 function ok(text) {
   return { content: [{ type: "text", text }] };
@@ -30512,55 +30448,11 @@ function listJsonFiles(dir) {
     return entry.isFile() && entry.name.endsWith(".json") ? [fullPath] : [];
   });
 }
-function readUnits() {
-  const unitsPath = path4.join(getMnemeDir(), "units", "units.json");
-  const parsed = readJsonFile(unitsPath);
-  if (!parsed || !Array.isArray(parsed.items)) {
-    return {
-      schemaVersion: 1,
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      items: []
-    };
-  }
-  return parsed;
-}
-function writeUnits(doc) {
-  const unitsPath = path4.join(getMnemeDir(), "units", "units.json");
-  fs4.mkdirSync(path4.dirname(unitsPath), { recursive: true });
-  fs4.writeFileSync(unitsPath, JSON.stringify(doc, null, 2));
-}
 function readRuleItems(ruleType) {
   const filePath = path4.join(getMnemeDir(), "rules", `${ruleType}.json`);
   const parsed = readJsonFile(filePath);
   const items = parsed?.items ?? parsed?.rules;
   return Array.isArray(items) ? items : [];
-}
-function readAuditEntries(options = {}) {
-  const auditDir = path4.join(getMnemeDir(), "audit");
-  if (!fs4.existsSync(auditDir)) return [];
-  const files = fs4.readdirSync(auditDir).filter((name) => name.endsWith(".jsonl")).sort();
-  const fromTime = options.from ? new Date(options.from).getTime() : null;
-  const toTime = options.to ? new Date(options.to).getTime() : null;
-  const entries = [];
-  for (const name of files) {
-    const fullPath = path4.join(auditDir, name);
-    const lines = fs4.readFileSync(fullPath, "utf-8").split("\n");
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const parsed = JSON.parse(line);
-        const ts = new Date(parsed.timestamp).getTime();
-        if (fromTime !== null && ts < fromTime) continue;
-        if (toTime !== null && ts > toTime) continue;
-        if (options.entity && parsed.entity !== options.entity) continue;
-        entries.push(parsed);
-      } catch {
-      }
-    }
-  }
-  return entries.sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
 }
 function readSessionsById() {
   const sessionsDir = path4.join(getMnemeDir(), "sessions");
@@ -30572,78 +30464,6 @@ function readSessionsById() {
     map2.set(id, parsed);
   }
   return map2;
-}
-function inferUnitPriority(unit) {
-  if (unit.sourceType === "rule") {
-    const [ruleFile, ruleId] = unit.sourceId.split(":", 2);
-    if ((ruleFile === "dev-rules" || ruleFile === "review-guidelines") && ruleId) {
-      const rule = readRuleItems(ruleFile).find((item) => item.id === ruleId);
-      const priority = typeof rule?.priority === "string" ? rule.priority.toLowerCase() : "";
-      if (priority === "p0" || priority === "p1" || priority === "p2") {
-        return priority;
-      }
-    }
-  }
-  const text = `${unit.title} ${unit.summary} ${unit.tags.join(" ")}`.toLowerCase();
-  if (/(security|auth|token|secret|password|injection|xss|csrf|compliance|outage|data[- ]?loss)/.test(
-    text
-  )) {
-    return "p0";
-  }
-  if (/(crash|error|correct|reliab|timeout|retry|integrity)/.test(text)) {
-    return "p1";
-  }
-  return "p2";
-}
-function extractChangedFilesFromDiff(diffText) {
-  const files = /* @__PURE__ */ new Set();
-  const lines = diffText.split("\n");
-  for (const line of lines) {
-    if (!line.startsWith("diff --git ")) continue;
-    const parts = line.split(" ");
-    if (parts.length >= 4) {
-      const bPath = parts[3].replace(/^b\//, "");
-      if (bPath) files.add(bPath);
-    }
-  }
-  return Array.from(files);
-}
-function scoreUnitAgainstDiff(unit, diffText, changedFiles) {
-  const reasons = [];
-  let score = 0;
-  const corpus = `${unit.title} ${unit.summary}`.toLowerCase();
-  const diffLower = diffText.toLowerCase();
-  for (const tag of unit.tags) {
-    if (!tag) continue;
-    const tagLower = tag.toLowerCase();
-    if (diffLower.includes(tagLower)) {
-      score += 3;
-      reasons.push(`tag:${tag}`);
-    }
-  }
-  const keywords = corpus.split(/[^a-zA-Z0-9_-]+/).filter((token) => token.length >= 5).slice(0, 20);
-  for (const token of keywords) {
-    if (diffLower.includes(token)) {
-      score += 1;
-      reasons.push(`keyword:${token}`);
-    }
-  }
-  for (const filePath of changedFiles) {
-    const lower = filePath.toLowerCase();
-    if (corpus.includes("test") && lower.includes("test")) {
-      score += 1;
-      reasons.push("path:test");
-    }
-    if ((corpus.includes("api") || unit.tags.includes("api")) && (lower.includes("api") || lower.includes("route"))) {
-      score += 1;
-      reasons.push("path:api");
-    }
-    if ((corpus.includes("db") || corpus.includes("sql")) && (lower.includes("db") || lower.includes("prisma") || lower.includes("migration"))) {
-      score += 1;
-      reasons.push("path:db");
-    }
-  }
-  return { score, reasons: Array.from(new Set(reasons)) };
 }
 var db = null;
 function getDb() {
@@ -31243,25 +31063,6 @@ function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT) {
     details
   };
 }
-function buildUnitGraph(units) {
-  const approved = units.filter((unit) => unit.status === "approved");
-  const edges = [];
-  for (let i = 0; i < approved.length; i++) {
-    for (let j = i + 1; j < approved.length; j++) {
-      const shared = approved[i].tags.filter(
-        (tag) => approved[j].tags.includes(tag)
-      );
-      if (shared.length > 0) {
-        edges.push({
-          source: approved[i].id,
-          target: approved[j].id,
-          weight: shared.length
-        });
-      }
-    }
-  }
-  return { nodes: approved, edges };
-}
 var server = new McpServer({
   name: "mneme-db",
   version: "0.1.0"
@@ -31546,139 +31347,6 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "mneme_unit_queue_list_pending",
-  {
-    description: "List pending units in the approval queue. Use this in save/review flows to surface actionable approvals.",
-    inputSchema: {
-      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(UNIT_LIMIT_MAX).optional().describe(
-        `Maximum items (${LIST_LIMIT_MIN}-${UNIT_LIMIT_MAX}, default: 100)`
-      )
-    }
-  },
-  async ({ limit }) => {
-    const units = readUnits().items.filter((item) => item.status === "pending").sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    ).slice(0, limit ?? 100);
-    return ok(
-      JSON.stringify(
-        {
-          count: units.length,
-          items: units
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_unit_queue_update_status",
-  {
-    description: "Update unit status (approve/reject/pending) in bulk or single item.",
-    inputSchema: {
-      unitIds: external_exports3.array(external_exports3.string().min(1)).min(1).describe("Target unit IDs"),
-      status: external_exports3.enum(["pending", "approved", "rejected"]).describe("New status"),
-      reviewedBy: external_exports3.string().optional().describe("Reviewer name (optional)")
-    }
-  },
-  async ({ unitIds, status, reviewedBy }) => {
-    const doc = readUnits();
-    const target = new Set(unitIds);
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    let updated = 0;
-    doc.items = doc.items.map((item) => {
-      if (!target.has(item.id)) return item;
-      updated += 1;
-      return {
-        ...item,
-        status,
-        reviewedAt: now,
-        reviewedBy,
-        updatedAt: now
-      };
-    });
-    doc.updatedAt = now;
-    writeUnits(doc);
-    return ok(
-      JSON.stringify(
-        { updated, status, requested: unitIds.length, updatedAt: now },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_unit_apply_suggest_for_diff",
-  {
-    description: "Suggest top approved units for a given git diff text. Intended for automatic review integration.",
-    inputSchema: {
-      diff: external_exports3.string().min(1).describe("Unified diff text"),
-      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(50).optional().describe("Maximum suggested units (default: 10)")
-    }
-  },
-  async ({ diff, limit }) => {
-    const changedFiles = extractChangedFilesFromDiff(diff);
-    const approved = readUnits().items.filter(
-      (item) => item.status === "approved"
-    );
-    const scored = approved.map((unit) => {
-      const { score, reasons } = scoreUnitAgainstDiff(
-        unit,
-        diff,
-        changedFiles
-      );
-      return { unit, score, reasons };
-    }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, limit ?? 10);
-    return ok(
-      JSON.stringify(
-        {
-          changedFiles,
-          suggestions: scored.map((item) => ({
-            id: item.unit.id,
-            title: item.unit.title,
-            score: item.score,
-            reasons: item.reasons,
-            source: `${item.unit.sourceType}:${item.unit.sourceId}`
-          }))
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_unit_apply_explain_match",
-  {
-    description: "Explain why a specific unit matches a diff.",
-    inputSchema: {
-      unitId: external_exports3.string().min(1).describe("Unit ID"),
-      diff: external_exports3.string().min(1).describe("Unified diff text")
-    }
-  },
-  async ({ unitId, diff }) => {
-    const unit = readUnits().items.find((item) => item.id === unitId);
-    if (!unit) return fail(`Unit not found: ${unitId}`);
-    const changedFiles = extractChangedFilesFromDiff(diff);
-    const scored = scoreUnitAgainstDiff(unit, diff, changedFiles);
-    return ok(
-      JSON.stringify(
-        {
-          unitId,
-          title: unit.title,
-          score: scored.score,
-          reasons: scored.reasons,
-          priority: inferUnitPriority(unit),
-          changedFiles
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
   "mneme_session_timeline",
   {
     description: "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
@@ -31838,61 +31506,6 @@ server.registerTool(
   }
 );
 server.registerTool(
-  "mneme_graph_insights",
-  {
-    description: "Compute graph insights from approved units: central units, tag communities, orphan units.",
-    inputSchema: {
-      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(100).optional().describe("Limit for ranked outputs (default: 10)")
-    }
-  },
-  async ({ limit }) => {
-    const k = limit ?? 10;
-    const units = readUnits().items.filter(
-      (item) => item.status === "approved"
-    );
-    const graph = buildUnitGraph(units);
-    const degree = /* @__PURE__ */ new Map();
-    for (const unit of graph.nodes) degree.set(unit.id, 0);
-    for (const edge of graph.edges) {
-      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
-      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
-    }
-    const topCentral = graph.nodes.map((unit) => ({
-      id: unit.id,
-      title: unit.title,
-      degree: degree.get(unit.id) || 0
-    })).sort((a, b) => b.degree - a.degree).slice(0, k);
-    const tagCounts = /* @__PURE__ */ new Map();
-    for (const unit of graph.nodes) {
-      for (const tag of unit.tags) {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-      }
-    }
-    const communities = Array.from(tagCounts.entries()).map(([tag, count]) => ({
-      tag,
-      count
-    })).sort((a, b) => b.count - a.count).slice(0, k);
-    const orphans = graph.nodes.filter((unit) => (degree.get(unit.id) || 0) === 0).map((unit) => ({
-      id: unit.id,
-      title: unit.title,
-      tags: unit.tags
-    })).slice(0, k);
-    return ok(
-      JSON.stringify(
-        {
-          approvedUnits: graph.nodes.length,
-          edges: graph.edges.length,
-          topCentral,
-          tagCommunities: communities,
-          orphanUnits: orphans
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
   "mneme_search_eval",
   {
     description: "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
@@ -31925,64 +31538,6 @@ server.registerTool(
       }
     }
     return ok(JSON.stringify(payload, null, 2));
-  }
-);
-server.registerTool(
-  "mneme_audit_query",
-  {
-    description: "Query unit-related audit logs and summarize change history.",
-    inputSchema: {
-      from: external_exports3.string().optional().describe("Start ISO date/time"),
-      to: external_exports3.string().optional().describe("End ISO date/time"),
-      targetId: external_exports3.string().optional().describe("Filter by target unit ID"),
-      summaryMode: external_exports3.enum(["changes", "actors", "target"]).optional().describe(
-        "changes=list, actors=aggregate by actor, target=single target history"
-      )
-    }
-  },
-  async ({ from, to, targetId, summaryMode }) => {
-    const entries = readAuditEntries({ from, to, entity: "unit" }).filter(
-      (entry) => targetId ? entry.targetId === targetId : true
-    );
-    if ((summaryMode || "changes") === "actors") {
-      const byActor = /* @__PURE__ */ new Map();
-      for (const entry of entries) {
-        const actor = entry.actor || "unknown";
-        byActor.set(actor, (byActor.get(actor) || 0) + 1);
-      }
-      return ok(
-        JSON.stringify(
-          {
-            total: entries.length,
-            actors: Array.from(byActor.entries()).map(([actor, count]) => ({ actor, count })).sort((a, b) => b.count - a.count)
-          },
-          null,
-          2
-        )
-      );
-    }
-    if ((summaryMode || "changes") === "target" && targetId) {
-      return ok(
-        JSON.stringify(
-          {
-            targetId,
-            history: entries
-          },
-          null,
-          2
-        )
-      );
-    }
-    return ok(
-      JSON.stringify(
-        {
-          total: entries.length,
-          changes: entries
-        },
-        null,
-        2
-      )
-    );
   }
 );
 async function main() {

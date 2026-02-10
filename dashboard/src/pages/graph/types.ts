@@ -1,7 +1,7 @@
 export interface GraphNode {
   id: string;
   entityId: string;
-  entityType: "session" | "unit";
+  entityType: "session" | "rule";
   title: string;
   tags: string[];
   createdAt: string;
@@ -60,7 +60,7 @@ export interface StructuralGap {
 }
 
 export type ColorMode = "type" | "cluster";
-export type EntityFilter = "all" | "session" | "unit";
+export type EntityFilter = "all" | "session" | "rule";
 export type LayoutMode = "force" | "td";
 
 export const typeColors: Record<string, string> = {
@@ -68,7 +68,6 @@ export const typeColors: Record<string, string> = {
   decision: "#3b82f6",
   pattern: "#8b5cf6",
   rule: "#f97316",
-  unit: "#ec4899",
   unknown: "#6b7280",
 };
 
