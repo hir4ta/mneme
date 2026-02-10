@@ -33,14 +33,14 @@ export function GraphSidebar(props: GraphSidebarProps) {
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rounded-full"
-              style={{ backgroundColor: "#3b82f6" }}
+              style={{ backgroundColor: "#40513B" }}
             />
             <span>{t("types.session")}</span>
           </div>
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rotate-45 rounded-sm"
-              style={{ backgroundColor: "#3b82f6" }}
+              style={{ backgroundColor: "#628141" }}
             />
             <span>{t("detail.unitType.decision")}</span>
           </div>
@@ -51,14 +51,14 @@ export function GraphSidebar(props: GraphSidebarProps) {
               role="img"
               aria-label="Triangle"
             >
-              <polygon points="6,0 12,10.4 0,10.4" fill="#8b5cf6" />
+              <polygon points="6,0 12,10.4 0,10.4" fill="#E5D9B6" />
             </svg>
             <span>{t("detail.unitType.pattern")}</span>
           </div>
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rounded-none"
-              style={{ backgroundColor: "#f97316" }}
+              style={{ backgroundColor: "#E67E22" }}
             />
             <span>{t("detail.unitType.rule")}</span>
           </div>

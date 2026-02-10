@@ -41,15 +41,15 @@ const sectionIcons: Record<string, ReactNode> = {
   errors: <AlertTriangle className="h-4 w-4" />,
 };
 
-// Section colors
+// Section colors (inline style values)
 const sectionColors: Record<string, string> = {
-  summary: "border-l-blue-500",
-  plan: "border-l-purple-500",
-  discussions: "border-l-indigo-500",
-  codeExamples: "border-l-green-500",
-  references: "border-l-yellow-500",
-  handoff: "border-l-orange-500",
-  errors: "border-l-red-500",
+  summary: "#40513B",
+  plan: "#40513B",
+  discussions: "#628141",
+  codeExamples: "#628141",
+  references: "#E5D9B6",
+  handoff: "#E67E22",
+  errors: "#E67E22",
 };
 
 function SectionCard({
@@ -63,11 +63,12 @@ function SectionCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const icon = sectionIcons[sectionKey] || <FileText className="h-4 w-4" />;
-  const borderColor = sectionColors[sectionKey] || "border-l-gray-500";
+  const borderColor = sectionColors[sectionKey] || "#6b7280";
 
   return (
     <div
-      className={`border-l-4 ${borderColor} bg-card rounded-r-lg shadow-sm overflow-hidden`}
+      className="border-l-4 bg-card rounded-r-lg shadow-sm overflow-hidden"
+      style={{ borderLeftColor: borderColor }}
     >
       <button
         type="button"

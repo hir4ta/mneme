@@ -91,22 +91,6 @@ function drawEffectivenessRing(
   }
 }
 
-function drawLabel(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  title: string,
-  color: string,
-) {
-  const label = title.length > 20 ? `${title.slice(0, 20)}\u2026` : title;
-  const fontSize = 3;
-  ctx.font = `${fontSize}px Sans-Serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = color;
-  ctx.fillText(label, x, y + size + 2);
-}
 
 function useContainerDimensions(ref: React.RefObject<HTMLDivElement | null>) {
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
@@ -224,17 +208,6 @@ export function GraphCanvas({
                 );
               }
 
-              // Label at higher zoom levels
-              if (globalScale > 1.5) {
-                drawLabel(
-                  ctx,
-                  x,
-                  y,
-                  size,
-                  n.title,
-                  isDark ? "#e7e5e4" : "#44403c",
-                );
-              }
             }}
             nodePointerAreaPaint={(node, color, ctx) => {
               const n = node as GraphRenderNode;

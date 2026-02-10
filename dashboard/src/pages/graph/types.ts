@@ -64,10 +64,10 @@ export type EntityFilter = "all" | "session" | "rule";
 export type LayoutMode = "force" | "td";
 
 export const typeColors: Record<string, string> = {
-  session: "#3b82f6",
-  decision: "#3b82f6",
-  pattern: "#8b5cf6",
-  rule: "#f97316",
+  session: "#40513B",
+  decision: "#628141",
+  pattern: "#E5D9B6",
+  rule: "#E67E22",
   unknown: "#6b7280",
 };
 

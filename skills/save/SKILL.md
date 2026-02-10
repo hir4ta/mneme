@@ -35,6 +35,14 @@ Use explicit section markers and XML-style tags for hard constraints:
 
 Always render missing required fields as blocking errors before write.
 
+## Session ID resolution
+
+<required>
+- Get the full Claude Session ID from the SessionStart context injected at the top of this conversation (look for `**Claude Session ID:**`)
+- Do NOT run any Bash commands to discover the session ID
+- NEVER run exploratory commands like `printenv`, `find`, `echo $MNEME_SESSION_ID`, or `ls -t ~/.claude/projects/*/`
+</required>
+
 ## Execution phases
 
 1. **Master session merge**

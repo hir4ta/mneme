@@ -12,6 +12,14 @@ disable-model-invocation: true
 
 Resume a previous session.
 
+## Session ID resolution
+
+<required>
+- Get the full Claude Session ID from the SessionStart context injected at the top of this conversation (look for `**Claude Session ID:**`)
+- Do NOT run any Bash commands to discover the session ID
+- NEVER run exploratory commands like `printenv`, `find`, `echo $MNEME_SESSION_ID`, or `ls -t ~/.claude/projects/*/`
+</required>
+
 ## Required constraints
 
 <required>
@@ -83,9 +91,8 @@ Glob: .mneme/sessions/**/*.json
 # Read each session file (metadata)
 Read: .mneme/sessions/{year}/{month}/{filename}.json
 
-# Get interactions from local SQLite (private, project-local)
-# Local DB location: .mneme/local.db
-sqlite3 ".mneme/local.db" "SELECT * FROM interactions WHERE session_id = '{id}' ORDER BY timestamp;"
+# Get interactions via MCP tool (private, project-local)
+mneme_get_interactions({ sessionId: "{id}", limit: 50 })
 
 # Create session-link file (NEW - master session support)
 # This links current Claude session to the master mneme session

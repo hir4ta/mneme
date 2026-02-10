@@ -385,6 +385,7 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
   }
 
   let sessionInfo = `**Session:** ${fileId}${resumeNote}
+**Claude Session ID:** ${sessionId}
 **Path:** ${sessionRelativePath}
 
 Sessions are saved:
