@@ -72,7 +72,12 @@
     "noSummary": "No summary available",
     "relatedNodes": "Related Nodes",
     "focusThisNode": "Focus this node",
-    "sharedTagsCount": "Shared tags: {{count}}"
+    "sharedTagsCount": "Shared tags: {{count}}",
+    "unitType": {
+      "decision": "Decision",
+      "pattern": "Pattern",
+      "rule": "Rule"
+    }
   },
   "gaps": {
     "title": "Structural Gaps",

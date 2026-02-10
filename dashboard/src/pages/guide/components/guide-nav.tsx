@@ -12,7 +12,6 @@ const navItems: NavItem[] = [
   { path: "/guide/workflow", labelKey: "nav.workflow" },
   { path: "/guide/commands", labelKey: "nav.commands" },
   { path: "/guide/use-cases", labelKey: "nav.useCases" },
-  { path: "/guide/faq", labelKey: "nav.faq" },
 ];
 
 export function GuideNav() {
@@ -20,7 +19,7 @@ export function GuideNav() {
   const location = useLocation();
 
   return (
-    <nav className="flex flex-wrap gap-2 mb-6 pb-4 border-b border-stone-200 dark:border-stone-700">
+    <nav className="flex flex-wrap gap-2 pb-4 border-b border-stone-200 dark:border-stone-700">
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
         return (

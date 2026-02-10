@@ -46,7 +46,13 @@ Always render missing required fields as blocking errors before write.
 
 3. **Session summary extraction (required MCP)**
 - Extract from the conversation: `title`, `goal`, `outcome`, `description`, `tags`, `sessionType`.
-- **MUST call `mneme_update_session_summary`** MCP tool with the extracted data.
+- Additionally extract **structured context** (auto-compact で失われるデータを保全):
+  - `plan`: セッションの目標、タスク一覧（完了は `[x] ` prefix）、残タスク
+  - `discussions`: 設計議論（topic, decision, reasoning, alternatives）
+  - `errors`: 遭遇したエラーと解決策（error, context, solution, files）
+  - `handoff`: 引き継ぎ情報（stoppedReason, notes, nextSteps）
+  - `references`: 参照したドキュメントURL、ファイルパス（type, url, path, title, description）
+- **MUST call `mneme_update_session_summary`** MCP tool with all extracted data.
   This writes the summary to `.mneme/sessions/` JSON file, ensuring the session is preserved on SessionEnd.
 - **Then call `mneme_mark_session_committed`** to finalize the commit.
 
@@ -55,6 +61,33 @@ Always render missing required fields as blocking errors before write.
 - Call `mneme_mark_session_committed` AFTER `mneme_update_session_summary` succeeds
 - Do NOT skip this step even for short/research sessions
 </required>
+
+### Structured context extraction guide
+
+Auto-compact はコンテキストウィンドウの約80%使用時に発動し、古いメッセージを要約で置換します。
+以下の情報は要約で失われやすいため、structured data として明示的に保存します。
+
+**plan** — 該当する場合のみ:
+- `goals`: セッション開始時に設定された目標
+- `tasks`: 実行したタスクリスト。完了済みは `[x] タスク名`、未完了は `[ ] タスク名`
+- `remaining`: 次回以降に持ち越すタスク
+
+**discussions** — 設計方針の議論があった場合:
+- 「AとBどちらにする？」→「Aにした」のような意思決定を抽出
+- `alternatives` に検討して採用しなかった選択肢を記録
+
+**errors** — ビルドエラー、テスト失敗、実行時エラーがあった場合:
+- エラーメッセージ、発生コンテキスト、解決策を記録
+- 同じエラーに再度遭遇しないための知見として保全
+
+**handoff** — セッション終了時に必ず:
+- `stoppedReason`: なぜここで止めるか（完了、時間切れ、ブロッカー等）
+- `notes`: 次のセッションで知っておくべき注意点
+- `nextSteps`: 次にやるべき具体的アクション
+
+**references** — 外部リソースを参照した場合:
+- WebFetch/WebSearch で確認した公式ドキュメントURL
+- 重要な参照ファイルパス
 
 4. **Decision extraction (source)**
 - Persist concrete choices and rationale to `decisions/YYYY/MM/*.json`.

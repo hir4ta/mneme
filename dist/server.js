@@ -1,6 +1,6 @@
 // dashboard/server/index.ts
-import fs4 from "node:fs";
-import path3 from "node:path";
+import fs13 from "node:fs";
+import path12 from "node:path";
 
 // node_modules/@hono/node-server/dist/index.mjs
 import { createServer as createServerHTTP } from "http";
@@ -666,10 +666,10 @@ var createStreamBody = (stream) => {
   });
   return body;
 };
-var getStats = (path4) => {
+var getStats = (path13) => {
   let stats;
   try {
-    stats = statSync(path4);
+    stats = statSync(path13);
   } catch {
   }
   return stats;
@@ -698,21 +698,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path4 = join(
+    let path13 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path4);
+    let stats = getStats(path13);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path4 = join(path4, indexFile);
-      stats = getStats(path4);
+      path13 = join(path13, indexFile);
+      stats = getStats(path13);
     }
     if (!stats) {
-      await options.onNotFound?.(path4, c);
+      await options.onNotFound?.(path13, c);
       return next();
     }
-    const mimeType = getMimeType(path4);
+    const mimeType = getMimeType(path13);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -722,12 +722,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path4 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path13 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path4 = path4 + ENCODINGS[encoding];
+          path13 = path13 + ENCODINGS[encoding];
           break;
         }
       }
@@ -741,7 +741,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path4)), 200);
+      result = c.body(createStreamBody(createReadStream(path13)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -752,12 +752,12 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream = createReadStream(path4, { start, end });
+      const stream = createReadStream(path13, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream), 206);
     }
-    await options.onFound?.(path4, c);
+    await options.onFound?.(path13, c);
     return result;
   };
 };
@@ -879,26 +879,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path4) => {
-  const paths = path4.split("/");
+var splitPath = (path13) => {
+  const paths = path13.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path4 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path4);
+  const { groups, path: path13 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path13);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path4) => {
+var extractGroupsFromPath = (path13) => {
   const groups = [];
-  path4 = path4.replace(/\{[^}]+\}/g, (match2, index) => {
+  path13 = path13.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path4 };
+  return { groups, path: path13 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -955,8 +955,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path4 = url.slice(start, end);
-      return tryDecodeURI(path4.includes("%25") ? path4.replace(/%25/g, "%2525") : path4);
+      const path13 = url.slice(start, end);
+      return tryDecodeURI(path13.includes("%25") ? path13.replace(/%25/g, "%2525") : path13);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -973,11 +973,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path4) => {
-  if (path4.charCodeAt(path4.length - 1) !== 63 || !path4.includes(":")) {
+var checkOptionalParameter = (path13) => {
+  if (path13.charCodeAt(path13.length - 1) !== 63 || !path13.includes(":")) {
     return null;
   }
-  const segments = path4.split("/");
+  const segments = path13.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1118,9 +1118,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path4 = "/", matchResult = [[]]) {
+  constructor(request, path13 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path4;
+    this.path = path13;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1856,8 +1856,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path4, ...handlers) => {
-      for (const p of [path4].flat()) {
+    this.on = (method, path13, ...handlers) => {
+      for (const p of [path13].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1914,8 +1914,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path4, app2) {
-    const subApp = this.basePath(path4);
+  route(path13, app2) {
+    const subApp = this.basePath(path13);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1941,9 +1941,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path4) {
+  basePath(path13) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path4);
+    subApp._basePath = mergePath(this._basePath, path13);
     return subApp;
   }
   /**
@@ -2017,7 +2017,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path4, applicationHandler, options) {
+  mount(path13, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2044,7 +2044,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path4);
+      const mergedPath = mergePath(this._basePath, path13);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -2059,14 +2059,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path4, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path13, "*"), handler);
     return this;
   }
-  #addRoute(method, path4, handler) {
+  #addRoute(method, path13, handler) {
     method = method.toUpperCase();
-    path4 = mergePath(this._basePath, path4);
-    const r = { basePath: this._basePath, path: path4, method, handler };
-    this.router.add(method, path4, [handler, r]);
+    path13 = mergePath(this._basePath, path13);
+    const r = { basePath: this._basePath, path: path13, method, handler };
+    this.router.add(method, path13, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2079,10 +2079,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path4 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path4);
+    const path13 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path13);
     const c = new Context(request, {
-      path: path4,
+      path: path13,
       matchResult,
       env,
       executionCtx,
@@ -2182,7 +2182,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path4) {
+function match(method, path13) {
   const matchers = this.buildAllMatchers();
   const match2 = ((method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -2198,7 +2198,7 @@ function match(method, path4) {
     return [matcher[1][index], match3];
   });
   this.match = match2;
-  return match2(method, path4);
+  return match2(method, path13);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -2313,12 +2313,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path4, index, pathErrorCheckOnly) {
+  insert(path13, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path4 = path4.replace(/\{[^}]+\}/g, (m) => {
+      path13 = path13.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -2329,7 +2329,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path4.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path13.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -2368,9 +2368,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path4) {
-  return wildcardRegExpCache[path4] ??= new RegExp(
-    path4 === "*" ? "" : `^${path4.replace(
+function buildWildcardRegExp(path13) {
+  return wildcardRegExpCache[path13] ??= new RegExp(
+    path13 === "*" ? "" : `^${path13.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -2392,17 +2392,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path4, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path13, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path4] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path13] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path4, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path13, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path4) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path13) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -2436,12 +2436,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path4) {
+function findMiddleware(middleware, path13) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path4)) {
+    if (buildWildcardRegExp(k).test(path13)) {
       return [...middleware[k]];
     }
   }
@@ -2455,7 +2455,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path4, handler) {
+  add(method, path13, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -2470,18 +2470,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path4 === "/*") {
-      path4 = "*";
+    if (path13 === "/*") {
+      path13 = "*";
     }
-    const paramCount = (path4.match(/\/:/g) || []).length;
-    if (/\*$/.test(path4)) {
-      const re = buildWildcardRegExp(path4);
+    const paramCount = (path13.match(/\/:/g) || []).length;
+    if (/\*$/.test(path13)) {
+      const re = buildWildcardRegExp(path13);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path4] ||= findMiddleware(middleware[m], path4) || findMiddleware(middleware[METHOD_NAME_ALL], path4) || [];
+          middleware[m][path13] ||= findMiddleware(middleware[m], path13) || findMiddleware(middleware[METHOD_NAME_ALL], path13) || [];
         });
       } else {
-        middleware[method][path4] ||= findMiddleware(middleware[method], path4) || findMiddleware(middleware[METHOD_NAME_ALL], path4) || [];
+        middleware[method][path13] ||= findMiddleware(middleware[method], path13) || findMiddleware(middleware[METHOD_NAME_ALL], path13) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -2499,7 +2499,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path4) || [path4];
+    const paths = checkOptionalParameter(path13) || [path13];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -2526,13 +2526,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path4) => [path4, r[method][path4]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path13) => [path13, r[method][path13]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path4) => [path4, r[METHOD_NAME_ALL][path4]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path13) => [path13, r[METHOD_NAME_ALL][path13]])
         );
       }
     });
@@ -2552,13 +2552,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path4, handler) {
+  add(method, path13, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path4, handler]);
+    this.#routes.push([method, path13, handler]);
   }
-  match(method, path4) {
+  match(method, path13) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -2573,7 +2573,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path4);
+        res = router.match(method, path13);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -2617,10 +2617,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path4, handler) {
+  insert(method, path13, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path4);
+    const parts = splitRoutingPath(path13);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -2671,12 +2671,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path4) {
+  search(method, path13) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path4);
+    const parts = splitPath(path13);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -2764,18 +2764,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path4, handler) {
-    const results = checkOptionalParameter(path4);
+  add(method, path13, handler) {
+    const results = checkOptionalParameter(path13);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path4, handler);
+    this.#node.insert(method, path13, handler);
   }
-  match(method, path4) {
-    return this.#node.search(method, path4);
+  match(method, path13) {
+    return this.#node.search(method, path13);
   }
 };
 
@@ -2878,100 +2878,6 @@ var cors = (options) => {
     }
   };
 };
-
-// lib/suppress-sqlite-warning.ts
-var originalEmit = process.emit;
-process.emit = (event, ...args) => {
-  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
-    return false;
-  }
-  return originalEmit.apply(process, [event, ...args]);
-};
-
-// lib/db.ts
-import { execSync } from "node:child_process";
-import { existsSync as existsSync2, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join as join2 } from "node:path";
-import { fileURLToPath } from "node:url";
-var { DatabaseSync } = await import("node:sqlite");
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = dirname(__filename);
-function getCurrentUser() {
-  try {
-    return execSync("git config user.name", { encoding: "utf-8" }).trim();
-  } catch {
-    try {
-      return execSync("whoami", { encoding: "utf-8" }).trim();
-    } catch {
-      return "unknown";
-    }
-  }
-}
-function getLocalDbPath(projectPath) {
-  return join2(projectPath, ".mneme", "local.db");
-}
-function configurePragmas(db) {
-  db.exec("PRAGMA journal_mode = WAL");
-  db.exec("PRAGMA busy_timeout = 5000");
-  db.exec("PRAGMA synchronous = NORMAL");
-}
-function openLocalDatabase(projectPath) {
-  const dbPath = getLocalDbPath(projectPath);
-  if (!existsSync2(dbPath)) {
-    return null;
-  }
-  const db = new DatabaseSync(dbPath);
-  configurePragmas(db);
-  return db;
-}
-function getInteractionsBySessionIds(db, sessionIds) {
-  if (sessionIds.length === 0) {
-    return [];
-  }
-  const placeholders = sessionIds.map(() => "?").join(", ");
-  const stmt = db.prepare(`
-    SELECT * FROM interactions
-    WHERE session_id IN (${placeholders})
-    ORDER BY timestamp ASC, id ASC
-  `);
-  return stmt.all(...sessionIds);
-}
-function deleteInteractions(db, sessionId) {
-  const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
-  stmt.run(sessionId);
-}
-function deleteBackups(db, sessionId) {
-  const stmt = db.prepare(
-    "DELETE FROM pre_compact_backups WHERE session_id = ?"
-  );
-  stmt.run(sessionId);
-}
-function countInteractions(db, filter) {
-  const conditions = [];
-  const params = [];
-  if (filter.sessionId) {
-    conditions.push("session_id = ?");
-    params.push(filter.sessionId);
-  }
-  if (filter.projectPath) {
-    conditions.push("project_path = ?");
-    params.push(filter.projectPath);
-  }
-  if (filter.repository) {
-    conditions.push("repository = ?");
-    params.push(filter.repository);
-  }
-  if (filter.before) {
-    conditions.push("timestamp < ?");
-    params.push(filter.before);
-  }
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const stmt = db.prepare(
-    `SELECT COUNT(*) as count FROM interactions ${whereClause}`
-  );
-  const result = stmt.get(...params);
-  return result.count;
-}
 
 // lib/index/manager.ts
 import * as fs3 from "node:fs";
@@ -3333,7 +3239,117 @@ function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
   return now - updatedAt > maxAgeMs;
 }
 
-// dashboard/server/index.ts
+// dashboard/server/lib/helpers.ts
+import fs4 from "node:fs";
+import path3 from "node:path";
+
+// lib/suppress-sqlite-warning.ts
+var originalEmit = process.emit;
+process.emit = (event, ...args) => {
+  if (event === "warning" && typeof args[0] === "object" && args[0] !== null && "name" in args[0] && args[0].name === "ExperimentalWarning" && "message" in args[0] && typeof args[0].message === "string" && args[0].message.includes("SQLite")) {
+    return false;
+  }
+  return originalEmit.apply(process, [event, ...args]);
+};
+
+// lib/db.ts
+import { execSync } from "node:child_process";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync2 } from "node:fs";
+import { dirname as dirname2, join as join4 } from "node:path";
+import { fileURLToPath } from "node:url";
+var { DatabaseSync } = await import("node:sqlite");
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = dirname2(__filename);
+function getCurrentUser() {
+  try {
+    return execSync("git config user.name", { encoding: "utf-8" }).trim();
+  } catch {
+    try {
+      return execSync("whoami", { encoding: "utf-8" }).trim();
+    } catch {
+      return "unknown";
+    }
+  }
+}
+function getLocalDbPath(projectPath) {
+  return join4(projectPath, ".mneme", "local.db");
+}
+function configurePragmas(db) {
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec("PRAGMA synchronous = NORMAL");
+}
+function openLocalDatabase(projectPath) {
+  const dbPath = getLocalDbPath(projectPath);
+  if (!existsSync5(dbPath)) {
+    return null;
+  }
+  const db = new DatabaseSync(dbPath);
+  configurePragmas(db);
+  return db;
+}
+function getInteractionsBySessionIds(db, sessionIds) {
+  if (sessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...sessionIds);
+}
+function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
+  if (claudeSessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = claudeSessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE claude_session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...claudeSessionIds);
+}
+function deleteInteractions(db, sessionId) {
+  const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
+  stmt.run(sessionId);
+}
+function deleteBackups(db, sessionId) {
+  const stmt = db.prepare(
+    "DELETE FROM pre_compact_backups WHERE session_id = ?"
+  );
+  stmt.run(sessionId);
+}
+function countInteractions(db, filter) {
+  const conditions = [];
+  const params = [];
+  if (filter.sessionId) {
+    conditions.push("session_id = ?");
+    params.push(filter.sessionId);
+  }
+  if (filter.projectPath) {
+    conditions.push("project_path = ?");
+    params.push(filter.projectPath);
+  }
+  if (filter.repository) {
+    conditions.push("repository = ?");
+    params.push(filter.repository);
+  }
+  if (filter.before) {
+    conditions.push("timestamp < ?");
+    params.push(filter.before);
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const stmt = db.prepare(
+    `SELECT COUNT(*) as count FROM interactions ${whereClause}`
+  );
+  const result = stmt.get(...params);
+  return result.count;
+}
+
+// dashboard/server/lib/helpers.ts
 function sanitizeId(id) {
   const normalized = decodeURIComponent(id).trim();
   if (!normalized) return "";
@@ -3350,7 +3366,6 @@ function safeParseJsonFile(filePath) {
     return null;
   }
 }
-var app = new Hono2();
 var getProjectRoot = () => {
   return process.env.MNEME_PROJECT_ROOT || process.cwd();
 };
@@ -3430,1202 +3445,22 @@ var findJsonFileById = (dir, id) => {
   return null;
 };
 var rulesDir = () => path3.join(getMnemeDir(), "rules");
-app.use(
-  "/api/*",
-  cors({
-    origin: (origin) => {
-      if (!origin) return void 0;
-      if (origin.startsWith("http://localhost:")) return origin;
-      return null;
-    }
-  })
-);
-function parsePaginationParams(c) {
-  return {
-    page: Math.max(1, Number.parseInt(c.req.query("page") || "1", 10)),
-    limit: Math.min(
-      100,
-      Math.max(1, Number.parseInt(c.req.query("limit") || "20", 10))
-    ),
-    tag: c.req.query("tag"),
-    type: c.req.query("type"),
-    project: c.req.query("project"),
-    search: c.req.query("search"),
-    showUntitled: c.req.query("showUntitled") === "true",
-    allMonths: c.req.query("allMonths") === "true"
-  };
-}
-function paginateArray(items, page, limit) {
-  const total = items.length;
-  const totalPages = Math.ceil(total / limit);
-  const start = (page - 1) * limit;
-  const data = items.slice(start, start + limit);
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1
-    }
-  };
-}
-app.get("/api/project", (c) => {
-  const projectRoot = getProjectRoot();
-  const projectName = path3.basename(projectRoot);
-  let repository = null;
-  try {
-    const gitConfigPath = path3.join(projectRoot, ".git", "config");
-    if (fs4.existsSync(gitConfigPath)) {
-      const gitConfig = fs4.readFileSync(gitConfigPath, "utf-8");
-      const match2 = gitConfig.match(
-        /url\s*=\s*.*[:/]([^/]+\/[^/]+?)(?:\.git)?$/m
-      );
-      if (match2) {
-        repository = match2[1];
-      }
-    }
-  } catch {
-  }
-  return c.json({
-    name: projectName,
-    path: projectRoot,
-    repository
-  });
-});
-app.get("/api/sessions", async (c) => {
-  const useIndex = c.req.query("useIndex") !== "false";
-  const usePagination = c.req.query("paginate") !== "false";
-  const mnemeDir2 = getMnemeDir();
-  const params = parsePaginationParams(c);
-  try {
-    let items;
-    if (useIndex) {
-      const index = params.allMonths ? readAllSessionIndexes(mnemeDir2) : readRecentSessionIndexes(mnemeDir2);
-      items = index.items;
-    } else {
-      const sessionsDir = path3.join(mnemeDir2, "sessions");
-      const files = listDatedJsonFiles(sessionsDir);
-      if (files.length === 0) {
-        return usePagination ? c.json({
-          data: [],
-          pagination: {
-            page: 1,
-            limit: params.limit,
-            total: 0,
-            totalPages: 0,
-            hasNext: false,
-            hasPrev: false
-          }
-        }) : c.json([]);
-      }
-      items = files.map((filePath) => {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        return JSON.parse(content);
-      });
-      items.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    let filtered = items;
-    if (!params.showUntitled) {
-      filtered = filtered.filter((s) => s.hasSummary === true);
-    }
-    if (params.tag) {
-      filtered = filtered.filter(
-        (s) => s.tags?.includes(params.tag)
-      );
-    }
-    if (params.type) {
-      filtered = filtered.filter((s) => s.sessionType === params.type);
-    }
-    if (params.project) {
-      const projectQuery = params.project;
-      filtered = filtered.filter((s) => {
-        const ctx = s.context;
-        const projectName = ctx?.projectName;
-        const repository = ctx?.repository;
-        return projectName === projectQuery || repository === projectQuery || repository?.endsWith(`/${projectQuery}`);
-      });
-    }
-    if (params.search) {
-      const query = params.search.toLowerCase();
-      filtered = filtered.filter((s) => {
-        const title = (s.title || "").toLowerCase();
-        const goal = (s.goal || "").toLowerCase();
-        return title.includes(query) || goal.includes(query);
-      });
-    }
-    if (!usePagination) {
-      return c.json(filtered);
-    }
-    return c.json(paginateArray(filtered, params.page, params.limit));
-  } catch (error) {
-    console.error("Failed to read sessions:", error);
-    return c.json({ error: "Failed to read sessions" }, 500);
-  }
-});
-app.get("/api/sessions/graph", async (c) => {
-  const mnemeDir2 = getMnemeDir();
-  const showUntitled = c.req.query("showUntitled") === "true";
-  try {
-    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
-    const filteredItems = showUntitled ? sessionsIndex.items : sessionsIndex.items.filter((s) => s.hasSummary === true);
-    const nodes = filteredItems.map((session) => ({
-      id: session.id,
-      title: session.title,
-      type: session.sessionType || "unknown",
-      tags: session.tags || [],
-      createdAt: session.createdAt
-    }));
-    const tagToNodes = /* @__PURE__ */ new Map();
-    for (const item of filteredItems) {
-      for (const tag of item.tags || []) {
-        const list = tagToNodes.get(tag) || [];
-        list.push(item.id);
-        tagToNodes.set(tag, list);
-      }
-    }
-    const edgeMap = /* @__PURE__ */ new Map();
-    for (const [, nodeIds] of tagToNodes) {
-      for (let i = 0; i < nodeIds.length; i++) {
-        for (let j = i + 1; j < nodeIds.length; j++) {
-          const key = nodeIds[i] < nodeIds[j] ? `${nodeIds[i]}|${nodeIds[j]}` : `${nodeIds[j]}|${nodeIds[i]}`;
-          const existing = edgeMap.get(key);
-          if (existing) {
-            existing.weight++;
-          } else {
-            const [source, target] = key.split("|");
-            edgeMap.set(key, { source, target, weight: 1 });
-          }
-        }
-      }
-    }
-    const edges = Array.from(edgeMap.values());
-    return c.json({ nodes, edges });
-  } catch (error) {
-    console.error("Failed to build session graph:", error);
-    return c.json({ error: "Failed to build session graph" }, 500);
-  }
-});
-app.get("/api/sessions/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
-  try {
-    const filePath = findJsonFileById(sessionsDir, id);
-    if (!filePath) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-    const session = safeParseJsonFile(filePath);
-    if (!session) {
-      return c.json({ error: "Failed to parse session" }, 500);
-    }
-    return c.json(session);
-  } catch (error) {
-    console.error("Failed to read session:", error);
-    return c.json({ error: "Failed to read session" }, 500);
-  }
-});
-app.get("/api/sessions/:id/markdown", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
-  try {
-    const jsonPath = findJsonFileById(sessionsDir, id);
-    if (!jsonPath) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-    const mdPath = jsonPath.replace(/\.json$/, ".md");
-    if (!fs4.existsSync(mdPath)) {
-      return c.json({ exists: false, content: null });
-    }
-    const content = fs4.readFileSync(mdPath, "utf-8");
-    return c.json({ exists: true, content });
-  } catch (error) {
-    console.error("Failed to read session markdown:", error);
-    return c.json({ error: "Failed to read session markdown" }, 500);
-  }
-});
-app.delete("/api/sessions/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const dryRun = c.req.query("dry-run") === "true";
-  const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path3.join(mnemeDir2, "sessions");
-  try {
-    const filePath = findJsonFileById(sessionsDir, id);
-    if (!filePath) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-    const sessionData = safeParseJsonFile(filePath);
-    const db = openLocalDatabase(getProjectRoot());
-    let interactionCount = 0;
-    if (db) {
-      interactionCount = countInteractions(db, { sessionId: id });
-      if (!dryRun) {
-        deleteInteractions(db, id);
-        deleteBackups(db, id);
-      }
-      db.close();
-    }
-    if (!dryRun) {
-      fs4.unlinkSync(filePath);
-      const mdPath = filePath.replace(/\.json$/, ".md");
-      if (fs4.existsSync(mdPath)) {
-        fs4.unlinkSync(mdPath);
-      }
-      const sessionLinksDir = path3.join(mnemeDir2, "session-links");
-      const linkPath = path3.join(sessionLinksDir, `${id}.json`);
-      if (fs4.existsSync(linkPath)) {
-        fs4.unlinkSync(linkPath);
-      }
-      if (sessionData?.createdAt) {
-        const date = new Date(sessionData.createdAt);
-        const year = date.getFullYear().toString();
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        rebuildSessionIndexForMonth(mnemeDir2, year, month);
-      }
-      writeAuditLog({
-        entity: "session",
-        action: "delete",
-        targetId: id
-      });
-    }
-    return c.json({
-      deleted: dryRun ? 0 : 1,
-      interactionsDeleted: dryRun ? 0 : interactionCount,
-      dryRun,
-      sessionId: id
-    });
-  } catch (error) {
-    console.error("Failed to delete session:", error);
-    return c.json({ error: "Failed to delete session" }, 500);
-  }
-});
-app.delete("/api/sessions", async (c) => {
-  const dryRun = c.req.query("dry-run") === "true";
-  const projectFilter = c.req.query("project");
-  const repositoryFilter = c.req.query("repository");
-  const beforeFilter = c.req.query("before");
-  const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path3.join(mnemeDir2, "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    const sessionsToDelete = [];
-    for (const filePath of files) {
-      try {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        const session = JSON.parse(content);
-        let shouldDelete = true;
-        if (projectFilter) {
-          const sessionProject = session.context?.projectDir;
-          if (sessionProject !== projectFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (repositoryFilter && shouldDelete) {
-          const sessionRepo = session.context?.repository;
-          if (sessionRepo !== repositoryFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (beforeFilter && shouldDelete) {
-          const sessionDate = session.createdAt?.split("T")[0];
-          if (!sessionDate || sessionDate >= beforeFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (shouldDelete) {
-          sessionsToDelete.push({ id: session.id, path: filePath });
-        }
-      } catch {
-      }
-    }
-    let totalInteractions = 0;
-    const db = openLocalDatabase(getProjectRoot());
-    if (db) {
-      for (const session of sessionsToDelete) {
-        totalInteractions += countInteractions(db, { sessionId: session.id });
-      }
-      if (!dryRun) {
-        for (const session of sessionsToDelete) {
-          deleteInteractions(db, session.id);
-          deleteBackups(db, session.id);
-        }
-      }
-      db.close();
-    }
-    if (!dryRun) {
-      for (const session of sessionsToDelete) {
-        fs4.unlinkSync(session.path);
-        const mdPath = session.path.replace(/\.json$/, ".md");
-        if (fs4.existsSync(mdPath)) {
-          fs4.unlinkSync(mdPath);
-        }
-        const sessionLinksDir = path3.join(mnemeDir2, "session-links");
-        const linkPath = path3.join(sessionLinksDir, `${session.id}.json`);
-        if (fs4.existsSync(linkPath)) {
-          fs4.unlinkSync(linkPath);
-        }
-        writeAuditLog({
-          entity: "session",
-          action: "delete",
-          targetId: session.id
-        });
-      }
-    }
-    return c.json({
-      deleted: dryRun ? 0 : sessionsToDelete.length,
-      interactionsDeleted: dryRun ? 0 : totalInteractions,
-      wouldDelete: sessionsToDelete.length,
-      dryRun,
-      filters: {
-        project: projectFilter || null,
-        repository: repositoryFilter || null,
-        before: beforeFilter || null
-      }
-    });
-  } catch (error) {
-    console.error("Failed to delete sessions:", error);
-    return c.json({ error: "Failed to delete sessions" }, 500);
-  }
-});
-app.get("/api/current-user", async (c) => {
-  try {
-    const user = getCurrentUser();
-    return c.json({ user });
-  } catch (error) {
-    console.error("Failed to get current user:", error);
-    return c.json({ error: "Failed to get current user" }, 500);
-  }
-});
-app.get("/api/sessions/:id/interactions", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const mnemeDir2 = getMnemeDir();
-  const sessionLinksDir = path3.join(mnemeDir2, "session-links");
-  const sessionsDir = path3.join(mnemeDir2, "sessions");
-  try {
-    const sessionFilePath = findJsonFileById(sessionsDir, id);
-    let projectDir = getProjectRoot();
-    if (sessionFilePath) {
-      const sessionData = safeParseJsonFile(sessionFilePath);
-      if (sessionData?.context?.projectDir) {
-        projectDir = sessionData.context.projectDir;
-      }
-    }
-    const db = openLocalDatabase(projectDir);
-    if (!db) {
-      return c.json({ interactions: [], count: 0 });
-    }
-    let masterId = id;
-    const myLinkFile = path3.join(sessionLinksDir, `${id}.json`);
-    if (fs4.existsSync(myLinkFile)) {
-      try {
-        const myLinkData = JSON.parse(fs4.readFileSync(myLinkFile, "utf-8"));
-        if (myLinkData.masterSessionId) {
-          masterId = myLinkData.masterSessionId;
-        }
-      } catch {
-      }
-    }
-    const sessionIds = [masterId];
-    if (masterId !== id) {
-      sessionIds.push(id);
-    }
-    if (fs4.existsSync(sessionLinksDir)) {
-      const linkFiles = fs4.readdirSync(sessionLinksDir);
-      for (const linkFile of linkFiles) {
-        if (!linkFile.endsWith(".json")) continue;
-        const linkPath = path3.join(sessionLinksDir, linkFile);
-        try {
-          const linkData = JSON.parse(fs4.readFileSync(linkPath, "utf-8"));
-          if (linkData.masterSessionId === masterId) {
-            const childId = linkFile.replace(".json", "");
-            if (!sessionIds.includes(childId)) {
-              sessionIds.push(childId);
-            }
-          }
-        } catch {
-        }
-      }
-    }
-    const sessionFiles = listDatedJsonFiles(sessionsDir);
-    for (const sessionFile of sessionFiles) {
-      try {
-        const sessionData = JSON.parse(fs4.readFileSync(sessionFile, "utf-8"));
-        if (sessionData.resumedFrom === masterId && sessionData.id !== masterId) {
-          if (!sessionIds.includes(sessionData.id)) {
-            sessionIds.push(sessionData.id);
-          }
-        }
-      } catch {
-      }
-    }
-    const interactions = getInteractionsBySessionIds(db, sessionIds);
-    db.close();
-    const groupedInteractions = [];
-    let currentInteraction = null;
-    for (const interaction of interactions) {
-      if (interaction.role === "user") {
-        if (currentInteraction) {
-          groupedInteractions.push(currentInteraction);
-        }
-        let hasPlanMode;
-        let planTools;
-        let toolsUsed;
-        let toolDetails;
-        let inPlanMode;
-        let slashCommand;
-        let toolResults;
-        let progressEvents;
-        if (interaction.tool_calls) {
-          try {
-            const metadata = JSON.parse(interaction.tool_calls);
-            if (metadata.hasPlanMode) {
-              hasPlanMode = true;
-              planTools = metadata.planTools || [];
-            }
-            if (metadata.inPlanMode) {
-              inPlanMode = true;
-            }
-            if (metadata.toolsUsed && Array.isArray(metadata.toolsUsed) && metadata.toolsUsed.length > 0) {
-              toolsUsed = metadata.toolsUsed;
-            }
-            if (metadata.toolDetails && Array.isArray(metadata.toolDetails) && metadata.toolDetails.length > 0) {
-              toolDetails = metadata.toolDetails;
-            }
-            if (metadata.slashCommand) {
-              slashCommand = metadata.slashCommand;
-            }
-            if (metadata.toolResults && Array.isArray(metadata.toolResults) && metadata.toolResults.length > 0) {
-              toolResults = metadata.toolResults;
-            }
-            if (metadata.progressEvents && Array.isArray(metadata.progressEvents) && metadata.progressEvents.length > 0) {
-              progressEvents = metadata.progressEvents;
-            }
-          } catch {
-          }
-        }
-        currentInteraction = {
-          id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
-          timestamp: interaction.timestamp,
-          user: interaction.content,
-          assistant: "",
-          thinking: null,
-          isCompactSummary: !!interaction.is_compact_summary,
-          ...hasPlanMode !== void 0 && { hasPlanMode },
-          ...planTools !== void 0 && planTools.length > 0 && { planTools },
-          ...toolsUsed !== void 0 && toolsUsed.length > 0 && { toolsUsed },
-          ...toolDetails !== void 0 && toolDetails.length > 0 && { toolDetails },
-          ...interaction.agent_id && { agentId: interaction.agent_id },
-          ...interaction.agent_type && { agentType: interaction.agent_type },
-          // New metadata fields
-          ...inPlanMode && { inPlanMode },
-          ...slashCommand && { slashCommand },
-          ...toolResults !== void 0 && toolResults.length > 0 && { toolResults },
-          ...progressEvents !== void 0 && progressEvents.length > 0 && { progressEvents }
-        };
-      } else if (interaction.role === "assistant" && currentInteraction) {
-        currentInteraction.assistant = interaction.content;
-        currentInteraction.thinking = interaction.thinking || null;
-      }
-    }
-    if (currentInteraction) {
-      groupedInteractions.push(currentInteraction);
-    }
-    return c.json({
-      interactions: groupedInteractions,
-      count: groupedInteractions.length
-    });
-  } catch (error) {
-    console.error("Failed to get session interactions:", error);
-    return c.json({ error: "Failed to get session interactions" }, 500);
-  }
-});
-app.get("/api/decisions", async (c) => {
-  const useIndex = c.req.query("useIndex") !== "false";
-  const usePagination = c.req.query("paginate") !== "false";
-  const mnemeDir2 = getMnemeDir();
-  const params = parsePaginationParams(c);
-  try {
-    let items;
-    if (useIndex) {
-      const index = params.allMonths ? readAllDecisionIndexes(mnemeDir2) : readRecentDecisionIndexes(mnemeDir2);
-      items = index.items;
-    } else {
-      const decisionsDir = path3.join(mnemeDir2, "decisions");
-      const files = listDatedJsonFiles(decisionsDir);
-      if (files.length === 0) {
-        return usePagination ? c.json({
-          data: [],
-          pagination: {
-            page: 1,
-            limit: params.limit,
-            total: 0,
-            totalPages: 0,
-            hasNext: false,
-            hasPrev: false
-          }
-        }) : c.json([]);
-      }
-      items = files.map((filePath) => {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        return JSON.parse(content);
-      });
-      items.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    let filtered = items;
-    if (params.tag) {
-      filtered = filtered.filter(
-        (d) => d.tags?.includes(params.tag)
-      );
-    }
-    if (params.search) {
-      const query = params.search.toLowerCase();
-      filtered = filtered.filter((d) => {
-        const title = (d.title || "").toLowerCase();
-        const decision = (d.decision || "").toLowerCase();
-        return title.includes(query) || decision.includes(query);
-      });
-    }
-    if (!usePagination) {
-      return c.json(filtered);
-    }
-    return c.json(paginateArray(filtered, params.page, params.limit));
-  } catch (error) {
-    console.error("Failed to read decisions:", error);
-    return c.json({ error: "Failed to read decisions" }, 500);
-  }
-});
-app.get("/api/decisions/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path3.join(getMnemeDir(), "decisions");
-  try {
-    const filePath = findJsonFileById(decisionsDir, id);
-    if (!filePath) {
-      return c.json({ error: "Decision not found" }, 404);
-    }
-    const decision = safeParseJsonFile(filePath);
-    if (!decision) {
-      return c.json({ error: "Failed to parse decision" }, 500);
-    }
-    return c.json(decision);
-  } catch (error) {
-    console.error("Failed to read decision:", error);
-    return c.json({ error: "Failed to read decision" }, 500);
-  }
-});
-app.delete("/api/decisions/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path3.join(getMnemeDir(), "decisions");
-  try {
-    const filePath = findJsonFileById(decisionsDir, id);
-    if (!filePath) {
-      return c.json({ error: "Decision not found" }, 404);
-    }
-    fs4.unlinkSync(filePath);
-    rebuildAllDecisionIndexes(getMnemeDir());
-    writeAuditLog({
-      entity: "decision",
-      action: "delete",
-      targetId: id
-    });
-    return c.json({ deleted: 1, id });
-  } catch (error) {
-    console.error("Failed to delete decision:", error);
-    return c.json({ error: "Failed to delete decision" }, 500);
-  }
-});
-app.get("/api/info", async (c) => {
-  const projectRoot = getProjectRoot();
-  const mnemeDir2 = getMnemeDir();
-  return c.json({
-    projectRoot,
-    mnemeDir: mnemeDir2,
-    exists: fs4.existsSync(mnemeDir2)
-  });
-});
-app.get("/api/rules/:id", async (c) => {
-  const id = c.req.param("id");
-  if (!ALLOWED_RULE_FILES.has(id)) {
-    return c.json({ error: "Invalid rule type" }, 400);
-  }
-  const dir = rulesDir();
-  try {
-    const filePath = path3.join(dir, `${id}.json`);
-    if (!fs4.existsSync(filePath)) {
-      return c.json({ error: "Rules not found" }, 404);
-    }
-    const rules = safeParseJsonFile(filePath);
-    if (!rules) {
-      return c.json({ error: "Failed to parse rules" }, 500);
-    }
-    return c.json(rules);
-  } catch (error) {
-    console.error("Failed to read rules:", error);
-    return c.json({ error: "Failed to read rules" }, 500);
-  }
-});
-app.put("/api/rules/:id", async (c) => {
-  const id = c.req.param("id");
-  if (!ALLOWED_RULE_FILES.has(id)) {
-    return c.json({ error: "Invalid rule type" }, 400);
-  }
-  const dir = rulesDir();
-  try {
-    const filePath = path3.join(dir, `${id}.json`);
-    if (!fs4.existsSync(filePath)) {
-      return c.json({ error: "Rules not found" }, 404);
-    }
-    const body = await c.req.json();
-    if (!body.items || !Array.isArray(body.items)) {
-      return c.json({ error: "Invalid rules format" }, 400);
-    }
-    fs4.writeFileSync(filePath, JSON.stringify(body, null, 2));
-    writeAuditLog({
-      entity: "rule",
-      action: "update",
-      targetId: id,
-      detail: { itemCount: body.items.length }
-    });
-    return c.json(body);
-  } catch (error) {
-    console.error("Failed to update rules:", error);
-    return c.json({ error: "Failed to update rules" }, 500);
-  }
-});
-app.delete("/api/rules/:id/:ruleId", async (c) => {
-  const id = c.req.param("id");
-  if (!ALLOWED_RULE_FILES.has(id)) {
-    return c.json({ error: "Invalid rule type" }, 400);
-  }
-  const ruleId = sanitizeId(c.req.param("ruleId"));
-  if (!ruleId) {
-    return c.json({ error: "Invalid rule id" }, 400);
-  }
-  const filePath = path3.join(rulesDir(), `${id}.json`);
-  if (!fs4.existsSync(filePath)) {
-    return c.json({ error: "Rules not found" }, 404);
-  }
-  try {
-    const doc = safeParseJsonFile(filePath);
-    if (!doc || !Array.isArray(doc.items)) {
-      return c.json({ error: "Invalid rules format" }, 500);
-    }
-    const nextItems = doc.items.filter((item) => item.id !== ruleId);
-    if (nextItems.length === doc.items.length) {
-      return c.json({ error: "Rule not found" }, 404);
-    }
-    const nextDoc = {
-      ...doc,
-      items: nextItems,
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    fs4.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
-    writeAuditLog({
-      entity: "rule",
-      action: "delete",
-      targetId: ruleId,
-      detail: { ruleType: id }
-    });
-    return c.json({ deleted: 1, id: ruleId, ruleType: id });
-  } catch (error) {
-    console.error("Failed to delete rule:", error);
-    return c.json({ error: "Failed to delete rule" }, 500);
-  }
-});
-app.get("/api/timeline", async (c) => {
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    if (files.length === 0) {
-      return c.json({ timeline: {} });
-    }
-    const sessions = files.map((filePath) => {
-      const content = fs4.readFileSync(filePath, "utf-8");
-      return JSON.parse(content);
-    });
-    const grouped = {};
-    for (const session of sessions) {
-      const date = session.createdAt?.split("T")[0] || "unknown";
-      if (!grouped[date]) grouped[date] = [];
-      grouped[date].push({
-        id: session.id,
-        title: session.title || "Untitled",
-        sessionType: session.sessionType,
-        branch: session.context?.branch,
-        tags: session.tags || [],
-        createdAt: session.createdAt
-      });
-    }
-    const sortedTimeline = {};
-    for (const date of Object.keys(grouped).sort().reverse()) {
-      sortedTimeline[date] = grouped[date].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    return c.json({ timeline: sortedTimeline });
-  } catch (error) {
-    console.error("Failed to build timeline:", error);
-    return c.json({ error: "Failed to build timeline" }, 500);
-  }
-});
-app.get("/api/tag-network", async (c) => {
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    const tagCounts = /* @__PURE__ */ new Map();
-    const coOccurrences = /* @__PURE__ */ new Map();
-    for (const filePath of files) {
-      const content = fs4.readFileSync(filePath, "utf-8");
-      const session = JSON.parse(content);
-      const tags = session.tags || [];
-      for (const tag of tags) {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-      }
-      for (let i = 0; i < tags.length; i++) {
-        for (let j = i + 1; j < tags.length; j++) {
-          const key = [tags[i], tags[j]].sort().join("|");
-          coOccurrences.set(key, (coOccurrences.get(key) || 0) + 1);
-        }
-      }
-    }
-    const nodes = Array.from(tagCounts.entries()).map(([id, count]) => ({
-      id,
-      count
-    }));
-    const edges = Array.from(coOccurrences.entries()).map(([key, weight]) => {
-      const [source, target] = key.split("|");
-      return { source, target, weight };
-    });
-    return c.json({ nodes, edges });
-  } catch (error) {
-    console.error("Failed to build tag network:", error);
-    return c.json({ error: "Failed to build tag network" }, 500);
-  }
-});
-app.get("/api/decisions/:id/impact", async (c) => {
-  const decisionId = sanitizeId(c.req.param("id"));
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
-  const patternsDir2 = path3.join(getMnemeDir(), "patterns");
-  try {
-    const impactedSessions = [];
-    const impactedPatterns = [];
-    const sessionFiles = listDatedJsonFiles(sessionsDir);
-    for (const filePath of sessionFiles) {
-      const content = fs4.readFileSync(filePath, "utf-8");
-      const session = JSON.parse(content);
-      const hasReference = session.relatedSessions?.includes(decisionId) || session.interactions?.some(
-        (i) => i.reasoning?.includes(decisionId) || i.choice?.includes(decisionId)
-      );
-      if (hasReference) {
-        impactedSessions.push({
-          id: session.id,
-          title: session.title || "Untitled"
-        });
-      }
-    }
-    const patternFiles = listJsonFiles(patternsDir2);
-    for (const filePath of patternFiles) {
-      const content = fs4.readFileSync(filePath, "utf-8");
-      const data = JSON.parse(content);
-      const patterns = data.patterns || [];
-      for (const pattern of patterns) {
-        if (pattern.sourceId?.includes(decisionId) || pattern.description?.includes(decisionId)) {
-          impactedPatterns.push({
-            id: `${path3.basename(filePath, ".json")}-${pattern.type}`,
-            description: pattern.description || "No description"
-          });
-        }
-      }
-    }
-    return c.json({
-      decisionId,
-      impactedSessions,
-      impactedPatterns
-    });
-  } catch (error) {
-    console.error("Failed to analyze decision impact:", error);
-    return c.json({ error: "Failed to analyze decision impact" }, 500);
-  }
-});
-var getOpenAIKey = () => {
-  return process.env.OPENAI_API_KEY || null;
-};
-app.get("/api/summary/weekly", async (c) => {
-  const mnemeDir2 = getMnemeDir();
-  const apiKey = getOpenAIKey();
-  try {
-    const sessionsIndex = readRecentSessionIndexes(mnemeDir2);
-    const decisionsIndex = readRecentDecisionIndexes(mnemeDir2);
-    const now = /* @__PURE__ */ new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
-    const recentSessions = sessionsIndex.items.filter(
-      (s) => new Date(s.createdAt) >= weekAgo
-    );
-    const recentDecisions = decisionsIndex.items.filter(
-      (d) => new Date(d.createdAt) >= weekAgo
-    );
-    const summary = {
-      period: { start: weekAgo.toISOString(), end: now.toISOString() },
-      stats: {
-        sessions: recentSessions.length,
-        decisions: recentDecisions.length,
-        interactions: recentSessions.reduce(
-          (sum, s) => sum + (s.interactionCount || 0),
-          0
-        )
-      },
-      topTags: getTopTags(recentSessions, 5),
-      sessionTypes: getSessionTypeBreakdown(recentSessions),
-      aiSummary: null
-    };
-    if (apiKey && (recentSessions.length > 0 || recentDecisions.length > 0)) {
-      try {
-        const prompt = buildSummaryPrompt(recentSessions, recentDecisions);
-        summary.aiSummary = await generateAISummary(apiKey, prompt);
-      } catch (aiError) {
-        console.error("AI summary generation failed:", aiError);
-      }
-    }
-    return c.json(summary);
-  } catch (error) {
-    console.error("Failed to generate weekly summary:", error);
-    return c.json({ error: "Failed to generate weekly summary" }, 500);
-  }
-});
-app.post("/api/summary/generate", async (c) => {
-  const apiKey = getOpenAIKey();
-  if (!apiKey) {
-    return c.json(
-      {
-        error: "AI summary requires OPENAI_API_KEY environment variable (optional feature)"
-      },
-      400
-    );
-  }
-  const body = await c.req.json();
-  const { sessionIds, prompt: customPrompt } = body;
-  const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path3.join(mnemeDir2, "sessions");
-  try {
-    const sessions = [];
-    for (const id of sessionIds || []) {
-      const filePath = findJsonFileById(sessionsDir, id);
-      if (filePath) {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        sessions.push(JSON.parse(content));
-      }
-    }
-    if (sessions.length === 0) {
-      return c.json({ error: "No sessions found" }, 404);
-    }
-    const prompt = customPrompt || `Summarize the following development sessions concisely:
-
-${sessions.map((s) => `- ${s.title}: ${s.goal || "No goal specified"}`).join("\n")}`;
-    const summary = await generateAISummary(apiKey, prompt);
-    return c.json({ summary });
-  } catch (error) {
-    console.error("Failed to generate summary:", error);
-    return c.json({ error: "Failed to generate summary" }, 500);
-  }
-});
-function getTopTags(sessions, limit) {
-  const tagCount = {};
-  for (const session of sessions) {
-    for (const tag of session.tags || []) {
-      tagCount[tag] = (tagCount[tag] || 0) + 1;
-    }
-  }
-  return Object.entries(tagCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, limit);
-}
-function getSessionTypeBreakdown(sessions) {
-  const breakdown = {};
-  for (const session of sessions) {
-    const type = session.sessionType || "unknown";
-    breakdown[type] = (breakdown[type] || 0) + 1;
-  }
-  return breakdown;
-}
-function buildSummaryPrompt(sessions, decisions) {
-  const sessionList = sessions.map((s) => `- ${s.title} (${s.sessionType || "unknown"})`).join("\n");
-  const decisionList = decisions.map((d) => `- ${d.title} (${d.status})`).join("\n");
-  return `Provide a brief weekly development summary (2-3 sentences) based on this activity:
-
-Sessions (${sessions.length}):
-${sessionList || "None"}
-
-Decisions (${decisions.length}):
-${decisionList || "None"}
-
-Focus on key accomplishments and patterns.`;
-}
-async function generateAISummary(apiKey, prompt) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 200,
-      temperature: 0.7
-    })
-  });
-  if (!response.ok) {
-    throw new Error("OpenAI API request failed");
-  }
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "Unable to generate summary.";
-}
-app.get("/api/stats/overview", async (c) => {
-  const mnemeDir2 = getMnemeDir();
-  try {
-    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
-    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
-    const validSessions = sessionsIndex.items.filter(
-      (session) => session.interactionCount > 0 || session.hasSummary === true
-    );
-    const sessionTypeCount = {};
-    for (const session of validSessions) {
-      const type = session.sessionType || "unknown";
-      sessionTypeCount[type] = (sessionTypeCount[type] || 0) + 1;
-    }
-    let totalPatterns = 0;
-    const patternsByType = {};
-    const patternsPath = path3.join(mnemeDir2, "patterns");
-    if (fs4.existsSync(patternsPath)) {
-      const patternFiles = listJsonFiles(patternsPath);
-      for (const filePath of patternFiles) {
-        try {
-          const content = fs4.readFileSync(filePath, "utf-8");
-          const data = JSON.parse(content);
-          const patterns = data.patterns || [];
-          for (const pattern of patterns) {
-            totalPatterns++;
-            const type = pattern.type || "unknown";
-            patternsByType[type] = (patternsByType[type] || 0) + 1;
-          }
-        } catch {
-        }
-      }
-    }
-    let totalRules = 0;
-    const rulesByType = {};
-    const rulesPath = path3.join(mnemeDir2, "rules");
-    if (fs4.existsSync(rulesPath)) {
-      for (const ruleType of ["dev-rules", "review-guidelines"]) {
-        const rulePath = path3.join(rulesPath, `${ruleType}.json`);
-        if (fs4.existsSync(rulePath)) {
-          try {
-            const content = fs4.readFileSync(rulePath, "utf-8");
-            const data = JSON.parse(content);
-            const items = data.items || [];
-            const activeItems = items.filter(
-              (item) => item.status === "active"
-            );
-            rulesByType[ruleType] = activeItems.length;
-            totalRules += activeItems.length;
-          } catch {
-          }
-        }
-      }
-    }
-    return c.json({
-      sessions: {
-        total: validSessions.length,
-        byType: sessionTypeCount
-      },
-      decisions: {
-        total: decisionsIndex.items.length
-      },
-      patterns: {
-        total: totalPatterns,
-        byType: patternsByType
-      },
-      rules: {
-        total: totalRules,
-        byType: rulesByType
-      }
-    });
-  } catch (error) {
-    console.error("Failed to get stats overview:", error);
-    return c.json({ error: "Failed to get stats overview" }, 500);
-  }
-});
-app.get("/api/stats/activity", async (c) => {
-  const mnemeDir2 = getMnemeDir();
-  const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
-  const MAX_DAYS = 365;
-  const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
-  try {
-    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
-    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
-    const now = /* @__PURE__ */ new Date();
-    const startDate = new Date(
-      now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1e3
-    );
-    const activityByDate = {};
-    for (let i = 0; i < safeDays; i++) {
-      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1e3);
-      const dateKey = d.toISOString().split("T")[0];
-      activityByDate[dateKey] = { sessions: 0, decisions: 0 };
-    }
-    for (const session of sessionsIndex.items) {
-      const dateKey = session.createdAt.split("T")[0];
-      if (activityByDate[dateKey]) {
-        activityByDate[dateKey].sessions += 1;
-      }
-    }
-    for (const decision of decisionsIndex.items) {
-      const dateKey = decision.createdAt.split("T")[0];
-      if (activityByDate[dateKey]) {
-        activityByDate[dateKey].decisions += 1;
-      }
-    }
-    const activity = Object.entries(activityByDate).map(([date, counts]) => ({ date, ...counts })).sort((a, b) => a.date.localeCompare(b.date));
-    return c.json({ activity, days: safeDays });
-  } catch (error) {
-    console.error("Failed to get activity stats:", error);
-    return c.json({ error: "Failed to get activity stats" }, 500);
-  }
-});
-app.get("/api/stats/tags", async (c) => {
-  const mnemeDir2 = getMnemeDir();
-  try {
-    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
-    const tagCount = {};
-    for (const session of sessionsIndex.items) {
-      for (const tag of session.tags || []) {
-        tagCount[tag] = (tagCount[tag] || 0) + 1;
-      }
-    }
-    const tags = Object.entries(tagCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 20);
-    return c.json({ tags });
-  } catch (error) {
-    console.error("Failed to get tag stats:", error);
-    return c.json({ error: "Failed to get tag stats" }, 500);
-  }
-});
 var patternsDir = () => path3.join(getMnemeDir(), "patterns");
-app.get("/api/patterns", async (c) => {
-  const dir = patternsDir();
-  try {
-    if (!fs4.existsSync(dir)) {
-      return c.json({ patterns: [] });
-    }
-    const files = listJsonFiles(dir);
-    const allPatterns = [];
-    for (const filePath of files) {
-      try {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        const data = JSON.parse(content);
-        const patterns = data.items || data.patterns || [];
-        for (const pattern of patterns) {
-          allPatterns.push({
-            ...pattern,
-            sourceFile: path3.basename(filePath, ".json")
-          });
-        }
-      } catch {
-      }
-    }
-    allPatterns.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return c.json({ patterns: allPatterns });
-  } catch (error) {
-    console.error("Failed to read patterns:", error);
-    return c.json({ error: "Failed to read patterns" }, 500);
-  }
-});
-app.get("/api/patterns/stats", async (c) => {
-  const dir = patternsDir();
-  try {
-    if (!fs4.existsSync(dir)) {
-      return c.json({ total: 0, byType: {}, bySource: {} });
-    }
-    const files = listJsonFiles(dir);
-    let total = 0;
-    const byType = {};
-    const bySource = {};
-    for (const filePath of files) {
-      try {
-        const content = fs4.readFileSync(filePath, "utf-8");
-        const data = JSON.parse(content);
-        const patterns = data.items || data.patterns || [];
-        const sourceName = path3.basename(filePath, ".json");
-        for (const pattern of patterns) {
-          total++;
-          const type = pattern.type || "unknown";
-          byType[type] = (byType[type] || 0) + 1;
-          bySource[sourceName] = (bySource[sourceName] || 0) + 1;
-        }
-      } catch {
-      }
-    }
-    return c.json({ total, byType, bySource });
-  } catch (error) {
-    console.error("Failed to get pattern stats:", error);
-    return c.json({ error: "Failed to get pattern stats" }, 500);
-  }
-});
-app.delete("/api/patterns/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
-  const sourceFile = c.req.query("source");
-  if (!id) {
-    return c.json({ error: "Invalid pattern id" }, 400);
-  }
-  if (!sourceFile) {
-    return c.json({ error: "Missing source file" }, 400);
-  }
-  const safeSource = sourceFile.replace(/[^a-zA-Z0-9_-]/g, "");
-  const filePath = path3.join(patternsDir(), `${safeSource}.json`);
-  if (!fs4.existsSync(filePath)) {
-    return c.json({ error: "Pattern source file not found" }, 404);
-  }
-  try {
-    const content = fs4.readFileSync(filePath, "utf-8");
-    const data = JSON.parse(content);
-    let deleted = 0;
-    if (Array.isArray(data.items)) {
-      const nextItems = data.items.filter((item) => item.id !== id);
-      deleted = data.items.length - nextItems.length;
-      data.items = nextItems;
-    } else if (Array.isArray(data.patterns)) {
-      const nextPatterns = data.patterns.filter((item) => item.id !== id);
-      deleted = data.patterns.length - nextPatterns.length;
-      data.patterns = nextPatterns;
-    } else {
-      return c.json({ error: "Invalid pattern file format" }, 500);
-    }
-    if (deleted === 0) {
-      return c.json({ error: "Pattern not found" }, 404);
-    }
-    fs4.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    writeAuditLog({
-      entity: "pattern",
-      action: "delete",
-      targetId: id,
-      detail: { sourceFile: safeSource }
-    });
-    return c.json({ deleted, id, sourceFile: safeSource });
-  } catch (error) {
-    console.error("Failed to delete pattern:", error);
-    return c.json({ error: "Failed to delete pattern" }, 500);
-  }
-});
+
+// dashboard/server/routes/analytics.ts
+import fs6 from "node:fs";
+import path5 from "node:path";
+
+// dashboard/server/routes/dev-rules.ts
+import fs5 from "node:fs";
+import path4 from "node:path";
 function collectDevRules() {
   const items = [];
   const decisionFiles = listDatedJsonFiles(
-    path3.join(getMnemeDir(), "decisions")
+    path4.join(getMnemeDir(), "decisions")
   );
   for (const filePath of decisionFiles) {
-    const sourceName = path3.basename(filePath, ".json");
+    const sourceName = path4.basename(filePath, ".json");
     const raw2 = safeParseJsonFile(filePath);
     if (!raw2) continue;
     const entries = [];
@@ -4655,7 +3490,7 @@ function collectDevRules() {
   }
   const patternFiles = listJsonFiles(patternsDir());
   for (const filePath of patternFiles) {
-    const sourceName = path3.basename(filePath, ".json");
+    const sourceName = path4.basename(filePath, ".json");
     const doc = safeParseJsonFile(filePath);
     const entries = doc?.items || doc?.patterns || [];
     for (const entry of entries) {
@@ -4681,7 +3516,7 @@ function collectDevRules() {
   }
   const ruleFileNames = ["dev-rules", "review-guidelines"];
   for (const ruleFile of ruleFileNames) {
-    const filePath = path3.join(rulesDir(), `${ruleFile}.json`);
+    const filePath = path4.join(rulesDir(), `${ruleFile}.json`);
     const doc = safeParseJsonFile(
       filePath
     );
@@ -4705,7 +3540,8 @@ function collectDevRules() {
   }
   return items;
 }
-app.get("/api/dev-rules", async (c) => {
+var devRules = new Hono2();
+devRules.get("/", async (c) => {
   try {
     const status = c.req.query("status");
     const items = collectDevRules();
@@ -4719,7 +3555,7 @@ app.get("/api/dev-rules", async (c) => {
     return c.json({ error: "Failed to read dev rules" }, 500);
   }
 });
-app.patch("/api/dev-rules/:type/:sourceFile/:id/status", async (c) => {
+devRules.patch("/:type/:sourceFile/:id/status", async (c) => {
   const type = c.req.param("type");
   const sourceFile = c.req.param("sourceFile");
   const id = sanitizeId(c.req.param("id"));
@@ -4734,20 +3570,20 @@ app.patch("/api/dev-rules/:type/:sourceFile/:id/status", async (c) => {
     let filePath;
     if (type === "decision") {
       const found = findJsonFileById(
-        path3.join(getMnemeDir(), "decisions"),
+        path4.join(getMnemeDir(), "decisions"),
         sourceFile
       );
       if (!found) return c.json({ error: "Source file not found" }, 404);
       filePath = found;
     } else if (type === "pattern") {
-      filePath = path3.join(patternsDir(), `${sourceFile}.json`);
+      filePath = path4.join(patternsDir(), `${sourceFile}.json`);
     } else {
-      filePath = path3.join(rulesDir(), `${sourceFile}.json`);
+      filePath = path4.join(rulesDir(), `${sourceFile}.json`);
     }
-    if (!fs4.existsSync(filePath)) {
+    if (!fs5.existsSync(filePath)) {
       return c.json({ error: "Source file not found" }, 404);
     }
-    const raw2 = JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+    const raw2 = JSON.parse(fs5.readFileSync(filePath, "utf-8"));
     const items = raw2.items || raw2.patterns || (raw2.id ? [raw2] : []);
     const target = items.find((item) => String(item.id) === id);
     if (!target) {
@@ -4758,7 +3594,7 @@ app.patch("/api/dev-rules/:type/:sourceFile/:id/status", async (c) => {
     if (!raw2.items && !raw2.patterns && raw2.id) {
       Object.assign(raw2, target);
     }
-    fs4.writeFileSync(filePath, `${JSON.stringify(raw2, null, 2)}
+    fs5.writeFileSync(filePath, `${JSON.stringify(raw2, null, 2)}
 `);
     writeAuditLog({
       entity: "dev-rule",
@@ -4772,7 +3608,7 @@ app.patch("/api/dev-rules/:type/:sourceFile/:id/status", async (c) => {
     return c.json({ error: "Failed to update status" }, 500);
   }
 });
-app.delete("/api/dev-rules/:type/:sourceFile/:id", async (c) => {
+devRules.delete("/:type/:sourceFile/:id", async (c) => {
   const type = c.req.param("type");
   const sourceFile = c.req.param("sourceFile");
   const id = sanitizeId(c.req.param("id"));
@@ -4783,20 +3619,20 @@ app.delete("/api/dev-rules/:type/:sourceFile/:id", async (c) => {
     let filePath;
     if (type === "decision") {
       const found = findJsonFileById(
-        path3.join(getMnemeDir(), "decisions"),
+        path4.join(getMnemeDir(), "decisions"),
         sourceFile
       );
       if (!found) return c.json({ error: "Source file not found" }, 404);
       filePath = found;
     } else if (type === "pattern") {
-      filePath = path3.join(patternsDir(), `${sourceFile}.json`);
+      filePath = path4.join(patternsDir(), `${sourceFile}.json`);
     } else {
-      filePath = path3.join(rulesDir(), `${sourceFile}.json`);
+      filePath = path4.join(rulesDir(), `${sourceFile}.json`);
     }
-    if (!fs4.existsSync(filePath)) {
+    if (!fs5.existsSync(filePath)) {
       return c.json({ error: "Source file not found" }, 404);
     }
-    const raw2 = JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+    const raw2 = JSON.parse(fs5.readFileSync(filePath, "utf-8"));
     const arrayKey = raw2.items ? "items" : raw2.patterns ? "patterns" : null;
     if (arrayKey) {
       const before = raw2[arrayKey].length;
@@ -4806,10 +3642,10 @@ app.delete("/api/dev-rules/:type/:sourceFile/:id", async (c) => {
       if (raw2[arrayKey].length === before) {
         return c.json({ error: "Item not found" }, 404);
       }
-      fs4.writeFileSync(filePath, `${JSON.stringify(raw2, null, 2)}
+      fs5.writeFileSync(filePath, `${JSON.stringify(raw2, null, 2)}
 `);
     } else if (raw2.id && String(raw2.id) === id) {
-      fs4.unlinkSync(filePath);
+      fs5.unlinkSync(filePath);
     } else {
       return c.json({ error: "Item not found" }, 404);
     }
@@ -4825,18 +3661,92 @@ app.delete("/api/dev-rules/:type/:sourceFile/:id", async (c) => {
     return c.json({ error: "Failed to delete dev rule" }, 500);
   }
 });
-app.get("/api/knowledge-graph", async (c) => {
+var dev_rules_default = devRules;
+
+// dashboard/server/routes/analytics.ts
+var analytics = new Hono2();
+analytics.get("/timeline", async (c) => {
+  const sessionsDir = path5.join(getMnemeDir(), "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    if (files.length === 0) {
+      return c.json({ timeline: {} });
+    }
+    const sessions2 = files.map((filePath) => {
+      const content = fs6.readFileSync(filePath, "utf-8");
+      return JSON.parse(content);
+    });
+    const grouped = {};
+    for (const session of sessions2) {
+      const date = session.createdAt?.split("T")[0] || "unknown";
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push({
+        id: session.id,
+        title: session.title || "Untitled",
+        sessionType: session.sessionType,
+        branch: session.context?.branch,
+        tags: session.tags || [],
+        createdAt: session.createdAt
+      });
+    }
+    const sortedTimeline = {};
+    for (const date of Object.keys(grouped).sort().reverse()) {
+      sortedTimeline[date] = grouped[date].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return c.json({ timeline: sortedTimeline });
+  } catch (error) {
+    console.error("Failed to build timeline:", error);
+    return c.json({ error: "Failed to build timeline" }, 500);
+  }
+});
+analytics.get("/tag-network", async (c) => {
+  const sessionsDir = path5.join(getMnemeDir(), "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    const tagCounts = /* @__PURE__ */ new Map();
+    const coOccurrences = /* @__PURE__ */ new Map();
+    for (const filePath of files) {
+      const content = fs6.readFileSync(filePath, "utf-8");
+      const session = JSON.parse(content);
+      const tags = session.tags || [];
+      for (const tag of tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+      for (let i = 0; i < tags.length; i++) {
+        for (let j = i + 1; j < tags.length; j++) {
+          const key = [tags[i], tags[j]].sort().join("|");
+          coOccurrences.set(key, (coOccurrences.get(key) || 0) + 1);
+        }
+      }
+    }
+    const nodes = Array.from(tagCounts.entries()).map(([id, count]) => ({
+      id,
+      count
+    }));
+    const edges = Array.from(coOccurrences.entries()).map(([key, weight]) => {
+      const [source, target] = key.split("|");
+      return { source, target, weight };
+    });
+    return c.json({ nodes, edges });
+  } catch (error) {
+    console.error("Failed to build tag network:", error);
+    return c.json({ error: "Failed to build tag network" }, 500);
+  }
+});
+analytics.get("/knowledge-graph", async (c) => {
   try {
     const mnemeDir2 = getMnemeDir();
     const sessionItems = readAllSessionIndexes(mnemeDir2).items;
-    const devRules = collectDevRules().filter(
+    const devRules2 = collectDevRules().filter(
       (item) => item.status === "approved"
     );
     const sessionDataMap = /* @__PURE__ */ new Map();
     for (const item of sessionItems.filter((i) => i.hasSummary)) {
       try {
-        const sessionPath = path3.join(mnemeDir2, item.filePath);
-        const raw2 = fs4.readFileSync(sessionPath, "utf-8");
+        const sessionPath = path5.join(mnemeDir2, item.filePath);
+        const raw2 = fs6.readFileSync(sessionPath, "utf-8");
         const session = JSON.parse(raw2);
         if (session.resumedFrom) {
           sessionDataMap.set(item.id, {
@@ -4861,7 +3771,7 @@ app.get("/api/knowledge-graph", async (c) => {
         appliedCount: null,
         acceptedCount: null
       })),
-      ...devRules.map((item) => ({
+      ...devRules2.map((item) => ({
         id: `rule:${item.type}:${item.id}`,
         entityType: "rule",
         entityId: item.id,
@@ -4932,6 +3842,323 @@ app.get("/api/knowledge-graph", async (c) => {
     return c.json({ error: "Failed to build knowledge graph" }, 500);
   }
 });
+analytics.get("/stats/overview", async (c) => {
+  const mnemeDir2 = getMnemeDir();
+  try {
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
+    const validSessions = sessionsIndex.items.filter(
+      (session) => session.interactionCount > 0 || session.hasSummary === true
+    );
+    const sessionTypeCount = {};
+    for (const session of validSessions) {
+      const type = session.sessionType || "unknown";
+      sessionTypeCount[type] = (sessionTypeCount[type] || 0) + 1;
+    }
+    let totalPatterns = 0;
+    const patternsByType = {};
+    const patternsPath = path5.join(mnemeDir2, "patterns");
+    if (fs6.existsSync(patternsPath)) {
+      const patternFiles = listJsonFiles(patternsPath);
+      for (const filePath of patternFiles) {
+        try {
+          const content = fs6.readFileSync(filePath, "utf-8");
+          const data = JSON.parse(content);
+          const patterns2 = data.patterns || [];
+          for (const pattern of patterns2) {
+            totalPatterns++;
+            const type = pattern.type || "unknown";
+            patternsByType[type] = (patternsByType[type] || 0) + 1;
+          }
+        } catch {
+        }
+      }
+    }
+    let totalRules = 0;
+    const rulesByType = {};
+    const rulesPath = path5.join(mnemeDir2, "rules");
+    if (fs6.existsSync(rulesPath)) {
+      for (const ruleType of ["dev-rules", "review-guidelines"]) {
+        const rulePath = path5.join(rulesPath, `${ruleType}.json`);
+        if (fs6.existsSync(rulePath)) {
+          try {
+            const content = fs6.readFileSync(rulePath, "utf-8");
+            const data = JSON.parse(content);
+            const items = data.items || [];
+            const activeItems = items.filter(
+              (item) => item.status === "active"
+            );
+            rulesByType[ruleType] = activeItems.length;
+            totalRules += activeItems.length;
+          } catch {
+          }
+        }
+      }
+    }
+    return c.json({
+      sessions: {
+        total: validSessions.length,
+        byType: sessionTypeCount
+      },
+      decisions: {
+        total: decisionsIndex.items.length
+      },
+      patterns: {
+        total: totalPatterns,
+        byType: patternsByType
+      },
+      rules: {
+        total: totalRules,
+        byType: rulesByType
+      }
+    });
+  } catch (error) {
+    console.error("Failed to get stats overview:", error);
+    return c.json({ error: "Failed to get stats overview" }, 500);
+  }
+});
+analytics.get("/stats/activity", async (c) => {
+  const mnemeDir2 = getMnemeDir();
+  const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
+  const MAX_DAYS = 365;
+  const safeDays = Math.min(Math.max(1, daysParam), MAX_DAYS);
+  try {
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
+    const now = /* @__PURE__ */ new Date();
+    const startDate = new Date(
+      now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1e3
+    );
+    const activityByDate = {};
+    for (let i = 0; i < safeDays; i++) {
+      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1e3);
+      const dateKey = d.toISOString().split("T")[0];
+      activityByDate[dateKey] = { sessions: 0, decisions: 0 };
+    }
+    for (const session of sessionsIndex.items) {
+      const dateKey = session.createdAt.split("T")[0];
+      if (activityByDate[dateKey]) {
+        activityByDate[dateKey].sessions += 1;
+      }
+    }
+    for (const decision of decisionsIndex.items) {
+      const dateKey = decision.createdAt.split("T")[0];
+      if (activityByDate[dateKey]) {
+        activityByDate[dateKey].decisions += 1;
+      }
+    }
+    const activity = Object.entries(activityByDate).map(([date, counts]) => ({ date, ...counts })).sort((a, b) => a.date.localeCompare(b.date));
+    return c.json({ activity, days: safeDays });
+  } catch (error) {
+    console.error("Failed to get activity stats:", error);
+    return c.json({ error: "Failed to get activity stats" }, 500);
+  }
+});
+analytics.get("/stats/tags", async (c) => {
+  const mnemeDir2 = getMnemeDir();
+  try {
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const tagCount = {};
+    for (const session of sessionsIndex.items) {
+      for (const tag of session.tags || []) {
+        tagCount[tag] = (tagCount[tag] || 0) + 1;
+      }
+    }
+    const tags = Object.entries(tagCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 20);
+    return c.json({ tags });
+  } catch (error) {
+    console.error("Failed to get tag stats:", error);
+    return c.json({ error: "Failed to get tag stats" }, 500);
+  }
+});
+var analytics_default = analytics;
+
+// dashboard/server/routes/decisions.ts
+import fs7 from "node:fs";
+import path6 from "node:path";
+
+// dashboard/server/lib/pagination.ts
+function parsePaginationParams(c) {
+  return {
+    page: Math.max(1, Number.parseInt(c.req.query("page") || "1", 10)),
+    limit: Math.min(
+      100,
+      Math.max(1, Number.parseInt(c.req.query("limit") || "20", 10))
+    ),
+    tag: c.req.query("tag"),
+    type: c.req.query("type"),
+    project: c.req.query("project"),
+    search: c.req.query("search"),
+    showUntitled: c.req.query("showUntitled") === "true",
+    allMonths: c.req.query("allMonths") === "true"
+  };
+}
+function paginateArray(items, page, limit) {
+  const total = items.length;
+  const totalPages = Math.ceil(total / limit);
+  const start = (page - 1) * limit;
+  const data = items.slice(start, start + limit);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1
+    }
+  };
+}
+
+// dashboard/server/routes/decisions.ts
+var decisions = new Hono2();
+decisions.get("/", async (c) => {
+  const useIndex = c.req.query("useIndex") !== "false";
+  const usePagination = c.req.query("paginate") !== "false";
+  const mnemeDir2 = getMnemeDir();
+  const params = parsePaginationParams(c);
+  try {
+    let items;
+    if (useIndex) {
+      const index = params.allMonths ? readAllDecisionIndexes(mnemeDir2) : readRecentDecisionIndexes(mnemeDir2);
+      items = index.items;
+    } else {
+      const decisionsDir = path6.join(mnemeDir2, "decisions");
+      const files = listDatedJsonFiles(decisionsDir);
+      if (files.length === 0) {
+        return usePagination ? c.json({
+          data: [],
+          pagination: {
+            page: 1,
+            limit: params.limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false
+          }
+        }) : c.json([]);
+      }
+      items = files.map((filePath) => {
+        const content = fs7.readFileSync(filePath, "utf-8");
+        return JSON.parse(content);
+      });
+      items.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    let filtered = items;
+    if (params.tag) {
+      filtered = filtered.filter(
+        (d) => d.tags?.includes(params.tag)
+      );
+    }
+    if (params.search) {
+      const query = params.search.toLowerCase();
+      filtered = filtered.filter((d) => {
+        const title = (d.title || "").toLowerCase();
+        const decision = (d.decision || "").toLowerCase();
+        return title.includes(query) || decision.includes(query);
+      });
+    }
+    if (!usePagination) {
+      return c.json(filtered);
+    }
+    return c.json(paginateArray(filtered, params.page, params.limit));
+  } catch (error) {
+    console.error("Failed to read decisions:", error);
+    return c.json({ error: "Failed to read decisions" }, 500);
+  }
+});
+decisions.get("/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const decisionsDir = path6.join(getMnemeDir(), "decisions");
+  try {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Decision not found" }, 404);
+    }
+    const decision = safeParseJsonFile(filePath);
+    if (!decision) {
+      return c.json({ error: "Failed to parse decision" }, 500);
+    }
+    return c.json(decision);
+  } catch (error) {
+    console.error("Failed to read decision:", error);
+    return c.json({ error: "Failed to read decision" }, 500);
+  }
+});
+decisions.get("/:id/impact", async (c) => {
+  const decisionId = sanitizeId(c.req.param("id"));
+  const sessionsDir = path6.join(getMnemeDir(), "sessions");
+  const patternsPath = path6.join(getMnemeDir(), "patterns");
+  try {
+    const impactedSessions = [];
+    const impactedPatterns = [];
+    const sessionFiles = listDatedJsonFiles(sessionsDir);
+    for (const filePath of sessionFiles) {
+      const content = fs7.readFileSync(filePath, "utf-8");
+      const session = JSON.parse(content);
+      const hasReference = session.relatedSessions?.includes(decisionId) || session.interactions?.some(
+        (i) => i.reasoning?.includes(decisionId) || i.choice?.includes(decisionId)
+      );
+      if (hasReference) {
+        impactedSessions.push({
+          id: session.id,
+          title: session.title || "Untitled"
+        });
+      }
+    }
+    const patternFiles = listJsonFiles(patternsPath);
+    for (const filePath of patternFiles) {
+      const content = fs7.readFileSync(filePath, "utf-8");
+      const data = JSON.parse(content);
+      const patterns2 = data.patterns || [];
+      for (const pattern of patterns2) {
+        if (pattern.sourceId?.includes(decisionId) || pattern.description?.includes(decisionId)) {
+          impactedPatterns.push({
+            id: `${path6.basename(filePath, ".json")}-${pattern.type}`,
+            description: pattern.description || "No description"
+          });
+        }
+      }
+    }
+    return c.json({
+      decisionId,
+      impactedSessions,
+      impactedPatterns
+    });
+  } catch (error) {
+    console.error("Failed to analyze decision impact:", error);
+    return c.json({ error: "Failed to analyze decision impact" }, 500);
+  }
+});
+decisions.delete("/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const decisionsDir = path6.join(getMnemeDir(), "decisions");
+  try {
+    const filePath = findJsonFileById(decisionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Decision not found" }, 404);
+    }
+    fs7.unlinkSync(filePath);
+    rebuildAllDecisionIndexes(getMnemeDir());
+    writeAuditLog({
+      entity: "decision",
+      action: "delete",
+      targetId: id
+    });
+    return c.json({ deleted: 1, id });
+  } catch (error) {
+    console.error("Failed to delete decision:", error);
+    return c.json({ error: "Failed to delete decision" }, 500);
+  }
+});
+var decisions_default = decisions;
+
+// dashboard/server/routes/export.ts
+import fs8 from "node:fs";
+import path7 from "node:path";
 function sessionToMarkdown(session) {
   const lines = [];
   lines.push(`# ${session.title || "Untitled Session"}`);
@@ -5068,15 +4295,16 @@ function decisionToMarkdown(decision) {
   lines.push("*Exported from mneme*");
   return lines.join("\n");
 }
-app.get("/api/export/sessions/:id/markdown", async (c) => {
+var exportRoutes = new Hono2();
+exportRoutes.get("/sessions/:id/markdown", async (c) => {
   const id = c.req.param("id");
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
+  const sessionsDir = path7.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
-    const content = fs4.readFileSync(filePath, "utf-8");
+    const content = fs8.readFileSync(filePath, "utf-8");
     const session = JSON.parse(content);
     const markdown = sessionToMarkdown(session);
     const filename = `session-${id}.md`;
@@ -5088,15 +4316,15 @@ app.get("/api/export/sessions/:id/markdown", async (c) => {
     return c.json({ error: "Failed to export session" }, 500);
   }
 });
-app.get("/api/export/decisions/:id/markdown", async (c) => {
+exportRoutes.get("/decisions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path3.join(getMnemeDir(), "decisions");
+  const decisionsDir = path7.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
-    const content = fs4.readFileSync(filePath, "utf-8");
+    const content = fs8.readFileSync(filePath, "utf-8");
     const decision = JSON.parse(content);
     const markdown = decisionToMarkdown(decision);
     const filename = `decision-${id}.md`;
@@ -5108,19 +4336,19 @@ app.get("/api/export/decisions/:id/markdown", async (c) => {
     return c.json({ error: "Failed to export decision" }, 500);
   }
 });
-app.post("/api/export/sessions/bulk", async (c) => {
+exportRoutes.post("/sessions/bulk", async (c) => {
   const body = await c.req.json();
   const { ids } = body;
   if (!ids || ids.length === 0) {
     return c.json({ error: "No session IDs provided" }, 400);
   }
-  const sessionsDir = path3.join(getMnemeDir(), "sessions");
+  const sessionsDir = path7.join(getMnemeDir(), "sessions");
   const markdowns = [];
   try {
     for (const id of ids) {
       const filePath = findJsonFileById(sessionsDir, id);
       if (filePath) {
-        const content = fs4.readFileSync(filePath, "utf-8");
+        const content = fs8.readFileSync(filePath, "utf-8");
         const session = JSON.parse(content);
         markdowns.push(sessionToMarkdown(session));
       }
@@ -5138,10 +4366,114 @@ app.post("/api/export/sessions/bulk", async (c) => {
     return c.json({ error: "Failed to export sessions" }, 500);
   }
 });
-app.get("/api/tags", async (c) => {
-  const tagsPath = path3.join(getMnemeDir(), "tags.json");
+var export_default = exportRoutes;
+
+// dashboard/server/routes/misc.ts
+import fs9 from "node:fs";
+import path8 from "node:path";
+
+// dashboard/server/lib/ai-summary.ts
+var getOpenAIKey = () => {
+  return process.env.OPENAI_API_KEY || null;
+};
+function getTopTags(sessions2, limit) {
+  const tagCount = {};
+  for (const session of sessions2) {
+    for (const tag of session.tags || []) {
+      tagCount[tag] = (tagCount[tag] || 0) + 1;
+    }
+  }
+  return Object.entries(tagCount).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, limit);
+}
+function getSessionTypeBreakdown(sessions2) {
+  const breakdown = {};
+  for (const session of sessions2) {
+    const type = session.sessionType || "unknown";
+    breakdown[type] = (breakdown[type] || 0) + 1;
+  }
+  return breakdown;
+}
+function buildSummaryPrompt(sessions2, decisions2) {
+  const sessionList = sessions2.map((s) => `- ${s.title} (${s.sessionType || "unknown"})`).join("\n");
+  const decisionList = decisions2.map((d) => `- ${d.title} (${d.status})`).join("\n");
+  return `Provide a brief weekly development summary (2-3 sentences) based on this activity:
+
+Sessions (${sessions2.length}):
+${sessionList || "None"}
+
+Decisions (${decisions2.length}):
+${decisionList || "None"}
+
+Focus on key accomplishments and patterns.`;
+}
+async function generateAISummary(apiKey, prompt) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+      temperature: 0.7
+    })
+  });
+  if (!response.ok) {
+    throw new Error("OpenAI API request failed");
+  }
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "Unable to generate summary.";
+}
+
+// dashboard/server/routes/misc.ts
+var misc = new Hono2();
+misc.get("/project", (c) => {
+  const projectRoot = getProjectRoot();
+  const projectName = path8.basename(projectRoot);
+  let repository = null;
   try {
-    if (!fs4.existsSync(tagsPath)) {
+    const gitConfigPath = path8.join(projectRoot, ".git", "config");
+    if (fs9.existsSync(gitConfigPath)) {
+      const gitConfig = fs9.readFileSync(gitConfigPath, "utf-8");
+      const match2 = gitConfig.match(
+        /url\s*=\s*.*[:/]([^/]+\/[^/]+?)(?:\.git)?$/m
+      );
+      if (match2) {
+        repository = match2[1];
+      }
+    }
+  } catch {
+  }
+  return c.json({
+    name: projectName,
+    path: projectRoot,
+    repository
+  });
+});
+misc.get("/info", async (c) => {
+  const projectRoot = getProjectRoot();
+  const mnemeDir2 = getMnemeDir();
+  return c.json({
+    projectRoot,
+    mnemeDir: mnemeDir2,
+    exists: fs9.existsSync(mnemeDir2)
+  });
+});
+misc.get("/current-user", async (c) => {
+  try {
+    const user = getCurrentUser();
+    return c.json({ user });
+  } catch (error) {
+    console.error("Failed to get current user:", error);
+    return c.json({ error: "Failed to get current user" }, 500);
+  }
+});
+misc.get("/tags", async (c) => {
+  const tagsPath = path8.join(getMnemeDir(), "tags.json");
+  try {
+    if (!fs9.existsSync(tagsPath)) {
       return c.json({ version: 1, tags: [] });
     }
     const tags = safeParseJsonFile(tagsPath);
@@ -5154,7 +4486,7 @@ app.get("/api/tags", async (c) => {
     return c.json({ error: "Failed to read tags" }, 500);
   }
 });
-app.get("/api/indexes/status", async (c) => {
+misc.get("/indexes/status", async (c) => {
   const mnemeDir2 = getMnemeDir();
   try {
     const sessionsIndex = readAllSessionIndexes(mnemeDir2);
@@ -5178,7 +4510,7 @@ app.get("/api/indexes/status", async (c) => {
     return c.json({ error: "Failed to get index status" }, 500);
   }
 });
-app.post("/api/indexes/rebuild", async (c) => {
+misc.post("/indexes/rebuild", async (c) => {
   const mnemeDir2 = getMnemeDir();
   try {
     const sessionIndexes = rebuildAllSessionIndexes(mnemeDir2);
@@ -5219,13 +4551,784 @@ app.post("/api/indexes/rebuild", async (c) => {
     );
   }
 });
-var distPath = path3.join(import.meta.dirname, "public");
-if (fs4.existsSync(distPath)) {
+misc.get("/summary/weekly", async (c) => {
+  const mnemeDir2 = getMnemeDir();
+  const apiKey = getOpenAIKey();
+  try {
+    const sessionsIndex = readRecentSessionIndexes(mnemeDir2);
+    const decisionsIndex = readRecentDecisionIndexes(mnemeDir2);
+    const now = /* @__PURE__ */ new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
+    const recentSessions = sessionsIndex.items.filter(
+      (s) => new Date(s.createdAt) >= weekAgo
+    );
+    const recentDecisions = decisionsIndex.items.filter(
+      (d) => new Date(d.createdAt) >= weekAgo
+    );
+    const summary = {
+      period: { start: weekAgo.toISOString(), end: now.toISOString() },
+      stats: {
+        sessions: recentSessions.length,
+        decisions: recentDecisions.length,
+        interactions: recentSessions.reduce(
+          (sum, s) => sum + (s.interactionCount || 0),
+          0
+        )
+      },
+      topTags: getTopTags(recentSessions, 5),
+      sessionTypes: getSessionTypeBreakdown(recentSessions),
+      aiSummary: null
+    };
+    if (apiKey && (recentSessions.length > 0 || recentDecisions.length > 0)) {
+      try {
+        const prompt = buildSummaryPrompt(recentSessions, recentDecisions);
+        summary.aiSummary = await generateAISummary(apiKey, prompt);
+      } catch (aiError) {
+        console.error("AI summary generation failed:", aiError);
+      }
+    }
+    return c.json(summary);
+  } catch (error) {
+    console.error("Failed to generate weekly summary:", error);
+    return c.json({ error: "Failed to generate weekly summary" }, 500);
+  }
+});
+misc.post("/summary/generate", async (c) => {
+  const apiKey = getOpenAIKey();
+  if (!apiKey) {
+    return c.json(
+      {
+        error: "AI summary requires OPENAI_API_KEY environment variable (optional feature)"
+      },
+      400
+    );
+  }
+  const body = await c.req.json();
+  const { sessionIds, prompt: customPrompt } = body;
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path8.join(mnemeDir2, "sessions");
+  try {
+    const sessions2 = [];
+    for (const id of sessionIds || []) {
+      const filePath = findJsonFileById(sessionsDir, id);
+      if (filePath) {
+        const content = fs9.readFileSync(filePath, "utf-8");
+        sessions2.push(JSON.parse(content));
+      }
+    }
+    if (sessions2.length === 0) {
+      return c.json({ error: "No sessions found" }, 404);
+    }
+    const prompt = customPrompt || `Summarize the following development sessions concisely:
+
+${sessions2.map((s) => `- ${s.title}: ${s.goal || "No goal specified"}`).join("\n")}`;
+    const summary = await generateAISummary(apiKey, prompt);
+    return c.json({ summary });
+  } catch (error) {
+    console.error("Failed to generate summary:", error);
+    return c.json({ error: "Failed to generate summary" }, 500);
+  }
+});
+var misc_default = misc;
+
+// dashboard/server/routes/patterns.ts
+import fs10 from "node:fs";
+import path9 from "node:path";
+var patterns = new Hono2();
+patterns.get("/", async (c) => {
+  const dir = patternsDir();
+  try {
+    if (!fs10.existsSync(dir)) {
+      return c.json({ patterns: [] });
+    }
+    const files = listJsonFiles(dir);
+    const allPatterns = [];
+    for (const filePath of files) {
+      try {
+        const content = fs10.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(content);
+        const items = data.items || data.patterns || [];
+        for (const pattern of items) {
+          allPatterns.push({
+            ...pattern,
+            sourceFile: path9.basename(filePath, ".json")
+          });
+        }
+      } catch {
+      }
+    }
+    allPatterns.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return c.json({ patterns: allPatterns });
+  } catch (error) {
+    console.error("Failed to read patterns:", error);
+    return c.json({ error: "Failed to read patterns" }, 500);
+  }
+});
+patterns.get("/stats", async (c) => {
+  const dir = patternsDir();
+  try {
+    if (!fs10.existsSync(dir)) {
+      return c.json({ total: 0, byType: {}, bySource: {} });
+    }
+    const files = listJsonFiles(dir);
+    let total = 0;
+    const byType = {};
+    const bySource = {};
+    for (const filePath of files) {
+      try {
+        const content = fs10.readFileSync(filePath, "utf-8");
+        const data = JSON.parse(content);
+        const items = data.items || data.patterns || [];
+        const sourceName = path9.basename(filePath, ".json");
+        for (const pattern of items) {
+          total++;
+          const type = pattern.type || "unknown";
+          byType[type] = (byType[type] || 0) + 1;
+          bySource[sourceName] = (bySource[sourceName] || 0) + 1;
+        }
+      } catch {
+      }
+    }
+    return c.json({ total, byType, bySource });
+  } catch (error) {
+    console.error("Failed to get pattern stats:", error);
+    return c.json({ error: "Failed to get pattern stats" }, 500);
+  }
+});
+patterns.delete("/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sourceFile = c.req.query("source");
+  if (!id) {
+    return c.json({ error: "Invalid pattern id" }, 400);
+  }
+  if (!sourceFile) {
+    return c.json({ error: "Missing source file" }, 400);
+  }
+  const safeSource = sourceFile.replace(/[^a-zA-Z0-9_-]/g, "");
+  const filePath = path9.join(patternsDir(), `${safeSource}.json`);
+  if (!fs10.existsSync(filePath)) {
+    return c.json({ error: "Pattern source file not found" }, 404);
+  }
+  try {
+    const content = fs10.readFileSync(filePath, "utf-8");
+    const data = JSON.parse(content);
+    let deleted = 0;
+    if (Array.isArray(data.items)) {
+      const nextItems = data.items.filter((item) => item.id !== id);
+      deleted = data.items.length - nextItems.length;
+      data.items = nextItems;
+    } else if (Array.isArray(data.patterns)) {
+      const nextPatterns = data.patterns.filter((item) => item.id !== id);
+      deleted = data.patterns.length - nextPatterns.length;
+      data.patterns = nextPatterns;
+    } else {
+      return c.json({ error: "Invalid pattern file format" }, 500);
+    }
+    if (deleted === 0) {
+      return c.json({ error: "Pattern not found" }, 404);
+    }
+    fs10.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    writeAuditLog({
+      entity: "pattern",
+      action: "delete",
+      targetId: id,
+      detail: { sourceFile: safeSource }
+    });
+    return c.json({ deleted, id, sourceFile: safeSource });
+  } catch (error) {
+    console.error("Failed to delete pattern:", error);
+    return c.json({ error: "Failed to delete pattern" }, 500);
+  }
+});
+var patterns_default = patterns;
+
+// dashboard/server/routes/rules.ts
+import fs11 from "node:fs";
+import path10 from "node:path";
+var rules = new Hono2();
+rules.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
+  const dir = rulesDir();
+  try {
+    const filePath = path10.join(dir, `${id}.json`);
+    if (!fs11.existsSync(filePath)) {
+      return c.json({ error: "Rules not found" }, 404);
+    }
+    const rulesData = safeParseJsonFile(filePath);
+    if (!rulesData) {
+      return c.json({ error: "Failed to parse rules" }, 500);
+    }
+    return c.json(rulesData);
+  } catch (error) {
+    console.error("Failed to read rules:", error);
+    return c.json({ error: "Failed to read rules" }, 500);
+  }
+});
+rules.put("/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
+  const dir = rulesDir();
+  try {
+    const filePath = path10.join(dir, `${id}.json`);
+    if (!fs11.existsSync(filePath)) {
+      return c.json({ error: "Rules not found" }, 404);
+    }
+    const body = await c.req.json();
+    if (!body.items || !Array.isArray(body.items)) {
+      return c.json({ error: "Invalid rules format" }, 400);
+    }
+    fs11.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "update",
+      targetId: id,
+      detail: { itemCount: body.items.length }
+    });
+    return c.json(body);
+  } catch (error) {
+    console.error("Failed to update rules:", error);
+    return c.json({ error: "Failed to update rules" }, 500);
+  }
+});
+rules.delete("/:id/:ruleId", async (c) => {
+  const id = c.req.param("id");
+  if (!ALLOWED_RULE_FILES.has(id)) {
+    return c.json({ error: "Invalid rule type" }, 400);
+  }
+  const ruleId = sanitizeId(c.req.param("ruleId"));
+  if (!ruleId) {
+    return c.json({ error: "Invalid rule id" }, 400);
+  }
+  const filePath = path10.join(rulesDir(), `${id}.json`);
+  if (!fs11.existsSync(filePath)) {
+    return c.json({ error: "Rules not found" }, 404);
+  }
+  try {
+    const doc = safeParseJsonFile(filePath);
+    if (!doc || !Array.isArray(doc.items)) {
+      return c.json({ error: "Invalid rules format" }, 500);
+    }
+    const nextItems = doc.items.filter((item) => item.id !== ruleId);
+    if (nextItems.length === doc.items.length) {
+      return c.json({ error: "Rule not found" }, 404);
+    }
+    const nextDoc = {
+      ...doc,
+      items: nextItems,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    fs11.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
+    writeAuditLog({
+      entity: "rule",
+      action: "delete",
+      targetId: ruleId,
+      detail: { ruleType: id }
+    });
+    return c.json({ deleted: 1, id: ruleId, ruleType: id });
+  } catch (error) {
+    console.error("Failed to delete rule:", error);
+    return c.json({ error: "Failed to delete rule" }, 500);
+  }
+});
+var rules_default = rules;
+
+// dashboard/server/routes/sessions.ts
+import fs12 from "node:fs";
+import path11 from "node:path";
+var sessions = new Hono2();
+sessions.get("/", async (c) => {
+  const useIndex = c.req.query("useIndex") !== "false";
+  const usePagination = c.req.query("paginate") !== "false";
+  const mnemeDir2 = getMnemeDir();
+  const params = parsePaginationParams(c);
+  try {
+    let items;
+    if (useIndex) {
+      const index = params.allMonths ? readAllSessionIndexes(mnemeDir2) : readRecentSessionIndexes(mnemeDir2);
+      items = index.items;
+    } else {
+      const sessionsDir = path11.join(mnemeDir2, "sessions");
+      const files = listDatedJsonFiles(sessionsDir);
+      if (files.length === 0) {
+        return usePagination ? c.json({
+          data: [],
+          pagination: {
+            page: 1,
+            limit: params.limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false
+          }
+        }) : c.json([]);
+      }
+      items = files.map((filePath) => {
+        const content = fs12.readFileSync(filePath, "utf-8");
+        return JSON.parse(content);
+      });
+      items.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    let filtered = items;
+    if (!params.showUntitled) {
+      filtered = filtered.filter((s) => s.hasSummary === true);
+    }
+    if (params.tag) {
+      filtered = filtered.filter(
+        (s) => s.tags?.includes(params.tag)
+      );
+    }
+    if (params.type) {
+      filtered = filtered.filter((s) => s.sessionType === params.type);
+    }
+    if (params.project) {
+      const projectQuery = params.project;
+      filtered = filtered.filter((s) => {
+        const ctx = s.context;
+        const projectName = ctx?.projectName;
+        const repository = ctx?.repository;
+        return projectName === projectQuery || repository === projectQuery || repository?.endsWith(`/${projectQuery}`);
+      });
+    }
+    if (params.search) {
+      const query = params.search.toLowerCase();
+      filtered = filtered.filter((s) => {
+        const title = (s.title || "").toLowerCase();
+        const goal = (s.goal || "").toLowerCase();
+        return title.includes(query) || goal.includes(query);
+      });
+    }
+    if (!usePagination) {
+      return c.json(filtered);
+    }
+    return c.json(paginateArray(filtered, params.page, params.limit));
+  } catch (error) {
+    console.error("Failed to read sessions:", error);
+    return c.json({ error: "Failed to read sessions" }, 500);
+  }
+});
+sessions.get("/graph", async (c) => {
+  const mnemeDir2 = getMnemeDir();
+  const showUntitled = c.req.query("showUntitled") === "true";
+  try {
+    const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+    const filteredItems = showUntitled ? sessionsIndex.items : sessionsIndex.items.filter((s) => s.hasSummary === true);
+    const nodes = filteredItems.map((session) => ({
+      id: session.id,
+      title: session.title,
+      type: session.sessionType || "unknown",
+      tags: session.tags || [],
+      createdAt: session.createdAt
+    }));
+    const tagToNodes = /* @__PURE__ */ new Map();
+    for (const item of filteredItems) {
+      for (const tag of item.tags || []) {
+        const list = tagToNodes.get(tag) || [];
+        list.push(item.id);
+        tagToNodes.set(tag, list);
+      }
+    }
+    const edgeMap = /* @__PURE__ */ new Map();
+    for (const [, nodeIds] of tagToNodes) {
+      for (let i = 0; i < nodeIds.length; i++) {
+        for (let j = i + 1; j < nodeIds.length; j++) {
+          const key = nodeIds[i] < nodeIds[j] ? `${nodeIds[i]}|${nodeIds[j]}` : `${nodeIds[j]}|${nodeIds[i]}`;
+          const existing = edgeMap.get(key);
+          if (existing) {
+            existing.weight++;
+          } else {
+            const [source, target] = key.split("|");
+            edgeMap.set(key, { source, target, weight: 1 });
+          }
+        }
+      }
+    }
+    const edges = Array.from(edgeMap.values());
+    return c.json({ nodes, edges });
+  } catch (error) {
+    console.error("Failed to build session graph:", error);
+    return c.json({ error: "Failed to build session graph" }, 500);
+  }
+});
+sessions.get("/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sessionsDir = path11.join(getMnemeDir(), "sessions");
+  try {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    const session = safeParseJsonFile(filePath);
+    if (!session) {
+      return c.json({ error: "Failed to parse session" }, 500);
+    }
+    return c.json(session);
+  } catch (error) {
+    console.error("Failed to read session:", error);
+    return c.json({ error: "Failed to read session" }, 500);
+  }
+});
+sessions.get("/:id/markdown", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const sessionsDir = path11.join(getMnemeDir(), "sessions");
+  try {
+    const jsonPath = findJsonFileById(sessionsDir, id);
+    if (!jsonPath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    const mdPath = jsonPath.replace(/\.json$/, ".md");
+    if (!fs12.existsSync(mdPath)) {
+      return c.json({ exists: false, content: null });
+    }
+    const content = fs12.readFileSync(mdPath, "utf-8");
+    return c.json({ exists: true, content });
+  } catch (error) {
+    console.error("Failed to read session markdown:", error);
+    return c.json({ error: "Failed to read session markdown" }, 500);
+  }
+});
+sessions.delete("/:id", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const dryRun = c.req.query("dry-run") === "true";
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path11.join(mnemeDir2, "sessions");
+  try {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    const sessionData = safeParseJsonFile(filePath);
+    const db = openLocalDatabase(getProjectRoot());
+    let interactionCount = 0;
+    if (db) {
+      interactionCount = countInteractions(db, { sessionId: id });
+      if (!dryRun) {
+        deleteInteractions(db, id);
+        deleteBackups(db, id);
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      fs12.unlinkSync(filePath);
+      const mdPath = filePath.replace(/\.json$/, ".md");
+      if (fs12.existsSync(mdPath)) {
+        fs12.unlinkSync(mdPath);
+      }
+      const sessionLinksDir = path11.join(mnemeDir2, "session-links");
+      const linkPath = path11.join(sessionLinksDir, `${id}.json`);
+      if (fs12.existsSync(linkPath)) {
+        fs12.unlinkSync(linkPath);
+      }
+      if (sessionData?.createdAt) {
+        const date = new Date(sessionData.createdAt);
+        const year = date.getFullYear().toString();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        rebuildSessionIndexForMonth(mnemeDir2, year, month);
+      }
+      writeAuditLog({
+        entity: "session",
+        action: "delete",
+        targetId: id
+      });
+    }
+    return c.json({
+      deleted: dryRun ? 0 : 1,
+      interactionsDeleted: dryRun ? 0 : interactionCount,
+      dryRun,
+      sessionId: id
+    });
+  } catch (error) {
+    console.error("Failed to delete session:", error);
+    return c.json({ error: "Failed to delete session" }, 500);
+  }
+});
+sessions.delete("/", async (c) => {
+  const dryRun = c.req.query("dry-run") === "true";
+  const projectFilter = c.req.query("project");
+  const repositoryFilter = c.req.query("repository");
+  const beforeFilter = c.req.query("before");
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path11.join(mnemeDir2, "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    const sessionsToDelete = [];
+    for (const filePath of files) {
+      try {
+        const content = fs12.readFileSync(filePath, "utf-8");
+        const session = JSON.parse(content);
+        let shouldDelete = true;
+        if (projectFilter) {
+          const sessionProject = session.context?.projectDir;
+          if (sessionProject !== projectFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (repositoryFilter && shouldDelete) {
+          const sessionRepo = session.context?.repository;
+          if (sessionRepo !== repositoryFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (beforeFilter && shouldDelete) {
+          const sessionDate = session.createdAt?.split("T")[0];
+          if (!sessionDate || sessionDate >= beforeFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (shouldDelete) {
+          sessionsToDelete.push({ id: session.id, path: filePath });
+        }
+      } catch {
+      }
+    }
+    let totalInteractions = 0;
+    const db = openLocalDatabase(getProjectRoot());
+    if (db) {
+      for (const session of sessionsToDelete) {
+        totalInteractions += countInteractions(db, { sessionId: session.id });
+      }
+      if (!dryRun) {
+        for (const session of sessionsToDelete) {
+          deleteInteractions(db, session.id);
+          deleteBackups(db, session.id);
+        }
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      for (const session of sessionsToDelete) {
+        fs12.unlinkSync(session.path);
+        const mdPath = session.path.replace(/\.json$/, ".md");
+        if (fs12.existsSync(mdPath)) {
+          fs12.unlinkSync(mdPath);
+        }
+        const sessionLinksDir = path11.join(mnemeDir2, "session-links");
+        const linkPath = path11.join(sessionLinksDir, `${session.id}.json`);
+        if (fs12.existsSync(linkPath)) {
+          fs12.unlinkSync(linkPath);
+        }
+        writeAuditLog({
+          entity: "session",
+          action: "delete",
+          targetId: session.id
+        });
+      }
+    }
+    return c.json({
+      deleted: dryRun ? 0 : sessionsToDelete.length,
+      interactionsDeleted: dryRun ? 0 : totalInteractions,
+      wouldDelete: sessionsToDelete.length,
+      dryRun,
+      filters: {
+        project: projectFilter || null,
+        repository: repositoryFilter || null,
+        before: beforeFilter || null
+      }
+    });
+  } catch (error) {
+    console.error("Failed to delete sessions:", error);
+    return c.json({ error: "Failed to delete sessions" }, 500);
+  }
+});
+sessions.get("/:id/interactions", async (c) => {
+  const id = sanitizeId(c.req.param("id"));
+  const mnemeDir2 = getMnemeDir();
+  const sessionLinksDir = path11.join(mnemeDir2, "session-links");
+  const sessionsDir = path11.join(mnemeDir2, "sessions");
+  try {
+    const sessionFilePath = findJsonFileById(sessionsDir, id);
+    let projectDir = getProjectRoot();
+    let primaryClaudeSessionId = null;
+    if (sessionFilePath) {
+      const sessionData = safeParseJsonFile(sessionFilePath);
+      if (sessionData?.context?.projectDir) {
+        projectDir = sessionData.context.projectDir;
+      }
+      if (sessionData?.sessionId) {
+        primaryClaudeSessionId = sessionData.sessionId;
+      }
+    }
+    const db = openLocalDatabase(projectDir);
+    if (!db) {
+      return c.json({ interactions: [], count: 0 });
+    }
+    let masterId = id;
+    const myLinkFile = path11.join(sessionLinksDir, `${id}.json`);
+    if (fs12.existsSync(myLinkFile)) {
+      try {
+        const myLinkData = JSON.parse(fs12.readFileSync(myLinkFile, "utf-8"));
+        if (myLinkData.masterSessionId) {
+          masterId = myLinkData.masterSessionId;
+        }
+      } catch {
+      }
+    }
+    const sessionIds = [masterId];
+    const claudeSessionIds = [];
+    if (primaryClaudeSessionId) {
+      claudeSessionIds.push(primaryClaudeSessionId);
+    }
+    if (masterId !== id) {
+      sessionIds.push(id);
+    }
+    if (fs12.existsSync(sessionLinksDir)) {
+      const linkFiles = fs12.readdirSync(sessionLinksDir);
+      for (const linkFile of linkFiles) {
+        if (!linkFile.endsWith(".json")) continue;
+        const linkPath = path11.join(sessionLinksDir, linkFile);
+        try {
+          const linkData = JSON.parse(fs12.readFileSync(linkPath, "utf-8"));
+          if (linkData.masterSessionId === masterId) {
+            const childId = linkFile.replace(".json", "");
+            if (!sessionIds.includes(childId)) {
+              sessionIds.push(childId);
+            }
+            const childSessionFile = findJsonFileById(sessionsDir, childId);
+            if (childSessionFile) {
+              const childData = safeParseJsonFile(
+                childSessionFile
+              );
+              if (childData?.sessionId) {
+                claudeSessionIds.push(childData.sessionId);
+              }
+            }
+          }
+        } catch {
+        }
+      }
+    }
+    const sessionFiles = listDatedJsonFiles(sessionsDir);
+    for (const sessionFile of sessionFiles) {
+      try {
+        const sessionData = JSON.parse(fs12.readFileSync(sessionFile, "utf-8"));
+        if (sessionData.resumedFrom === masterId && sessionData.id !== masterId) {
+          if (!sessionIds.includes(sessionData.id)) {
+            sessionIds.push(sessionData.id);
+          }
+          if (sessionData.sessionId) {
+            claudeSessionIds.push(sessionData.sessionId);
+          }
+        }
+      } catch {
+      }
+    }
+    const interactions = claudeSessionIds.length > 0 ? getInteractionsByClaudeSessionIds(db, claudeSessionIds) : getInteractionsBySessionIds(db, sessionIds);
+    db.close();
+    const groupedInteractions = [];
+    let currentInteraction = null;
+    for (const interaction of interactions) {
+      if (interaction.role === "user") {
+        if (currentInteraction) {
+          groupedInteractions.push(currentInteraction);
+        }
+        let hasPlanMode;
+        let planTools;
+        let toolsUsed;
+        let toolDetails;
+        let inPlanMode;
+        let slashCommand;
+        let toolResults;
+        let progressEvents;
+        if (interaction.tool_calls) {
+          try {
+            const metadata = JSON.parse(interaction.tool_calls);
+            if (metadata.hasPlanMode) {
+              hasPlanMode = true;
+              planTools = metadata.planTools || [];
+            }
+            if (metadata.inPlanMode) {
+              inPlanMode = true;
+            }
+            if (metadata.toolsUsed && Array.isArray(metadata.toolsUsed) && metadata.toolsUsed.length > 0) {
+              toolsUsed = metadata.toolsUsed;
+            }
+            if (metadata.toolDetails && Array.isArray(metadata.toolDetails) && metadata.toolDetails.length > 0) {
+              toolDetails = metadata.toolDetails;
+            }
+            if (metadata.slashCommand) {
+              slashCommand = metadata.slashCommand;
+            }
+            if (metadata.toolResults && Array.isArray(metadata.toolResults) && metadata.toolResults.length > 0) {
+              toolResults = metadata.toolResults;
+            }
+            if (metadata.progressEvents && Array.isArray(metadata.progressEvents) && metadata.progressEvents.length > 0) {
+              progressEvents = metadata.progressEvents;
+            }
+          } catch {
+          }
+        }
+        currentInteraction = {
+          id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
+          timestamp: interaction.timestamp,
+          user: interaction.content,
+          assistant: "",
+          thinking: null,
+          isCompactSummary: !!interaction.is_compact_summary,
+          ...hasPlanMode !== void 0 && { hasPlanMode },
+          ...planTools !== void 0 && planTools.length > 0 && { planTools },
+          ...toolsUsed !== void 0 && toolsUsed.length > 0 && { toolsUsed },
+          ...toolDetails !== void 0 && toolDetails.length > 0 && { toolDetails },
+          ...interaction.agent_id && { agentId: interaction.agent_id },
+          ...interaction.agent_type && { agentType: interaction.agent_type },
+          ...inPlanMode && { inPlanMode },
+          ...slashCommand && { slashCommand },
+          ...toolResults !== void 0 && toolResults.length > 0 && { toolResults },
+          ...progressEvents !== void 0 && progressEvents.length > 0 && { progressEvents }
+        };
+      } else if (interaction.role === "assistant" && currentInteraction) {
+        currentInteraction.assistant = interaction.content;
+        currentInteraction.thinking = interaction.thinking || null;
+      }
+    }
+    if (currentInteraction) {
+      groupedInteractions.push(currentInteraction);
+    }
+    return c.json({
+      interactions: groupedInteractions,
+      count: groupedInteractions.length
+    });
+  } catch (error) {
+    console.error("Failed to get session interactions:", error);
+    return c.json({ error: "Failed to get session interactions" }, 500);
+  }
+});
+var sessions_default = sessions;
+
+// dashboard/server/index.ts
+var app = new Hono2();
+app.use(
+  "/api/*",
+  cors({
+    origin: (origin) => {
+      if (!origin) return void 0;
+      if (origin.startsWith("http://localhost:")) return origin;
+      return null;
+    }
+  })
+);
+app.route("/api/sessions", sessions_default);
+app.route("/api/decisions", decisions_default);
+app.route("/api/rules", rules_default);
+app.route("/api/patterns", patterns_default);
+app.route("/api/dev-rules", dev_rules_default);
+app.route("/api/export", export_default);
+app.route("/api", analytics_default);
+app.route("/api", misc_default);
+var distPath = path12.join(import.meta.dirname, "public");
+if (fs13.existsSync(distPath)) {
   app.use("/*", serveStatic({ root: distPath }));
   app.get("*", async (c) => {
-    const indexPath = path3.join(distPath, "index.html");
-    if (fs4.existsSync(indexPath)) {
-      const content = fs4.readFileSync(indexPath, "utf-8");
+    const indexPath = path12.join(distPath, "index.html");
+    if (fs13.existsSync(indexPath)) {
+      const content = fs13.readFileSync(indexPath, "utf-8");
       return c.html(content);
     }
     return c.notFound();
@@ -5234,7 +5337,7 @@ if (fs4.existsSync(distPath)) {
 var requestedPort = parseInt(process.env.PORT || "7777", 10);
 var maxPortAttempts = 10;
 var mnemeDir = getMnemeDir();
-if (fs4.existsSync(mnemeDir)) {
+if (fs13.existsSync(mnemeDir)) {
   try {
     const sessionsIndex = readRecentSessionIndexes(mnemeDir, 1);
     const decisionsIndex = readRecentDecisionIndexes(mnemeDir, 1);

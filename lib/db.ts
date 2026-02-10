@@ -267,6 +267,27 @@ export function getInteractionsBySessionIds(
 }
 
 /**
+ * Get interactions for multiple sessions filtered by claude_session_ids (full UUIDs).
+ * More precise than session_id (8-char) matching - prevents cross-session data leaks.
+ */
+export function getInteractionsByClaudeSessionIds(
+  db: DatabaseSyncType,
+  claudeSessionIds: string[],
+): Interaction[] {
+  if (claudeSessionIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = claudeSessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE claude_session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...claudeSessionIds) as unknown as Interaction[];
+}
+
+/**
  * Get interactions for multiple sessions owned by specific user
  * This should be used for API endpoints to ensure security.
  */

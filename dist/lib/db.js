@@ -146,6 +146,18 @@ function getInteractionsBySessionIds(db, sessionIds) {
   `);
   return stmt.all(...sessionIds);
 }
+function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
+  if (claudeSessionIds.length === 0) {
+    return [];
+  }
+  const placeholders = claudeSessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE claude_session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...claudeSessionIds);
+}
 function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
   if (sessionIds.length === 0) {
     return [];
@@ -322,6 +334,7 @@ export {
   getCurrentUser,
   getDbStats,
   getInteractions,
+  getInteractionsByClaudeSessionIds,
   getInteractionsByOwner,
   getInteractionsByProject,
   getInteractionsByRepository,

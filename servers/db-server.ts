@@ -827,12 +827,12 @@ async function saveInteractions(
     };
   }
 
-  // Delete existing interactions for this session
+  // Delete existing interactions for this session (same claude_session_id only)
   try {
     const deleteStmt = database.prepare(
-      "DELETE FROM interactions WHERE session_id = ?",
+      "DELETE FROM interactions WHERE claude_session_id = ?",
     );
-    deleteStmt.run(sessionId);
+    deleteStmt.run(claudeSessionId);
   } catch {
     // Ignore delete errors
   }
@@ -1254,9 +1254,88 @@ server.registerTool(
         .describe(
           "Session type (e.g. implementation, research, bugfix, refactor)",
         ),
+      plan: z
+        .object({
+          goals: z.array(z.string()).optional().describe("Session goals"),
+          tasks: z
+            .array(z.string())
+            .optional()
+            .describe('Task list (prefix with "[x] " for completed)'),
+          remaining: z.array(z.string()).optional().describe("Remaining tasks"),
+        })
+        .optional()
+        .describe("Session plan with tasks and progress"),
+      discussions: z
+        .array(
+          z.object({
+            topic: z.string().describe("Discussion topic"),
+            decision: z.string().describe("Final decision"),
+            reasoning: z.string().optional().describe("Reasoning"),
+            alternatives: z
+              .array(z.string())
+              .optional()
+              .describe("Considered alternatives"),
+          }),
+        )
+        .optional()
+        .describe("Design discussions and decisions made during session"),
+      errors: z
+        .array(
+          z.object({
+            error: z.string().describe("Error message or description"),
+            context: z.string().optional().describe("Where/when it occurred"),
+            solution: z.string().optional().describe("How it was resolved"),
+            files: z
+              .array(z.string())
+              .optional()
+              .describe("Related file paths"),
+          }),
+        )
+        .optional()
+        .describe("Errors encountered and their solutions"),
+      handoff: z
+        .object({
+          stoppedReason: z
+            .string()
+            .optional()
+            .describe("Why the session stopped"),
+          notes: z
+            .array(z.string())
+            .optional()
+            .describe("Important notes for next session"),
+          nextSteps: z.array(z.string()).optional().describe("What to do next"),
+        })
+        .optional()
+        .describe("Handoff context for session continuity"),
+      references: z
+        .array(
+          z.object({
+            type: z
+              .string()
+              .optional()
+              .describe('Reference type: "doc", "file", "url"'),
+            url: z.string().optional().describe("URL if external"),
+            path: z.string().optional().describe("File path if local"),
+            title: z.string().optional().describe("Title or label"),
+            description: z.string().optional().describe("Brief description"),
+          }),
+        )
+        .optional()
+        .describe("Documents and resources referenced during session"),
     },
   },
-  async ({ claudeSessionId, title, summary, tags, sessionType }) => {
+  async ({
+    claudeSessionId,
+    title,
+    summary,
+    tags,
+    sessionType,
+    plan,
+    discussions,
+    errors,
+    handoff,
+    references,
+  }) => {
     if (!claudeSessionId.trim()) {
       return fail("claudeSessionId must not be empty.");
     }
@@ -1281,6 +1360,18 @@ server.registerTool(
       return null;
     };
     sessionFile = searchDir(sessionsDir);
+
+    // Guard: don't overwrite a session file that belongs to a different Claude session
+    if (sessionFile) {
+      const existingData = readJsonFile<{ sessionId?: string }>(sessionFile);
+      if (
+        existingData?.sessionId &&
+        existingData.sessionId !== claudeSessionId
+      ) {
+        // Different Claude session has the same short ID - create a new file instead
+        sessionFile = null;
+      }
+    }
 
     // Create session file if not found (SessionStart hook may not have run)
     if (!sessionFile) {
@@ -1324,6 +1415,11 @@ server.registerTool(
     data.updatedAt = new Date().toISOString();
     if (tags) data.tags = tags;
     if (sessionType) data.sessionType = sessionType;
+    if (plan) data.plan = plan;
+    if (discussions && discussions.length > 0) data.discussions = discussions;
+    if (errors && errors.length > 0) data.errors = errors;
+    if (handoff) data.handoff = handoff;
+    if (references && references.length > 0) data.references = references;
 
     // Enrich with transcript metrics/files if available
     const transcriptPath = getTranscriptPath(claudeSessionId);

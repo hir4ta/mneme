@@ -22,8 +22,8 @@ export function GuideWorkflowPage() {
   }>;
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 space-y-6 pb-4">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="shrink-0 space-y-4">
         <div>
           <h1 className="text-2xl font-bold">{t("workflow.title")}</h1>
           <p className="text-sm text-muted-foreground">
@@ -34,7 +34,7 @@ export function GuideWorkflowPage() {
         <GuideNav />
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto pt-6 space-y-6">
         <p className="text-stone-600 dark:text-stone-300">
           {t("workflow.intro")}
         </p>

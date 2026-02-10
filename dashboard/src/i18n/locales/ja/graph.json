@@ -72,7 +72,12 @@
     "noSummary": "要約がありません",
     "relatedNodes": "関連ノード",
     "focusThisNode": "このノードを中心表示",
-    "sharedTagsCount": "共有タグ: {{count}}"
+    "sharedTagsCount": "共有タグ: {{count}}",
+    "unitType": {
+      "decision": "意思決定",
+      "pattern": "パターン",
+      "rule": "開発ルール"
+    }
   },
   "gaps": {
     "title": "構造ギャップ",

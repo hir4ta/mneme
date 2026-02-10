@@ -14,7 +14,6 @@ describe("search-core", () => {
     fs.mkdirSync(path.join(mnemeDir, "sessions", "2026", "02"), {
       recursive: true,
     });
-    fs.mkdirSync(path.join(mnemeDir, "units"), { recursive: true });
     fs.writeFileSync(
       path.join(mnemeDir, "tags.json"),
       JSON.stringify(
@@ -47,35 +46,13 @@ describe("search-core", () => {
         2,
       ),
     );
-
-    fs.writeFileSync(
-      path.join(mnemeDir, "units", "units.json"),
-      JSON.stringify(
-        {
-          items: [
-            {
-              id: "unit-auth-001",
-              type: "rule",
-              sourceType: "rule",
-              sourceId: "dev-rules:jwt-auth",
-              status: "approved",
-              title: "JWT auth guardrails",
-              summary: "Use stateless JWT tokens and validate key format.",
-              tags: ["auth"],
-            },
-          ],
-        },
-        null,
-        2,
-      ),
-    );
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("searches across sessions/approved-units with alias expansion", () => {
+  it("searches sessions with alias expansion", () => {
     const results = searchKnowledge({
       query: "authentication",
       mnemeDir,
@@ -84,9 +61,9 @@ describe("search-core", () => {
       limit: 10,
     });
 
-    const types = new Set(results.map((result) => result.type));
-    expect(types.has("session")).toBe(true);
-    expect(types.has("unit")).toBe(true);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].type).toBe("session");
+    expect(results[0].id).toBe("sess1234");
   });
 
   it("uses interaction fallback query with OR LIKE clauses", () => {

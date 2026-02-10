@@ -132,6 +132,8 @@ Select a session to resume (1-2), or enter ID:
 
 ### Resume View
 
+Display structured context in this priority order (most critical for continuity first):
+
 ```
 Resuming session "JWT authentication implementation"
 
@@ -140,15 +142,20 @@ Session chain: current ← abc123
 
 ---
 
-## Summary:
+## Handoff (引き継ぎ):
 
-  Title: JWT authentication implementation
-  Goal: Implement JWT-based auth with refresh token support
-  Outcome: success
-  Type: implementation
+  Stopped: Test creation postponed to next session
+  Notes:
+    - vitest configured
+    - Mock key pair in test/fixtures/
+  Next Steps:
+    - Create jwt.test.ts
+    - Add E2E tests
 
-## Plan:
+## Plan (計画と進捗):
 
+  Goals:
+    - Implement JWT-based auth with refresh token support
   Tasks:
     - [x] JWT signing method selection
     - [x] Middleware implementation
@@ -156,36 +163,39 @@ Session chain: current ← abc123
   Remaining:
     - Add tests
 
-## Discussions:
+## Errors (遭遇したエラー):
 
-  - Signing algorithm: RS256 (Security considerations for production)
+  - `secretOrPrivateKey must be asymmetric`
+    Context: RS256 signing requires asymmetric key pair
+    Solution: Generate RS256 key pair with openssl
 
-## Handoff:
+## Discussions (設計議論):
 
-  Stopped: Test creation postponed to next session
-  Notes:
-    - vitest configured
-    - Mock key pair in test/fixtures/
-  Next:
-    - Create jwt.test.ts
-    - Add E2E tests
+  - **Signing algorithm**: RS256 (Security considerations for production)
+    Alternatives: HS256 (simpler but requires shared secret)
 
-## Errors:
+## Summary:
 
-  - secretOrPrivateKey must be asymmetric → Generate RS256 key pair
+  Title: JWT authentication implementation
+  Goal: Implement JWT-based auth with refresh token support
+  Outcome: success
+  Type: implementation
+
+## References:
+
+  - [RFC 7519 - JSON Web Token](https://tools.ietf.org/html/rfc7519)
+  - File: src/middleware/auth.ts
 
 ---
 
-## Interactions Log (from SQLite):
+## Recent Interactions (from SQLite):
 
 [int-001] 2026-01-24T10:00:00Z
   User: Implement authentication
-  Thinking: JWT would be better for microservices...
   Assistant: Implemented JWT auth with RS256 signing
 
 [int-002] 2026-01-24T10:30:00Z
   User: What should be the refresh token expiry?
-  Thinking: Balance between security and UX...
   Assistant: Set to 7 days
 
 (Note: If this session was created by another user, interactions won't be available - only metadata from JSON)
@@ -195,6 +205,14 @@ Session chain: current ← abc123
 Ready to continue?
 ```
 
+**Display rules:**
+- Only show sections that have data (skip empty/missing sections)
+- **Handoff first**: most critical for immediate context restoration
+- **Plan second**: shows what's done and what remains
+- **Errors third**: prevents re-encountering solved problems
+- **Discussions fourth**: preserves decision rationale
+- Interactions are supplementary — the structured data above is the primary context
+
 ## Failure conditions
 
 - Target session not found.
@@ -202,24 +220,47 @@ Ready to continue?
 
 ## Context Injection
 
-When resuming, inject context from JSON (metadata) and SQLite (interactions):
+When resuming, inject context from JSON (metadata) and SQLite (interactions).
+**Priority order** (most critical for continuity first):
 
-### Structured Data (from JSON, set by /mneme:save):
-1. **Summary**: title, goal, outcome, description, sessionType
-2. **Plan**: tasks, remaining → what was planned and what's left
-3. **Discussions**: decisions with reasoning and alternatives
-4. **Code examples**: significant changes with before/after
-5. **Errors**: problems encountered and solutions
-6. **Handoff**: stoppedReason, notes, nextSteps → critical for continuity
-7. **References**: documents and resources used
+### 1. Handoff (from JSON — critical for continuity)
+- `stoppedReason`: Why the previous session ended
+- `notes`: Important context that must be carried over
+- `nextSteps`: Concrete actions to take next
+- **This is the single most important section for seamless resume.**
 
-### Log Data (from JSON, auto-saved by SessionEnd):
-8. **Title/Tags**: For quick context
-9. **Files**: What files were changed
-10. **Metrics**: Message counts, tool usage
+### 2. Plan (from JSON — shows progress)
+- `goals`: What the session aimed to accomplish
+- `tasks`: What was done (marked `[x]`) and what wasn't
+- `remaining`: Explicitly listed remaining work
 
-### Interactions (from SQLite, auto-saved by SessionEnd):
-11. **Interactions**: Full conversation log with thinking (private, local only)
+### 3. Errors (from JSON — prevents re-encountering solved problems)
+- `error`: What went wrong
+- `solution`: How it was resolved
+- `files`: Which files were involved
+
+### 4. Discussions (from JSON — preserves decision rationale)
+- `topic` + `decision`: What was decided
+- `reasoning`: Why that choice was made
+- `alternatives`: What was considered but rejected
+- **Critical for avoiding re-discussion of settled decisions.**
+
+### 5. Summary (from JSON — high-level context)
+- `title`, `goal`, `outcome`, `description`, `sessionType`
+- `tags`, `files`, `metrics`
+
+### 6. References (from JSON — external resources)
+- URLs of official docs, Stack Overflow answers, etc.
+- Local file paths that were important
+
+### 7. Interactions (from SQLite — detailed conversation log)
+- Full conversation history with thinking (private, local only)
+- Supplementary to structured data above
+
+**Display rules:**
+- Only show sections that have data (skip empty/missing fields)
+- Structured data (1-6) takes priority over raw interactions (7)
+- If structured data is rich, interactions can be summarized or truncated
 
 **Privacy Note**: Interactions are stored in project-local SQLite (`.mneme/local.db`) and are private to each developer.
 If you're resuming a session created by another team member, interactions won't be available.

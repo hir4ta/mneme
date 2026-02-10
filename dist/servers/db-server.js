@@ -30899,9 +30899,9 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
   }
   try {
     const deleteStmt = database.prepare(
-      "DELETE FROM interactions WHERE session_id = ?"
+      "DELETE FROM interactions WHERE claude_session_id = ?"
     );
-    deleteStmt.run(sessionId);
+    deleteStmt.run(claudeSessionId);
   } catch {
   }
   const insertStmt = database.prepare(`
@@ -31201,10 +31201,56 @@ server.registerTool(
       tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
       sessionType: external_exports3.string().optional().describe(
         "Session type (e.g. implementation, research, bugfix, refactor)"
-      )
+      ),
+      plan: external_exports3.object({
+        goals: external_exports3.array(external_exports3.string()).optional().describe("Session goals"),
+        tasks: external_exports3.array(external_exports3.string()).optional().describe('Task list (prefix with "[x] " for completed)'),
+        remaining: external_exports3.array(external_exports3.string()).optional().describe("Remaining tasks")
+      }).optional().describe("Session plan with tasks and progress"),
+      discussions: external_exports3.array(
+        external_exports3.object({
+          topic: external_exports3.string().describe("Discussion topic"),
+          decision: external_exports3.string().describe("Final decision"),
+          reasoning: external_exports3.string().optional().describe("Reasoning"),
+          alternatives: external_exports3.array(external_exports3.string()).optional().describe("Considered alternatives")
+        })
+      ).optional().describe("Design discussions and decisions made during session"),
+      errors: external_exports3.array(
+        external_exports3.object({
+          error: external_exports3.string().describe("Error message or description"),
+          context: external_exports3.string().optional().describe("Where/when it occurred"),
+          solution: external_exports3.string().optional().describe("How it was resolved"),
+          files: external_exports3.array(external_exports3.string()).optional().describe("Related file paths")
+        })
+      ).optional().describe("Errors encountered and their solutions"),
+      handoff: external_exports3.object({
+        stoppedReason: external_exports3.string().optional().describe("Why the session stopped"),
+        notes: external_exports3.array(external_exports3.string()).optional().describe("Important notes for next session"),
+        nextSteps: external_exports3.array(external_exports3.string()).optional().describe("What to do next")
+      }).optional().describe("Handoff context for session continuity"),
+      references: external_exports3.array(
+        external_exports3.object({
+          type: external_exports3.string().optional().describe('Reference type: "doc", "file", "url"'),
+          url: external_exports3.string().optional().describe("URL if external"),
+          path: external_exports3.string().optional().describe("File path if local"),
+          title: external_exports3.string().optional().describe("Title or label"),
+          description: external_exports3.string().optional().describe("Brief description")
+        })
+      ).optional().describe("Documents and resources referenced during session")
     }
   },
-  async ({ claudeSessionId, title, summary, tags, sessionType }) => {
+  async ({
+    claudeSessionId,
+    title,
+    summary,
+    tags,
+    sessionType,
+    plan,
+    discussions,
+    errors,
+    handoff,
+    references
+  }) => {
     if (!claudeSessionId.trim()) {
       return fail("claudeSessionId must not be empty.");
     }
@@ -31226,6 +31272,12 @@ server.registerTool(
       return null;
     };
     sessionFile = searchDir(sessionsDir);
+    if (sessionFile) {
+      const existingData = readJsonFile(sessionFile);
+      if (existingData?.sessionId && existingData.sessionId !== claudeSessionId) {
+        sessionFile = null;
+      }
+    }
     if (!sessionFile) {
       const now = /* @__PURE__ */ new Date();
       const yearMonth = path4.join(
@@ -31264,6 +31316,11 @@ server.registerTool(
     data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     if (tags) data.tags = tags;
     if (sessionType) data.sessionType = sessionType;
+    if (plan) data.plan = plan;
+    if (discussions && discussions.length > 0) data.discussions = discussions;
+    if (errors && errors.length > 0) data.errors = errors;
+    if (handoff) data.handoff = handoff;
+    if (references && references.length > 0) data.references = references;
     const transcriptPath = getTranscriptPath(claudeSessionId);
     if (transcriptPath) {
       try {
