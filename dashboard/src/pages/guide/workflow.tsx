@@ -103,11 +103,11 @@ export function GuideWorkflowPage() {
                     <div className="w-0.5 flex-1 bg-stone-200 dark:bg-stone-700" />
                   )}
                 </div>
-                <div className={`flex-1 ${index < dataFlowSteps.length - 1 ? "pb-6" : ""}`}>
+                <div
+                  className={`flex-1 ${index < dataFlowSteps.length - 1 ? "pb-6" : ""}`}
+                >
                   <h4 className="font-medium text-sm">{step.event}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {step.action}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{step.action}</p>
                 </div>
               </div>
             ))}
