@@ -3107,8 +3107,17 @@ function rebuildSessionIndexForMonth(mnemeDir2, year, month) {
 }
 function rebuildDecisionIndexForMonth(mnemeDir2, year, month) {
   const index = buildDecisionIndexForMonth(mnemeDir2, year, month);
+  const indexPath = path2.join(
+    mnemeDir2,
+    INDEXES_DIR,
+    "decisions",
+    year,
+    `${month}.json`
+  );
   if (index.items.length > 0) {
     writeDecisionIndexForMonth(mnemeDir2, year, month, index);
+  } else if (fs3.existsSync(indexPath)) {
+    fs3.unlinkSync(indexPath);
   }
   return index;
 }
@@ -3480,7 +3489,7 @@ function collectDevRules() {
           entry.text || entry.decision || entry.reasoning || entry.title || ""
         ),
         tags: Array.isArray(entry.tags) ? entry.tags.map((t) => String(t)) : [],
-        status: entry.status || "approved",
+        status: entry.status || "draft",
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || raw2.createdAt || ""),
@@ -3506,7 +3515,7 @@ function collectDevRules() {
           entry.solution || entry.description || entry.errorPattern || ""
         ),
         tags: Array.isArray(entry.tags) ? entry.tags.map((t) => String(t)) : [sourceName],
-        status: entry.status || "approved",
+        status: entry.status || "draft",
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || ""),
@@ -3530,7 +3539,7 @@ function collectDevRules() {
         title: String(entry.text || entry.title || entry.rule || id),
         summary: String(entry.rationale || entry.description || ""),
         tags: Array.isArray(entry.tags) ? entry.tags.map((t) => String(t)) : [ruleFile],
-        status: entry.status || "approved",
+        status: entry.status || "draft",
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: ruleFile,
         createdAt: String(entry.createdAt || ""),
@@ -3545,7 +3554,7 @@ devRules.get("/", async (c) => {
   try {
     const status = c.req.query("status");
     const items = collectDevRules();
-    const filtered = status && ["approved", "rejected"].includes(status) ? items.filter((item) => item.status === status) : items;
+    const filtered = status && ["draft", "approved", "rejected"].includes(status) ? items.filter((item) => item.status === status) : items;
     return c.json({
       items: filtered,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -3563,7 +3572,7 @@ devRules.patch("/:type/:sourceFile/:id/status", async (c) => {
   if (!id || !sourceFile) {
     return c.json({ error: "Invalid parameters" }, 400);
   }
-  if (!body.status || !["approved", "rejected"].includes(body.status)) {
+  if (!body.status || !["draft", "approved", "rejected"].includes(body.status)) {
     return c.json({ error: "Invalid status" }, 400);
   }
   try {

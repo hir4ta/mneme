@@ -19,10 +19,12 @@
   },
   "stats": {
     "total": "合計",
+    "draft": "下書き",
     "approved": "承認済み",
     "rejected": "却下"
   },
   "status": {
+    "draft": "下書き",
     "approved": "承認済み",
     "rejected": "却下"
   },

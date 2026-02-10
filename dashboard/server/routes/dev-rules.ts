@@ -46,7 +46,7 @@ export function collectDevRules(): DevRuleItem[] {
           entry.text || entry.decision || entry.reasoning || entry.title || "",
         ),
         tags: Array.isArray(entry.tags) ? entry.tags.map((t) => String(t)) : [],
-        status: (entry.status as DevRuleStatus) || "approved",
+        status: (entry.status as DevRuleStatus) || "draft",
         priority: entry.priority ? String(entry.priority) : undefined,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || raw.createdAt || ""),
@@ -79,7 +79,7 @@ export function collectDevRules(): DevRuleItem[] {
         tags: Array.isArray(entry.tags)
           ? entry.tags.map((t) => String(t))
           : [sourceName],
-        status: (entry.status as DevRuleStatus) || "approved",
+        status: (entry.status as DevRuleStatus) || "draft",
         priority: entry.priority ? String(entry.priority) : undefined,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || ""),
@@ -107,7 +107,7 @@ export function collectDevRules(): DevRuleItem[] {
         tags: Array.isArray(entry.tags)
           ? entry.tags.map((t) => String(t))
           : [ruleFile],
-        status: (entry.status as DevRuleStatus) || "approved",
+        status: (entry.status as DevRuleStatus) || "draft",
         priority: entry.priority ? String(entry.priority) : undefined,
         sourceFile: ruleFile,
         createdAt: String(entry.createdAt || ""),
@@ -127,7 +127,7 @@ devRules.get("/", async (c) => {
     const status = c.req.query("status") as DevRuleStatus | undefined;
     const items = collectDevRules();
     const filtered =
-      status && ["approved", "rejected"].includes(status)
+      status && ["draft", "approved", "rejected"].includes(status)
         ? items.filter((item) => item.status === status)
         : items;
     return c.json({
@@ -150,7 +150,10 @@ devRules.patch("/:type/:sourceFile/:id/status", async (c) => {
   if (!id || !sourceFile) {
     return c.json({ error: "Invalid parameters" }, 400);
   }
-  if (!body.status || !["approved", "rejected"].includes(body.status)) {
+  if (
+    !body.status ||
+    !["draft", "approved", "rejected"].includes(body.status)
+  ) {
     return c.json({ error: "Invalid status" }, 400);
   }
 

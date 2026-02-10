@@ -143,8 +143,18 @@ export function rebuildDecisionIndexForMonth(
   month: string,
 ): DecisionIndex {
   const index = buildDecisionIndexForMonth(mnemeDir, year, month);
+  const indexPath = path.join(
+    mnemeDir,
+    INDEXES_DIR,
+    "decisions",
+    year,
+    `${month}.json`,
+  );
+
   if (index.items.length > 0) {
     writeDecisionIndexForMonth(mnemeDir, year, month, index);
+  } else if (fs.existsSync(indexPath)) {
+    fs.unlinkSync(indexPath);
   }
   return index;
 }

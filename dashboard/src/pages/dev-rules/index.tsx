@@ -37,7 +37,11 @@ type DevRuleStatus = DevRuleItem["status"];
 
 const ITEMS_PER_PAGE = 20;
 
-const statusVariant: Record<DevRuleStatus, "default" | "destructive"> = {
+const statusVariant: Record<
+  DevRuleStatus,
+  "default" | "secondary" | "destructive"
+> = {
+  draft: "secondary",
   approved: "default",
   rejected: "destructive",
 };
@@ -369,6 +373,7 @@ export function DevRulesPage() {
     );
   }
 
+  const draftCount = allItems.filter((i) => i.status === "draft").length;
   const approvedCount = allItems.filter((i) => i.status === "approved").length;
   const rejectedCount = allItems.filter((i) => i.status === "rejected").length;
 
@@ -381,7 +386,7 @@ export function DevRulesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("stats.total")}</CardTitle>
@@ -389,6 +394,12 @@ export function DevRulesPage() {
           <CardContent className="text-2xl font-bold">
             {allItems.length}
           </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("stats.draft")}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{draftCount}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -455,6 +466,7 @@ export function DevRulesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filter.allStatus")}</SelectItem>
+            <SelectItem value="draft">{t("status.draft")}</SelectItem>
             <SelectItem value="approved">{t("status.approved")}</SelectItem>
             <SelectItem value="rejected">{t("status.rejected")}</SelectItem>
           </SelectContent>

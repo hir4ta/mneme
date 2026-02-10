@@ -19,10 +19,12 @@
   },
   "stats": {
     "total": "Total",
+    "draft": "Draft",
     "approved": "Approved",
     "rejected": "Rejected"
   },
   "status": {
+    "draft": "Draft",
     "approved": "Approved",
     "rejected": "Rejected"
   },

@@ -186,7 +186,7 @@ export interface DevRuleItem {
   title: string;
   summary: string;
   tags: string[];
-  status: "approved" | "rejected";
+  status: "draft" | "approved" | "rejected";
   priority?: string;
   sourceFile: string;
   createdAt: string;
@@ -199,7 +199,7 @@ export interface DevRulesResponse {
 }
 
 export async function getDevRules(
-  status?: "approved" | "rejected",
+  status?: "draft" | "approved" | "rejected",
 ): Promise<DevRulesResponse> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
@@ -213,7 +213,7 @@ export async function updateDevRuleStatus(
   type: DevRuleItem["type"],
   sourceFile: string,
   id: string,
-  status: "approved" | "rejected",
+  status: "draft" | "approved" | "rejected",
 ): Promise<{ id: string; type: string; sourceFile: string; status: string }> {
   const res = await fetch(
     `${API_BASE}/dev-rules/${type}/${sourceFile}/${id}/status`,

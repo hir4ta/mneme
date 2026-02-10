@@ -84,7 +84,7 @@ export function writeAuditLog(entry: {
 }
 
 // Dev rule item type (replaces former Unit concept)
-export type DevRuleStatus = "approved" | "rejected";
+export type DevRuleStatus = "draft" | "approved" | "rejected";
 export type DevRuleType = "decision" | "pattern" | "rule";
 
 export interface DevRuleItem {
