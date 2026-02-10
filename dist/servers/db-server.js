@@ -31069,6 +31069,14 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
     ...interaction,
     id: `int-${String(idx + 1).padStart(3, "0")}`
   }));
+  if (finalInteractions.length === 0) {
+    return {
+      success: true,
+      savedCount: 0,
+      mergedFromBackup: backupInteractions.length,
+      message: "No interactions to save (transcript may have no text user messages). Existing data preserved."
+    };
+  }
   try {
     const deleteStmt = database.prepare(
       "DELETE FROM interactions WHERE session_id = ?"
@@ -31455,7 +31463,56 @@ server.registerTool(
     data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     if (tags) data.tags = tags;
     if (sessionType) data.sessionType = sessionType;
+    const transcriptPath = getTranscriptPath(claudeSessionId);
+    if (transcriptPath) {
+      try {
+        const parsed = await parseTranscript(transcriptPath);
+        data.metrics = {
+          userMessages: parsed.metrics.userMessages,
+          assistantResponses: parsed.metrics.assistantResponses,
+          thinkingBlocks: parsed.metrics.thinkingBlocks,
+          toolUsage: parsed.toolUsage
+        };
+        if (parsed.files.length > 0) {
+          data.files = parsed.files;
+        }
+      } catch {
+      }
+    }
+    const ctx = data.context;
+    if (ctx && !ctx.repository) {
+      try {
+        const { execSync } = await import("node:child_process");
+        const cwd = ctx.projectDir || projectPath;
+        const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+          encoding: "utf8",
+          cwd
+        }).trim();
+        if (branch) ctx.branch = branch;
+        const remoteUrl = execSync("git remote get-url origin", {
+          encoding: "utf8",
+          cwd
+        }).trim();
+        const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+        if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
+        const userName = execSync("git config user.name", {
+          encoding: "utf8",
+          cwd
+        }).trim();
+        const userEmail = execSync("git config user.email", {
+          encoding: "utf8",
+          cwd
+        }).trim();
+        if (userName)
+          ctx.user = {
+            name: userName,
+            ...userEmail ? { email: userEmail } : {}
+          };
+      } catch {
+      }
+    }
     fs4.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+    markSessionCommitted(claudeSessionId);
     return ok(
       JSON.stringify(
         {

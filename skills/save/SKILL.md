@@ -4,7 +4,7 @@ description: |
   Extract and persist session outputs, then generate development rule candidates (decision/pattern/rule).
   Use when: (1) finishing meaningful implementation work, (2) capturing reusable guidance,
   (3) before ending a long session.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # /mneme:save

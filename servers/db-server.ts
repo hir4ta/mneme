@@ -1009,6 +1009,17 @@ async function saveInteractions(
     id: `int-${String(idx + 1).padStart(3, "0")}`,
   }));
 
+  // Guard: don't delete existing data when there's nothing to insert
+  if (finalInteractions.length === 0) {
+    return {
+      success: true,
+      savedCount: 0,
+      mergedFromBackup: backupInteractions.length,
+      message:
+        "No interactions to save (transcript may have no text user messages). Existing data preserved.",
+    };
+  }
+
   // Delete existing interactions for this session
   try {
     const deleteStmt = database.prepare(
@@ -1527,7 +1538,65 @@ server.registerTool(
     if (tags) data.tags = tags;
     if (sessionType) data.sessionType = sessionType;
 
+    // Enrich with transcript metrics/files if available
+    const transcriptPath = getTranscriptPath(claudeSessionId);
+    if (transcriptPath) {
+      try {
+        const parsed = await parseTranscript(transcriptPath);
+        data.metrics = {
+          userMessages: parsed.metrics.userMessages,
+          assistantResponses: parsed.metrics.assistantResponses,
+          thinkingBlocks: parsed.metrics.thinkingBlocks,
+          toolUsage: parsed.toolUsage,
+        };
+        if (parsed.files.length > 0) {
+          data.files = parsed.files;
+        }
+      } catch {
+        // Transcript parse failed, keep existing values
+      }
+    }
+
+    // Enrich context if minimal (missing repository info)
+    const ctx = data.context as Record<string, unknown> | undefined;
+    if (ctx && !ctx.repository) {
+      try {
+        const { execSync } = await import("node:child_process");
+        const cwd = (ctx.projectDir as string) || projectPath;
+        const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+          encoding: "utf8",
+          cwd,
+        }).trim();
+        if (branch) ctx.branch = branch;
+        const remoteUrl = execSync("git remote get-url origin", {
+          encoding: "utf8",
+          cwd,
+        }).trim();
+        const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+        if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
+        const userName = execSync("git config user.name", {
+          encoding: "utf8",
+          cwd,
+        }).trim();
+        const userEmail = execSync("git config user.email", {
+          encoding: "utf8",
+          cwd,
+        }).trim();
+        if (userName)
+          ctx.user = {
+            name: userName,
+            ...(userEmail ? { email: userEmail } : {}),
+          };
+      } catch {
+        // Not a git repo or git not available
+      }
+    }
+
     fs.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+
+    // Auto-commit: mark session as committed after successful summary write
+    // This ensures committed flag is set even if mneme_mark_session_committed is not called explicitly
+    markSessionCommitted(claudeSessionId);
 
     return ok(
       JSON.stringify(
