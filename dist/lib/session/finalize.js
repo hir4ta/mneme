@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// lib/session-finalize.ts
+// lib/session/finalize.ts
 import * as fs7 from "node:fs";
 import * as path6 from "node:path";
 
@@ -817,7 +817,7 @@ function findJsonFiles(dir) {
   return results;
 }
 
-// lib/session-finalize.ts
+// lib/session/finalize.ts
 function findSessionFile(sessionsDir, shortId) {
   if (!fs7.existsSync(sessionsDir)) return null;
   const files = findJsonFiles(sessionsDir);
@@ -996,6 +996,6 @@ async function main2() {
   }
 }
 var scriptPath = process.argv[1];
-if (scriptPath && (import.meta.url === `file://${scriptPath}` || scriptPath.endsWith("session-finalize.js") || scriptPath.endsWith("session-finalize.ts"))) {
+if (scriptPath && (import.meta.url === `file://${scriptPath}` || scriptPath.endsWith("session/finalize.js") || scriptPath.endsWith("session/finalize.ts"))) {
   main2();
 }

@@ -19,8 +19,13 @@ import {
   cleanupStaleUncommittedSessions,
   cleanupUncommittedSession,
   incrementalSave,
-} from "./incremental-save.ts";
-import { findJsonFiles, nowISO, safeReadJson, safeWriteJson } from "./utils.ts";
+} from "../save/index.ts";
+import {
+  findJsonFiles,
+  nowISO,
+  safeReadJson,
+  safeWriteJson,
+} from "../utils.ts";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -288,8 +293,8 @@ const scriptPath = process.argv[1];
 if (
   scriptPath &&
   (import.meta.url === `file://${scriptPath}` ||
-    scriptPath.endsWith("session-finalize.js") ||
-    scriptPath.endsWith("session-finalize.ts"))
+    scriptPath.endsWith("session/finalize.js") ||
+    scriptPath.endsWith("session/finalize.ts"))
 ) {
   main();
 }

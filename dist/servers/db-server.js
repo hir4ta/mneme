@@ -29947,11 +29947,11 @@ var StdioServerTransport = class {
   }
 };
 
-// servers/db-utils.ts
+// servers/db/utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-// servers/db-types.ts
+// servers/db/types.ts
 var { DatabaseSync } = await import("node:sqlite");
 var LIST_LIMIT_MIN = 1;
 var LIST_LIMIT_MAX = 200;
@@ -29968,7 +29968,7 @@ function fail(message) {
   };
 }
 
-// servers/db-utils.ts
+// servers/db/utils.ts
 function getProjectPath() {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
@@ -30030,7 +30030,7 @@ function getDb() {
   }
 }
 
-// servers/db-queries.ts
+// servers/db/queries.ts
 function mapSearchRow(row) {
   return {
     sessionId: row.session_id,
@@ -30235,10 +30235,10 @@ function crossProjectSearch(query, options = {}) {
   }
 }
 
-// servers/db-save.ts
+// servers/db/save.ts
 import * as os2 from "node:os";
 
-// servers/db-transcript.ts
+// servers/db/transcript.ts
 import * as fs2 from "node:fs";
 import * as os from "node:os";
 import * as path2 from "node:path";
@@ -30368,7 +30368,7 @@ function buildInteractions(userMessages, assistantMessages) {
   return interactions;
 }
 
-// servers/db-save.ts
+// servers/db/save.ts
 async function saveInteractions(claudeSessionId, mnemeSessionId) {
   const transcriptPath = getTranscriptPath(claudeSessionId);
   if (!transcriptPath) {
@@ -30577,27 +30577,214 @@ function markSessionCommitted(claudeSessionId) {
   }
 }
 
-// servers/db-benchmark.ts
+// servers/db/session-summary.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+async function updateSessionSummary(params) {
+  const {
+    claudeSessionId,
+    title,
+    summary,
+    tags,
+    sessionType,
+    plan,
+    discussions,
+    errors,
+    handoff,
+    references
+  } = params;
+  const projectPath = getProjectPath();
+  const sessionsDir = path3.join(projectPath, ".mneme", "sessions");
+  const shortId = claudeSessionId.slice(0, 8);
+  let sessionFile = null;
+  const searchDir = (dir) => {
+    if (!fs3.existsSync(dir)) return null;
+    for (const entry of fs3.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path3.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const result = searchDir(fullPath);
+        if (result) return result;
+      } else if (entry.name === `${shortId}.json`) {
+        return fullPath;
+      }
+    }
+    return null;
+  };
+  sessionFile = searchDir(sessionsDir);
+  if (sessionFile) {
+    const existingData = readJsonFile(sessionFile);
+    if (existingData?.sessionId && existingData.sessionId !== claudeSessionId) {
+      sessionFile = null;
+    }
+  }
+  if (!sessionFile) {
+    const now = /* @__PURE__ */ new Date();
+    const yearMonth = path3.join(
+      sessionsDir,
+      String(now.getFullYear()),
+      String(now.getMonth() + 1).padStart(2, "0")
+    );
+    if (!fs3.existsSync(yearMonth)) fs3.mkdirSync(yearMonth, { recursive: true });
+    sessionFile = path3.join(yearMonth, `${shortId}.json`);
+    const initial = {
+      id: shortId,
+      sessionId: claudeSessionId,
+      createdAt: now.toISOString(),
+      title: "",
+      tags: [],
+      context: {
+        projectDir: projectPath,
+        projectName: path3.basename(projectPath)
+      },
+      metrics: {
+        userMessages: 0,
+        assistantResponses: 0,
+        thinkingBlocks: 0,
+        toolUsage: []
+      },
+      files: [],
+      status: null
+    };
+    fs3.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
+  }
+  const data = readJsonFile(sessionFile) ?? {};
+  data.title = title;
+  data.summary = summary;
+  data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (tags) data.tags = tags;
+  if (sessionType) data.sessionType = sessionType;
+  if (plan) data.plan = plan;
+  if (discussions && discussions.length > 0) data.discussions = discussions;
+  if (errors && errors.length > 0) data.errors = errors;
+  if (handoff) data.handoff = handoff;
+  if (references && references.length > 0) data.references = references;
+  const transcriptPath = getTranscriptPath(claudeSessionId);
+  if (transcriptPath) {
+    try {
+      const parsed = await parseTranscript(transcriptPath);
+      data.metrics = {
+        userMessages: parsed.metrics.userMessages,
+        assistantResponses: parsed.metrics.assistantResponses,
+        thinkingBlocks: parsed.metrics.thinkingBlocks,
+        toolUsage: parsed.toolUsage
+      };
+      if (parsed.files.length > 0) data.files = parsed.files;
+    } catch {
+    }
+  }
+  const ctx = data.context;
+  if (ctx && !ctx.repository) {
+    try {
+      const { execSync } = await import("node:child_process");
+      const cwd = ctx.projectDir || projectPath;
+      const git = (cmd) => execSync(cmd, { encoding: "utf8", cwd }).trim();
+      const branch = git("git rev-parse --abbrev-ref HEAD");
+      if (branch) ctx.branch = branch;
+      const remoteUrl = git("git remote get-url origin");
+      const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+      if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
+      const userName = git("git config user.name");
+      const userEmail = git("git config user.email");
+      if (userName)
+        ctx.user = {
+          name: userName,
+          ...userEmail ? { email: userEmail } : {}
+        };
+    } catch {
+    }
+  }
+  fs3.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+  markSessionCommitted(claudeSessionId);
+  return {
+    success: true,
+    sessionFile: sessionFile.replace(projectPath, "."),
+    shortId
+  };
+}
+function registerSessionSummaryTool(server2) {
+  server2.registerTool(
+    "mneme_update_session_summary",
+    {
+      description: "Update session JSON with summary data for /mneme:save Phase 3.",
+      inputSchema: {
+        claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
+        title: external_exports3.string().describe("Session title"),
+        summary: external_exports3.object({
+          goal: external_exports3.string().describe("What the session aimed to accomplish"),
+          outcome: external_exports3.string().describe("What was actually accomplished"),
+          description: external_exports3.string().optional().describe("Detailed description of the session")
+        }).describe("Session summary object"),
+        tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
+        sessionType: external_exports3.string().optional().describe(
+          "Session type (e.g. implementation, research, bugfix, refactor)"
+        ),
+        plan: external_exports3.object({
+          goals: external_exports3.array(external_exports3.string()).optional().describe("Session goals"),
+          tasks: external_exports3.array(external_exports3.string()).optional().describe('Task list (prefix with "[x] " for completed)'),
+          remaining: external_exports3.array(external_exports3.string()).optional().describe("Remaining tasks")
+        }).optional().describe("Session plan with tasks and progress"),
+        discussions: external_exports3.array(
+          external_exports3.object({
+            topic: external_exports3.string().describe("Discussion topic"),
+            decision: external_exports3.string().describe("Final decision"),
+            reasoning: external_exports3.string().optional().describe("Reasoning"),
+            alternatives: external_exports3.array(external_exports3.string()).optional().describe("Considered alternatives")
+          })
+        ).optional().describe("Design discussions and decisions made during session"),
+        errors: external_exports3.array(
+          external_exports3.object({
+            error: external_exports3.string().describe("Error message or description"),
+            context: external_exports3.string().optional().describe("Where/when it occurred"),
+            solution: external_exports3.string().optional().describe("How it was resolved"),
+            files: external_exports3.array(external_exports3.string()).optional().describe("Related file paths")
+          })
+        ).optional().describe("Errors encountered and their solutions"),
+        handoff: external_exports3.object({
+          stoppedReason: external_exports3.string().optional().describe("Why the session stopped"),
+          notes: external_exports3.array(external_exports3.string()).optional().describe("Important notes for next session"),
+          nextSteps: external_exports3.array(external_exports3.string()).optional().describe("What to do next")
+        }).optional().describe("Handoff context for session continuity"),
+        references: external_exports3.array(
+          external_exports3.object({
+            type: external_exports3.string().optional().describe('Reference type: "doc", "file", "url"'),
+            url: external_exports3.string().optional().describe("URL if external"),
+            path: external_exports3.string().optional().describe("File path if local"),
+            title: external_exports3.string().optional().describe("Title or label"),
+            description: external_exports3.string().optional().describe("Brief description")
+          })
+        ).optional().describe("Documents and resources referenced during session")
+      }
+    },
+    async (params) => {
+      if (!params.claudeSessionId.trim())
+        return fail("claudeSessionId must not be empty.");
+      const result = await updateSessionSummary(params);
+      return ok(JSON.stringify(result, null, 2));
+    }
+  );
+}
+
+// servers/db/benchmark.ts
+import * as path8 from "node:path";
+
+// lib/search/core.ts
+import * as fs7 from "node:fs";
 import * as path7 from "node:path";
 
-// lib/search-core.ts
+// lib/search/helpers.ts
 import * as fs6 from "node:fs";
 import * as path6 from "node:path";
 
-// lib/search-helpers.ts
+// lib/search/fuzzy.ts
 import * as fs5 from "node:fs";
 import * as path5 from "node:path";
 
-// lib/fuzzy-search.ts
+// lib/utils.ts
 import * as fs4 from "node:fs";
 import * as path4 from "node:path";
-
-// lib/utils.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
 function safeReadJson(filePath, fallback) {
   try {
-    const content = fs3.readFileSync(filePath, "utf-8");
+    const content = fs4.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
   } catch {
     return fallback;
@@ -30605,10 +30792,10 @@ function safeReadJson(filePath, fallback) {
 }
 function findJsonFiles(dir) {
   const results = [];
-  if (!fs3.existsSync(dir)) return results;
-  const items = fs3.readdirSync(dir, { withFileTypes: true });
+  if (!fs4.existsSync(dir)) return results;
+  const items = fs4.readdirSync(dir, { withFileTypes: true });
   for (const item of items) {
-    const fullPath = path3.join(dir, item.name);
+    const fullPath = path4.join(dir, item.name);
     if (item.isDirectory()) {
       results.push(...findJsonFiles(fullPath));
     } else if (item.name.endsWith(".json")) {
@@ -30618,7 +30805,7 @@ function findJsonFiles(dir) {
   return results;
 }
 
-// lib/fuzzy-search.ts
+// lib/search/fuzzy.ts
 function levenshtein(a, b) {
   const matrix = [];
   for (let i = 0; i <= a.length; i++) {
@@ -30680,12 +30867,12 @@ async function search(options) {
   } = options;
   const startTime = Date.now();
   const results = [];
-  const tagsPath = path4.join(mnemeDir, "tags.json");
+  const tagsPath = path5.join(mnemeDir, "tags.json");
   const tagsData = safeReadJson(tagsPath, { tags: [] });
   const expandedQueries = expandAliases(query, tagsData.tags);
   if (targets.includes("sessions")) {
-    const sessionsDir = path4.join(mnemeDir, "sessions");
-    if (fs4.existsSync(sessionsDir)) {
+    const sessionsDir = path5.join(mnemeDir, "sessions");
+    if (fs5.existsSync(sessionsDir)) {
       const files = findJsonFiles(sessionsDir);
       for (const file2 of files) {
         if (Date.now() - startTime > timeout) break;
@@ -30698,7 +30885,7 @@ async function search(options) {
         if (score > 0) {
           results.push({
             type: "session",
-            id: session.id || path4.basename(file2, ".json"),
+            id: session.id || path5.basename(file2, ".json"),
             score,
             title: session.title || "Untitled",
             highlights: []
@@ -30708,8 +30895,8 @@ async function search(options) {
     }
   }
   if (targets.includes("decisions")) {
-    const decisionsDir = path4.join(mnemeDir, "decisions");
-    if (fs4.existsSync(decisionsDir)) {
+    const decisionsDir = path5.join(mnemeDir, "decisions");
+    if (fs5.existsSync(decisionsDir)) {
       const files = findJsonFiles(decisionsDir);
       for (const file2 of files) {
         if (Date.now() - startTime > timeout) break;
@@ -30722,7 +30909,7 @@ async function search(options) {
         if (score > 0) {
           results.push({
             type: "decision",
-            id: decision.id || path4.basename(file2, ".json"),
+            id: decision.id || path5.basename(file2, ".json"),
             score,
             title: decision.title || "Untitled",
             highlights: []
@@ -30732,8 +30919,8 @@ async function search(options) {
     }
   }
   if (targets.includes("patterns")) {
-    const patternsDir = path4.join(mnemeDir, "patterns");
-    if (fs4.existsSync(patternsDir)) {
+    const patternsDir = path5.join(mnemeDir, "patterns");
+    if (fs5.existsSync(patternsDir)) {
       const files = findJsonFiles(patternsDir);
       for (const file2 of files) {
         if (Date.now() - startTime > timeout) break;
@@ -30748,7 +30935,7 @@ async function search(options) {
           if (score > 0) {
             results.push({
               type: "pattern",
-              id: `${path4.basename(file2, ".json")}-${p.type || "unknown"}`,
+              id: `${path5.basename(file2, ".json")}-${p.type || "unknown"}`,
               score,
               title: p.description || "Untitled pattern",
               highlights: []
@@ -30780,7 +30967,7 @@ function scoreDocument(doc, queries, fields) {
   }
   return totalScore;
 }
-var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
+var isMain = process.argv[1]?.endsWith("fuzzy.js") || process.argv[1]?.endsWith("fuzzy.ts");
 if (isMain && process.argv.length > 2) {
   const args = process.argv.slice(2);
   const queryIndex = args.indexOf("--query");
@@ -30797,7 +30984,7 @@ if (isMain && process.argv.length > 2) {
   });
 }
 
-// lib/search-helpers.ts
+// lib/search/helpers.ts
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -30818,10 +31005,10 @@ function isFuzzyMatch(word, target, maxDistance = 2) {
   return distance <= threshold;
 }
 function loadTags(mnemeDir) {
-  const tagsPath = path5.join(mnemeDir, "tags.json");
-  if (!fs5.existsSync(tagsPath)) return null;
+  const tagsPath = path6.join(mnemeDir, "tags.json");
+  if (!fs6.existsSync(tagsPath)) return null;
   try {
-    return JSON.parse(fs5.readFileSync(tagsPath, "utf-8"));
+    return JSON.parse(fs6.readFileSync(tagsPath, "utf-8"));
   } catch {
     return null;
   }
@@ -30844,10 +31031,10 @@ function expandKeywordsWithAliases(keywords, tags) {
   return Array.from(expanded);
 }
 function walkJsonFiles(dir, callback) {
-  if (!fs5.existsSync(dir)) return;
-  const entries = fs5.readdirSync(dir, { withFileTypes: true });
+  if (!fs6.existsSync(dir)) return;
+  const entries = fs6.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
-    const fullPath = path5.join(dir, entry.name);
+    const fullPath = path6.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkJsonFiles(fullPath, callback);
       continue;
@@ -30858,7 +31045,7 @@ function walkJsonFiles(dir, callback) {
   }
 }
 
-// lib/search-core.ts
+// lib/search/core.ts
 function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
   try {
@@ -30917,13 +31104,13 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
   }
 }
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path6.join(mnemeDir, "sessions");
+  const sessionsDir = path7.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs6.readFileSync(filePath, "utf-8")
+        fs7.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
@@ -31030,9 +31217,9 @@ function searchKnowledge(options) {
   }).slice(safeOffset, safeOffset + limit);
 }
 
-// servers/db-benchmark.ts
+// servers/db/benchmark.ts
 function runSearchBenchmark(limit) {
-  const queryPath = path7.join(
+  const queryPath = path8.join(
     getProjectPath(),
     "scripts",
     "search-benchmark.queries.json"
@@ -31155,12 +31342,12 @@ function lintRules(ruleType) {
   };
 }
 
-// servers/db-server-tools.ts
+// servers/db/tools.ts
 function registerExtendedTools(server2) {
   server2.registerTool(
     "mneme_mark_session_committed",
     {
-      description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",
+      description: "Mark session as committed to prevent cleanup on SessionEnd.",
       inputSchema: {
         claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)")
       }
@@ -31178,7 +31365,7 @@ function registerExtendedTools(server2) {
   server2.registerTool(
     "mneme_session_timeline",
     {
-      description: "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
+      description: "Build timeline for a session or its resume-chain.",
       inputSchema: {
         sessionId: external_exports3.string().min(1).describe("Session ID (short or full)"),
         includeChain: external_exports3.boolean().optional().describe(
@@ -31237,7 +31424,7 @@ function registerExtendedTools(server2) {
   server2.registerTool(
     "mneme_rule_linter",
     {
-      description: "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
+      description: "Lint rules for schema and quality.",
       inputSchema: {
         ruleType: external_exports3.enum(["dev-rules", "review-guidelines", "all"]).optional().describe("Rule set to lint (default: all)")
       }
@@ -31249,7 +31436,7 @@ function registerExtendedTools(server2) {
   server2.registerTool(
     "mneme_search_eval",
     {
-      description: "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
+      description: "Run/compare search benchmark for quality checks.",
       inputSchema: {
         mode: external_exports3.enum(["run", "compare", "regression"]).optional().describe(
           "run=single, compare=against baseline, regression=threshold check"
@@ -31283,193 +31470,6 @@ function registerExtendedTools(server2) {
   );
 }
 
-// servers/db-session-summary.ts
-import * as fs7 from "node:fs";
-import * as path8 from "node:path";
-async function updateSessionSummary(params) {
-  const {
-    claudeSessionId,
-    title,
-    summary,
-    tags,
-    sessionType,
-    plan,
-    discussions,
-    errors,
-    handoff,
-    references
-  } = params;
-  const projectPath = getProjectPath();
-  const sessionsDir = path8.join(projectPath, ".mneme", "sessions");
-  const shortId = claudeSessionId.slice(0, 8);
-  let sessionFile = null;
-  const searchDir = (dir) => {
-    if (!fs7.existsSync(dir)) return null;
-    for (const entry of fs7.readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = path8.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        const result = searchDir(fullPath);
-        if (result) return result;
-      } else if (entry.name === `${shortId}.json`) {
-        return fullPath;
-      }
-    }
-    return null;
-  };
-  sessionFile = searchDir(sessionsDir);
-  if (sessionFile) {
-    const existingData = readJsonFile(sessionFile);
-    if (existingData?.sessionId && existingData.sessionId !== claudeSessionId) {
-      sessionFile = null;
-    }
-  }
-  if (!sessionFile) {
-    const now = /* @__PURE__ */ new Date();
-    const yearMonth = path8.join(
-      sessionsDir,
-      String(now.getFullYear()),
-      String(now.getMonth() + 1).padStart(2, "0")
-    );
-    if (!fs7.existsSync(yearMonth)) fs7.mkdirSync(yearMonth, { recursive: true });
-    sessionFile = path8.join(yearMonth, `${shortId}.json`);
-    const initial = {
-      id: shortId,
-      sessionId: claudeSessionId,
-      createdAt: now.toISOString(),
-      title: "",
-      tags: [],
-      context: {
-        projectDir: projectPath,
-        projectName: path8.basename(projectPath)
-      },
-      metrics: {
-        userMessages: 0,
-        assistantResponses: 0,
-        thinkingBlocks: 0,
-        toolUsage: []
-      },
-      files: [],
-      status: null
-    };
-    fs7.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
-  }
-  const data = readJsonFile(sessionFile) ?? {};
-  data.title = title;
-  data.summary = summary;
-  data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  if (tags) data.tags = tags;
-  if (sessionType) data.sessionType = sessionType;
-  if (plan) data.plan = plan;
-  if (discussions && discussions.length > 0) data.discussions = discussions;
-  if (errors && errors.length > 0) data.errors = errors;
-  if (handoff) data.handoff = handoff;
-  if (references && references.length > 0) data.references = references;
-  const transcriptPath = getTranscriptPath(claudeSessionId);
-  if (transcriptPath) {
-    try {
-      const parsed = await parseTranscript(transcriptPath);
-      data.metrics = {
-        userMessages: parsed.metrics.userMessages,
-        assistantResponses: parsed.metrics.assistantResponses,
-        thinkingBlocks: parsed.metrics.thinkingBlocks,
-        toolUsage: parsed.toolUsage
-      };
-      if (parsed.files.length > 0) data.files = parsed.files;
-    } catch {
-    }
-  }
-  const ctx = data.context;
-  if (ctx && !ctx.repository) {
-    try {
-      const { execSync } = await import("node:child_process");
-      const cwd = ctx.projectDir || projectPath;
-      const git = (cmd) => execSync(cmd, { encoding: "utf8", cwd }).trim();
-      const branch = git("git rev-parse --abbrev-ref HEAD");
-      if (branch) ctx.branch = branch;
-      const remoteUrl = git("git remote get-url origin");
-      const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
-      if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
-      const userName = git("git config user.name");
-      const userEmail = git("git config user.email");
-      if (userName)
-        ctx.user = {
-          name: userName,
-          ...userEmail ? { email: userEmail } : {}
-        };
-    } catch {
-    }
-  }
-  fs7.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
-  markSessionCommitted(claudeSessionId);
-  return {
-    success: true,
-    sessionFile: sessionFile.replace(projectPath, "."),
-    shortId
-  };
-}
-function registerSessionSummaryTool(server2) {
-  server2.registerTool(
-    "mneme_update_session_summary",
-    {
-      description: "Update session JSON file with summary data. MUST be called during /mneme:save Phase 3 to persist session metadata. Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
-      inputSchema: {
-        claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
-        title: external_exports3.string().describe("Session title"),
-        summary: external_exports3.object({
-          goal: external_exports3.string().describe("What the session aimed to accomplish"),
-          outcome: external_exports3.string().describe("What was actually accomplished"),
-          description: external_exports3.string().optional().describe("Detailed description of the session")
-        }).describe("Session summary object"),
-        tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
-        sessionType: external_exports3.string().optional().describe(
-          "Session type (e.g. implementation, research, bugfix, refactor)"
-        ),
-        plan: external_exports3.object({
-          goals: external_exports3.array(external_exports3.string()).optional().describe("Session goals"),
-          tasks: external_exports3.array(external_exports3.string()).optional().describe('Task list (prefix with "[x] " for completed)'),
-          remaining: external_exports3.array(external_exports3.string()).optional().describe("Remaining tasks")
-        }).optional().describe("Session plan with tasks and progress"),
-        discussions: external_exports3.array(
-          external_exports3.object({
-            topic: external_exports3.string().describe("Discussion topic"),
-            decision: external_exports3.string().describe("Final decision"),
-            reasoning: external_exports3.string().optional().describe("Reasoning"),
-            alternatives: external_exports3.array(external_exports3.string()).optional().describe("Considered alternatives")
-          })
-        ).optional().describe("Design discussions and decisions made during session"),
-        errors: external_exports3.array(
-          external_exports3.object({
-            error: external_exports3.string().describe("Error message or description"),
-            context: external_exports3.string().optional().describe("Where/when it occurred"),
-            solution: external_exports3.string().optional().describe("How it was resolved"),
-            files: external_exports3.array(external_exports3.string()).optional().describe("Related file paths")
-          })
-        ).optional().describe("Errors encountered and their solutions"),
-        handoff: external_exports3.object({
-          stoppedReason: external_exports3.string().optional().describe("Why the session stopped"),
-          notes: external_exports3.array(external_exports3.string()).optional().describe("Important notes for next session"),
-          nextSteps: external_exports3.array(external_exports3.string()).optional().describe("What to do next")
-        }).optional().describe("Handoff context for session continuity"),
-        references: external_exports3.array(
-          external_exports3.object({
-            type: external_exports3.string().optional().describe('Reference type: "doc", "file", "url"'),
-            url: external_exports3.string().optional().describe("URL if external"),
-            path: external_exports3.string().optional().describe("File path if local"),
-            title: external_exports3.string().optional().describe("Title or label"),
-            description: external_exports3.string().optional().describe("Brief description")
-          })
-        ).optional().describe("Documents and resources referenced during session")
-      }
-    },
-    async (params) => {
-      if (!params.claudeSessionId.trim())
-        return fail("claudeSessionId must not be empty.");
-      const result = await updateSessionSummary(params);
-      return ok(JSON.stringify(result, null, 2));
-    }
-  );
-}
-
 // servers/db-server.ts
 var server = new McpServer({
   name: "mneme-db",
@@ -31478,7 +31478,7 @@ var server = new McpServer({
 server.registerTool(
   "mneme_list_projects",
   {
-    description: "List all projects tracked in mneme's local database with session counts and last activity",
+    description: "List all projects with session counts and last activity",
     inputSchema: {}
   },
   async () => {
@@ -31529,7 +31529,7 @@ server.registerTool(
 server.registerTool(
   "mneme_stats",
   {
-    description: "Get statistics across all projects: total counts, per-project breakdown, recent activity",
+    description: "Get statistics: total counts, per-project breakdown, recent activity",
     inputSchema: {}
   },
   async () => {
@@ -31541,7 +31541,7 @@ server.registerTool(
 server.registerTool(
   "mneme_cross_project_search",
   {
-    description: "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
+    description: "Search interactions across all projects via FTS5.",
     inputSchema: {
       query: external_exports3.string().max(QUERY_MAX_LENGTH).describe("Search query"),
       limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(LIST_LIMIT_MAX).optional().describe(
@@ -31561,7 +31561,7 @@ server.registerTool(
 server.registerTool(
   "mneme_save_interactions",
   {
-    description: "Save conversation interactions from Claude Code transcript to SQLite. Use this during /mneme:save to persist the conversation history. Reads the transcript file directly and extracts user/assistant messages.",
+    description: "Save transcript interactions to SQLite for /mneme:save.",
     inputSchema: {
       claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
       mnemeSessionId: external_exports3.string().optional().describe(

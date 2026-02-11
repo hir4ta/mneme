@@ -5,6 +5,7 @@ description: |
   Use when: (1) looking for past solutions, (2) recalling approved guidance,
   (3) finding related implementation context.
 argument-hint: "<query>"
+allowed-tools: mcp__mneme-search__mneme_search, mcp__mneme-search__mneme_get_session
 ---
 
 # /mneme:search

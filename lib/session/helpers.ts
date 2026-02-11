@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { findJsonFiles, nowISO, safeWriteJson } from "./utils.ts";
+import { findJsonFiles, nowISO, safeWriteJson } from "../utils.ts";
 
 export function getGitInfo(cwd: string): {
   branch: string;

@@ -90,7 +90,7 @@ export {
   getLocalDbPath,
   initLocalDatabase,
   openLocalDatabase,
-} from "./db-init.js";
+} from "./init.js";
 export {
   deleteBackups,
   deleteBackupsByProject,
@@ -99,7 +99,7 @@ export {
   deleteInteractionsByProject,
   insertInteractions,
   insertPreCompactBackup,
-} from "./db-mutations.js";
+} from "./mutations.js";
 export {
   countInteractions,
   getAllBackups,
@@ -117,4 +117,4 @@ export {
   hasInteractions,
   hasInteractionsForSessionIds,
   searchInteractions,
-} from "./db-queries.js";
+} from "./queries.js";

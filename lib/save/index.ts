@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import "./suppress-sqlite-warning.js";
+import "../suppress-sqlite-warning.js";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -9,23 +9,19 @@ const { DatabaseSync } = await import("node:sqlite");
 import {
   cleanupStaleUncommittedSessions,
   cleanupUncommittedSession,
-} from "./incremental-save-cleanup.js";
-import {
-  getSaveState,
-  initDatabase,
-  updateSaveState,
-} from "./incremental-save-db.js";
-import { getGitInfo, resolveMnemeSessionId } from "./incremental-save-git.js";
+} from "./cleanup.js";
+import { getSaveState, initDatabase, updateSaveState } from "./db.js";
+import { getGitInfo, resolveMnemeSessionId } from "./git.js";
 
 export {
   cleanupStaleUncommittedSessions,
   cleanupUncommittedSession,
-} from "./incremental-save-cleanup.js";
+} from "./cleanup.js";
 
-import { parseTranscriptIncremental } from "./incremental-save-parser.js";
-import type { SaveResult } from "./incremental-save-types.js";
+import { parseTranscriptIncremental } from "./parser.js";
+import type { SaveResult } from "./types.js";
 
-export type { SaveResult } from "./incremental-save-types.js";
+export type { SaveResult } from "./types.js";
 
 export async function incrementalSave(
   claudeSessionId: string,

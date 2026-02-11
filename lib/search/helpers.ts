@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { levenshtein } from "./fuzzy-search.js";
+import { levenshtein } from "./fuzzy.js";
 
 export interface TagDefinition {
   id: string;

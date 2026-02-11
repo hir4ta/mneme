@@ -5,7 +5,7 @@ import type {
   ProgressEvent,
   ToolResultMeta,
   TranscriptEntry,
-} from "./incremental-save-types.js";
+} from "./types.js";
 
 function extractSlashCommand(content: string): string | undefined {
   const match = content.match(/<command-name>([^<]+)<\/command-name>/);

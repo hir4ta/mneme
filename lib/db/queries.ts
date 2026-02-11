@@ -1,9 +1,9 @@
-import "./suppress-sqlite-warning.js";
+import "../suppress-sqlite-warning.js";
 
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
 
-import type { Interaction, PreCompactBackup } from "./db.js";
+import type { Interaction, PreCompactBackup } from "./index.js";
 
 export function getInteractions(
   db: DatabaseSyncType,

@@ -3,7 +3,7 @@ import {
   calculateSimilarity,
   expandAliases,
   levenshtein,
-} from "../fuzzy-search";
+} from "../search/fuzzy";
 
 describe("fuzzy-search", () => {
   const mockTags = [

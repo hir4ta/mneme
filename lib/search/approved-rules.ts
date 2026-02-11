@@ -6,7 +6,7 @@ import {
   fieldScore,
   loadTags,
   walkJsonFiles,
-} from "./search-helpers.js";
+} from "./helpers.js";
 
 export type ApprovedSourceType = "decision" | "pattern" | "rule";
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// lib/session-init.ts
+// lib/session/init.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 
@@ -62,11 +62,6 @@ function getRepositoryInfo(projectPath) {
   return result;
 }
 
-// lib/session-init-helpers.ts
-import { execSync as execSync2 } from "node:child_process";
-import * as fs2 from "node:fs";
-import * as path2 from "node:path";
-
 // lib/utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -108,7 +103,10 @@ function findJsonFiles(dir) {
   return results;
 }
 
-// lib/session-init-helpers.ts
+// lib/session/helpers.ts
+import { execSync as execSync2 } from "node:child_process";
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
 function getGitInfo(cwd) {
   const result = { branch: "", userName: "unknown", userEmail: "" };
   try {
@@ -210,9 +208,9 @@ function initTags(mnemeDir, pluginRoot) {
   }
 }
 
-// lib/session-init.ts
+// lib/session/init.ts
 function sessionInit(sessionId, cwd) {
-  const pluginRoot = path3.resolve(__dirname, "..");
+  const pluginRoot = path3.resolve(__dirname, "..", "..");
   const mnemeDir = path3.join(cwd, ".mneme");
   const sessionsDir = path3.join(mnemeDir, "sessions");
   const rulesDir = path3.join(mnemeDir, "rules");
@@ -409,7 +407,7 @@ function main() {
   }
 }
 var scriptPath = process.argv[1];
-if (scriptPath && (import.meta.url === `file://${scriptPath}` || scriptPath.endsWith("session-init.js") || scriptPath.endsWith("session-init.ts"))) {
+if (scriptPath && (import.meta.url === `file://${scriptPath}` || scriptPath.endsWith("session/init.js") || scriptPath.endsWith("session/init.ts"))) {
   main();
 }
 export {

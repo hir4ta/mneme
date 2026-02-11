@@ -6,6 +6,7 @@ description: |
   (3) picking up where you left off after a break.
 argument-hint: "[session-id]"
 disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Glob, mcp__mneme-db__mneme_get_interactions
 ---
 
 # /mneme:resume

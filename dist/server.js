@@ -3197,7 +3197,7 @@ function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
 import fs4 from "node:fs";
 import path3 from "node:path";
 
-// lib/db.ts
+// lib/db/index.ts
 import { execSync } from "node:child_process";
 
 // lib/suppress-sqlite-warning.ts
@@ -3209,7 +3209,7 @@ process.emit = (event, ...args) => {
   return originalEmit.apply(process, [event, ...args]);
 };
 
-// lib/db-init.ts
+// lib/db/init.ts
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync2 } from "node:fs";
 import { dirname as dirname2, join as join4 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -3234,7 +3234,7 @@ function openLocalDatabase(projectPath) {
   return db;
 }
 
-// lib/db-mutations.ts
+// lib/db/mutations.ts
 var { DatabaseSync: DatabaseSync2 } = await import("node:sqlite");
 function deleteInteractions(db, sessionId) {
   const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
@@ -3247,7 +3247,7 @@ function deleteBackups(db, sessionId) {
   stmt.run(sessionId);
 }
 
-// lib/db-queries.ts
+// lib/db/queries.ts
 var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
 function getInteractionsBySessionIds(db, sessionIds) {
   if (sessionIds.length === 0) return [];
@@ -3296,7 +3296,7 @@ function countInteractions(db, filter) {
   return result.count;
 }
 
-// lib/db.ts
+// lib/db/index.ts
 function getCurrentUser() {
   try {
     return execSync("git config user.name", { encoding: "utf-8" }).trim();
@@ -4427,13 +4427,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  let version = null;
-  try {
-    const pkgPath = path9.resolve(import.meta.dirname, "../package.json");
-    const pkg = JSON.parse(fs10.readFileSync(pkgPath, "utf-8"));
-    version = pkg.version || null;
-  } catch {
-  }
+  const version = "0.23.1";
   return c.json({
     name: projectName,
     path: projectRoot,

@@ -7,10 +7,10 @@ import * as path from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { markSessionCommitted } from "./db-save.js";
-import { getTranscriptPath, parseTranscript } from "./db-transcript.js";
-import { fail, ok } from "./db-types.js";
-import { getProjectPath, readJsonFile } from "./db-utils.js";
+import { markSessionCommitted } from "./save.js";
+import { getTranscriptPath, parseTranscript } from "./transcript.js";
+import { fail, ok } from "./types.js";
+import { getProjectPath, readJsonFile } from "./utils.js";
 
 interface SessionSummaryParams {
   claudeSessionId: string;
@@ -182,9 +182,7 @@ export function registerSessionSummaryTool(server: McpServer) {
     "mneme_update_session_summary",
     {
       description:
-        "Update session JSON file with summary data. " +
-        "MUST be called during /mneme:save Phase 3 to persist session metadata. " +
-        "Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
+        "Update session JSON with summary data for /mneme:save Phase 3.",
       inputSchema: {
         claudeSessionId: z
           .string()

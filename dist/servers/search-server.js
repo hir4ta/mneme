@@ -29951,15 +29951,15 @@ var StdioServerTransport = class {
   }
 };
 
-// lib/search-core.ts
+// lib/search/core.ts
 import * as fs4 from "node:fs";
 import * as path4 from "node:path";
 
-// lib/search-helpers.ts
+// lib/search/helpers.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 
-// lib/fuzzy-search.ts
+// lib/search/fuzzy.ts
 import * as fs2 from "node:fs";
 import * as path2 from "node:path";
 
@@ -29989,7 +29989,7 @@ function findJsonFiles(dir) {
   return results;
 }
 
-// lib/fuzzy-search.ts
+// lib/search/fuzzy.ts
 function levenshtein(a, b) {
   const matrix = [];
   for (let i = 0; i <= a.length; i++) {
@@ -30151,7 +30151,7 @@ function scoreDocument(doc, queries, fields) {
   }
   return totalScore;
 }
-var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
+var isMain = process.argv[1]?.endsWith("fuzzy.js") || process.argv[1]?.endsWith("fuzzy.ts");
 if (isMain && process.argv.length > 2) {
   const args = process.argv.slice(2);
   const queryIndex = args.indexOf("--query");
@@ -30168,7 +30168,7 @@ if (isMain && process.argv.length > 2) {
   });
 }
 
-// lib/search-helpers.ts
+// lib/search/helpers.ts
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -30229,7 +30229,7 @@ function walkJsonFiles(dir, callback) {
   }
 }
 
-// lib/search-core.ts
+// lib/search/core.ts
 function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
   try {
@@ -30480,7 +30480,7 @@ var server = new McpServer({
 server.registerTool(
   "mneme_search",
   {
-    description: "Search mneme's knowledge base for sessions and interactions. Returns scored results with matched fields.",
+    description: "Search mneme's knowledge base for sessions and interactions.",
     inputSchema: {
       query: external_exports3.string().max(QUERY_MAX_LENGTH).describe("Search query (keywords)"),
       types: external_exports3.array(external_exports3.enum(["session", "interaction"])).optional().describe("Types to search (default: session/interaction)."),

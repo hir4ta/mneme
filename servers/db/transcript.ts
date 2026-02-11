@@ -7,8 +7,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import * as readline from "node:readline";
 
-import type { ParsedInteraction, ParsedTranscript } from "./db-types.js";
-import { getProjectPath } from "./db-utils.js";
+import type { ParsedInteraction, ParsedTranscript } from "./types.js";
+import { getProjectPath } from "./utils.js";
 
 export function getTranscriptPath(claudeSessionId: string): string | null {
   const projectPath = getProjectPath();

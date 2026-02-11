@@ -2,8 +2,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { searchApprovedRules } from "./approved-rules-search.js";
-import { searchKnowledge } from "./search-core.js";
+import { searchApprovedRules } from "./approved-rules.js";
+import { searchKnowledge } from "./core.js";
 
 // Suppress Node.js SQLite experimental warning.
 const originalEmit = process.emit;

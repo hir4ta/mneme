@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/mneme",
-  "version": "0.23.0",
+  "version": "0.23.1",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",
@@ -27,7 +27,7 @@
     "dev:server": "tsx watch dashboard/server/index.ts",
     "build": "vite build && npm run build:server && npm run build:lib && npm run build:mcp",
     "build:server": "esbuild dashboard/server/index.ts --bundle --platform=node --outfile=dist/server.js --format=esm --external:fsevents",
-    "build:lib": "esbuild lib/*.ts --bundle --platform=node --outdir=dist/lib --format=esm --external:fsevents",
+    "build:lib": "esbuild lib/save/index.ts lib/search/prompt.ts lib/session/init.ts lib/session/finalize.ts --bundle --platform=node --outdir=dist/lib --format=esm --external:fsevents",
     "build:mcp": "esbuild servers/db-server.ts servers/search-server.ts --bundle --platform=node --outdir=dist/servers --format=esm --external:fsevents",
     "preview": "npm run build && node dist/server.js",
     "lint": "biome check .",

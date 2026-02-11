@@ -3,9 +3,9 @@
  */
 
 import * as os from "node:os";
-import { getTranscriptPath, parseTranscript } from "./db-transcript.js";
-import type { ParsedInteraction } from "./db-types.js";
-import { getDb, getProjectPath } from "./db-utils.js";
+import { getTranscriptPath, parseTranscript } from "./transcript.js";
+import type { ParsedInteraction } from "./types.js";
+import { getDb, getProjectPath } from "./utils.js";
 
 interface SaveInteractionsResult {
   success: boolean;

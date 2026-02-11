@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { Tag } from "./schemas/index.js";
-import { findJsonFiles, safeReadJson } from "./utils.js";
+import type { Tag } from "../schemas/index.js";
+import { findJsonFiles, safeReadJson } from "../utils.js";
 
 export interface SearchResult {
   type: "session" | "decision" | "pattern";
@@ -239,8 +239,8 @@ function scoreDocument(
 
 // CLI エントリポイント
 const isMain =
-  process.argv[1]?.endsWith("fuzzy-search.js") ||
-  process.argv[1]?.endsWith("fuzzy-search.ts");
+  process.argv[1]?.endsWith("fuzzy.js") ||
+  process.argv[1]?.endsWith("fuzzy.ts");
 
 if (isMain && process.argv.length > 2) {
   const args = process.argv.slice(2);

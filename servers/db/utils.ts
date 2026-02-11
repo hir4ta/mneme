@@ -5,11 +5,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import {
-  DatabaseSync,
-  type DatabaseSyncType,
-  type RuleDoc,
-} from "./db-types.js";
+import { DatabaseSync, type DatabaseSyncType, type RuleDoc } from "./types.js";
 
 export function getProjectPath(): string {
   return process.env.MNEME_PROJECT_PATH || process.cwd();

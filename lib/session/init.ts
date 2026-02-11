@@ -3,21 +3,21 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { getRepositoryInfo } from "./db.ts";
-import {
-  getGitInfo,
-  getRecentSessions,
-  initDatabase,
-  initRulesFile,
-  initTags,
-} from "./session-init-helpers.ts";
+import { getRepositoryInfo } from "../db/index.ts";
 import {
   ensureDir,
   findJsonFiles,
   nowISO,
   safeReadJson,
   safeWriteJson,
-} from "./utils.ts";
+} from "../utils.ts";
+import {
+  getGitInfo,
+  getRecentSessions,
+  initDatabase,
+  initRulesFile,
+  initTags,
+} from "./helpers.ts";
 
 export {
   getGitInfo,
@@ -25,7 +25,7 @@ export {
   initDatabase,
   initRulesFile,
   initTags,
-} from "./session-init-helpers.ts";
+} from "./helpers.ts";
 
 interface SessionJson {
   id: string;
@@ -65,7 +65,7 @@ interface InitResult {
 }
 
 function sessionInit(sessionId: string, cwd: string): InitResult {
-  const pluginRoot = path.resolve(__dirname, "..");
+  const pluginRoot = path.resolve(__dirname, "..", "..");
   const mnemeDir = path.join(cwd, ".mneme");
   const sessionsDir = path.join(mnemeDir, "sessions");
   const rulesDir = path.join(mnemeDir, "rules");
@@ -299,8 +299,8 @@ const scriptPath = process.argv[1];
 if (
   scriptPath &&
   (import.meta.url === `file://${scriptPath}` ||
-    scriptPath.endsWith("session-init.js") ||
-    scriptPath.endsWith("session-init.ts"))
+    scriptPath.endsWith("session/init.js") ||
+    scriptPath.endsWith("session/init.ts"))
 ) {
   main();
 }

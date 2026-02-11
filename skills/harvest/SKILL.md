@@ -6,6 +6,7 @@ description: |
   (3) merged PRs contain operational lessons.
 argument-hint: "<PR-URL>"
 disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
 # /mneme:harvest

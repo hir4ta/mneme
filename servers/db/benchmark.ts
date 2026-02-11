@@ -4,15 +4,15 @@
 
 import * as path from "node:path";
 
-import { searchKnowledge } from "../lib/search-core.js";
-import type { BenchmarkQuery } from "./db-types.js";
+import { searchKnowledge } from "../../lib/search/core.js";
+import type { BenchmarkQuery } from "./types.js";
 import {
   getDb,
   getMnemeDir,
   getProjectPath,
   readJsonFile,
   readRuleItems,
-} from "./db-utils.js";
+} from "./utils.js";
 
 export function runSearchBenchmark(limit: number): {
   queryCount: number;

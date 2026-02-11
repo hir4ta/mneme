@@ -28,16 +28,26 @@ validate_mneme() {
 # Find a script: first try dist/ (production), then lib/ (development).
 # Usage: find_script <plugin_root> <name>
 # Example: find_script "$PLUGIN_ROOT" "incremental-save"
-#   → /path/to/dist/lib/incremental-save.js  or
-#   → /path/to/lib/incremental-save.ts        or
+#   → /path/to/dist/lib/save/index.js  or
+#   → /path/to/lib/save/index.ts       or
 #   → "" (not found)
 find_script() {
   local plugin_root="$1"
   local name="$2"
-  if [ -f "${plugin_root}/dist/lib/${name}.js" ]; then
-    echo "${plugin_root}/dist/lib/${name}.js"
-  elif [ -f "${plugin_root}/lib/${name}.ts" ]; then
-    echo "${plugin_root}/lib/${name}.ts"
+
+  # Map names to subdirectory paths
+  local mapped_name="$name"
+  case "$name" in
+    incremental-save)  mapped_name="save/index" ;;
+    prompt-search)     mapped_name="search/prompt" ;;
+    session-init)      mapped_name="session/init" ;;
+    session-finalize)  mapped_name="session/finalize" ;;
+  esac
+
+  if [ -f "${plugin_root}/dist/lib/${mapped_name}.js" ]; then
+    echo "${plugin_root}/dist/lib/${mapped_name}.js"
+  elif [ -f "${plugin_root}/lib/${mapped_name}.ts" ]; then
+    echo "${plugin_root}/lib/${mapped_name}.ts"
   fi
 }
 

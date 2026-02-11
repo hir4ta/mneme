@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getCurrentUser } from "../../../lib/db.js";
+import { getCurrentUser } from "../../../lib/db/index.js";
 
 /**
  * Sanitize ID parameter to prevent path traversal

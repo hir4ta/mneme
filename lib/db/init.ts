@@ -1,4 +1,4 @@
-import "./suppress-sqlite-warning.js";
+import "../suppress-sqlite-warning.js";
 
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -31,7 +31,7 @@ export function initLocalDatabase(projectPath: string): DatabaseSyncType {
 
   configurePragmas(db);
 
-  const schemaPath = join(__dirname, "schema.sql");
+  const schemaPath = join(__dirname, "..", "schema.sql");
   if (existsSync(schemaPath)) {
     const schema = readFileSync(schemaPath, "utf-8");
     db.exec(schema);

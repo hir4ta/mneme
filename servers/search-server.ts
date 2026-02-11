@@ -11,7 +11,7 @@ import {
   type QueryableDb,
   type SearchType,
   searchKnowledge,
-} from "../lib/search-core.js";
+} from "../lib/search/core.js";
 
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
@@ -131,8 +131,7 @@ const server = new McpServer({
 server.registerTool(
   "mneme_search",
   {
-    description:
-      "Search mneme's knowledge base for sessions and interactions. Returns scored results with matched fields.",
+    description: "Search mneme's knowledge base for sessions and interactions.",
     inputSchema: {
       query: z
         .string()

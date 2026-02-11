@@ -7,7 +7,7 @@ import {
   isFuzzyMatch,
   loadTags,
   walkJsonFiles,
-} from "./search-helpers.js";
+} from "./helpers.js";
 
 export type SearchType = "session" | "interaction";
 

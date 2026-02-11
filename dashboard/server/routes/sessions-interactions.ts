@@ -5,7 +5,7 @@ import {
   getInteractionsByClaudeSessionIds,
   getInteractionsBySessionIds,
   openLocalDatabase,
-} from "../../../lib/db.js";
+} from "../../../lib/db/index.js";
 import {
   findJsonFileById,
   getMnemeDir,

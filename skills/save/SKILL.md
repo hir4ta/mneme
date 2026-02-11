@@ -4,7 +4,8 @@ description: |
   Extract and persist session outputs, then generate development rule candidates (decision/pattern/rule).
   Use when: (1) finishing meaningful implementation work, (2) capturing reusable guidance,
   (3) before ending a long session.
-disable-model-invocation: false
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__mneme-db__mneme_save_interactions, mcp__mneme-db__mneme_update_session_summary, mcp__mneme-db__mneme_mark_session_committed, mcp__mneme-db__mneme_rule_linter, mcp__mneme-db__mneme_search_eval
 ---
 
 # /mneme:save

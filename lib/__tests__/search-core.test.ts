@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { searchKnowledge } from "../search-core";
+import { searchKnowledge } from "../search/core";
 
 describe("search-core", () => {
   let tmpDir: string;

@@ -1,10 +1,5 @@
-import type {
-  Interaction,
-  ProjectInfo,
-  SessionInfo,
-  Stats,
-} from "./db-types.js";
-import { getDb } from "./db-utils.js";
+import type { Interaction, ProjectInfo, SessionInfo, Stats } from "./types.js";
+import { getDb } from "./utils.js";
 
 type SearchRow = {
   session_id: string;

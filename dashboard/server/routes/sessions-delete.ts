@@ -6,7 +6,7 @@ import {
   deleteBackups,
   deleteInteractions,
   openLocalDatabase,
-} from "../../../lib/db.js";
+} from "../../../lib/db/index.js";
 import { rebuildSessionIndexForMonth } from "../../../lib/index/manager.js";
 import {
   findJsonFileById,

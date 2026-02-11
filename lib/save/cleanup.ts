@@ -1,4 +1,4 @@
-import "./suppress-sqlite-warning.js";
+import "../suppress-sqlite-warning.js";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -9,7 +9,7 @@ import {
   findSessionFileById,
   hasSessionSummary,
   resolveMnemeSessionId,
-} from "./incremental-save-git.js";
+} from "./git.js";
 
 export function cleanupUncommittedSession(
   claudeSessionId: string,

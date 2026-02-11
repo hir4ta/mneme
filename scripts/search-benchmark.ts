@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type QueryableDb, searchKnowledge } from "../lib/search-core.js";
+import { type QueryableDb, searchKnowledge } from "../lib/search/core.js";
 
 // Suppress Node.js SQLite experimental warning.
 const originalEmit = process.emit;

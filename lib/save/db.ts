@@ -1,4 +1,4 @@
-import "./suppress-sqlite-warning.js";
+import "../suppress-sqlite-warning.js";
 
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -6,13 +6,13 @@ import * as path from "node:path";
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
 
-import type { SaveState } from "./incremental-save-types.js";
+import type { SaveState } from "./types.js";
 
 function getSchemaPath(): string | null {
   const scriptDir = path.dirname(new URL(import.meta.url).pathname);
   const candidates = [
+    path.join(scriptDir, "..", "schema.sql"),
     path.join(scriptDir, "schema.sql"),
-    path.join(scriptDir, "..", "lib", "schema.sql"),
     path.join(scriptDir, "..", "..", "lib", "schema.sql"),
   ];
   for (const candidate of candidates) {

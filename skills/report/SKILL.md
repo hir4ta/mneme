@@ -4,7 +4,9 @@ description: |
   Generate an AI-powered knowledge report from mneme session data.
   Use when: (1) sharing team progress, (2) reviewing accumulated knowledge,
   (3) generating weekly/monthly summaries for stakeholders.
-disable-model-invocation: false
+disable-model-invocation: true
+context: fork
+allowed-tools: Read, Write, Glob, Grep, AskUserQuestion
 ---
 
 # /mneme:report

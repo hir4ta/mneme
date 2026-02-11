@@ -20,10 +20,10 @@ import {
   getStats,
   listProjects,
   listSessions,
-} from "./db-queries.js";
-import { saveInteractions } from "./db-save.js";
-import { registerExtendedTools } from "./db-server-tools.js";
-import { registerSessionSummaryTool } from "./db-session-summary.js";
+} from "./db/queries.js";
+import { saveInteractions } from "./db/save.js";
+import { registerSessionSummaryTool } from "./db/session-summary.js";
+import { registerExtendedTools } from "./db/tools.js";
 import {
   fail,
   INTERACTION_OFFSET_MIN,
@@ -31,8 +31,8 @@ import {
   LIST_LIMIT_MIN,
   ok,
   QUERY_MAX_LENGTH,
-} from "./db-types.js";
-import { getDb } from "./db-utils.js";
+} from "./db/types.js";
+import { getDb } from "./db/utils.js";
 
 const server = new McpServer({
   name: "mneme-db",
@@ -42,8 +42,7 @@ const server = new McpServer({
 server.registerTool(
   "mneme_list_projects",
   {
-    description:
-      "List all projects tracked in mneme's local database with session counts and last activity",
+    description: "List all projects with session counts and last activity",
     inputSchema: {},
   },
   async () => {
@@ -118,7 +117,7 @@ server.registerTool(
   "mneme_stats",
   {
     description:
-      "Get statistics across all projects: total counts, per-project breakdown, recent activity",
+      "Get statistics: total counts, per-project breakdown, recent activity",
     inputSchema: {},
   },
   async () => {
@@ -131,8 +130,7 @@ server.registerTool(
 server.registerTool(
   "mneme_cross_project_search",
   {
-    description:
-      "Search interactions across ALL projects (not just current). Uses FTS5 for fast full-text search.",
+    description: "Search interactions across all projects via FTS5.",
     inputSchema: {
       query: z.string().max(QUERY_MAX_LENGTH).describe("Search query"),
       limit: z
@@ -159,10 +157,7 @@ server.registerTool(
 server.registerTool(
   "mneme_save_interactions",
   {
-    description:
-      "Save conversation interactions from Claude Code transcript to SQLite. " +
-      "Use this during /mneme:save to persist the conversation history. " +
-      "Reads the transcript file directly and extracts user/assistant messages.",
+    description: "Save transcript interactions to SQLite for /mneme:save.",
     inputSchema: {
       claudeSessionId: z
         .string()

@@ -6,25 +6,23 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { lintRules, runSearchBenchmark } from "./db-benchmark.js";
-import { getInteractions } from "./db-queries.js";
-import { markSessionCommitted } from "./db-save.js";
+import { lintRules, runSearchBenchmark } from "./benchmark.js";
+import { getInteractions } from "./queries.js";
+import { markSessionCommitted } from "./save.js";
 import {
   fail,
   LIST_LIMIT_MIN,
   ok,
   SEARCH_EVAL_DEFAULT_LIMIT,
-} from "./db-types.js";
-import { getDb, readSessionsById } from "./db-utils.js";
+} from "./types.js";
+import { getDb, readSessionsById } from "./utils.js";
 
 export function registerExtendedTools(server: McpServer) {
   server.registerTool(
     "mneme_mark_session_committed",
     {
       description:
-        "Mark a session as committed (saved with /mneme:save). " +
-        "This prevents the session's interactions from being deleted on SessionEnd. " +
-        "Call this after successfully saving session data.",
+        "Mark session as committed to prevent cleanup on SessionEnd.",
       inputSchema: {
         claudeSessionId: z
           .string()
@@ -46,8 +44,7 @@ export function registerExtendedTools(server: McpServer) {
   server.registerTool(
     "mneme_session_timeline",
     {
-      description:
-        "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
+      description: "Build timeline for a session or its resume-chain.",
       inputSchema: {
         sessionId: z.string().min(1).describe("Session ID (short or full)"),
         includeChain: z
@@ -122,8 +119,7 @@ export function registerExtendedTools(server: McpServer) {
   server.registerTool(
     "mneme_rule_linter",
     {
-      description:
-        "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
+      description: "Lint rules for schema and quality.",
       inputSchema: {
         ruleType: z
           .enum(["dev-rules", "review-guidelines", "all"])
@@ -139,8 +135,7 @@ export function registerExtendedTools(server: McpServer) {
   server.registerTool(
     "mneme_search_eval",
     {
-      description:
-        "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
+      description: "Run/compare search benchmark for quality checks.",
       inputSchema: {
         mode: z
           .enum(["run", "compare", "regression"])
