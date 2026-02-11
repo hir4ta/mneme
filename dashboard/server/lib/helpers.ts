@@ -112,8 +112,19 @@ export const listDatedJsonFiles = (dir: string): string[] => {
   });
 };
 
+/**
+ * Extract 8-char short ID from a full UUID or return as-is if already short.
+ * e.g. "5282b6be-c3e0-421e-a8f5-269173642a14" → "5282b6be"
+ */
+export const toShortId = (id: string): string => {
+  if (id.length === 36 && id[8] === "-") {
+    return id.slice(0, 8);
+  }
+  return id;
+};
+
 export const findJsonFileById = (dir: string, id: string): string | null => {
-  const target = `${id}.json`;
+  const target = `${toShortId(id)}.json`;
   const queue = [dir];
   while (queue.length > 0) {
     const current = queue.shift();

@@ -203,21 +203,25 @@ function extractSlashCommand(content) {
   const match = content.match(/<command-name>([^<]+)<\/command-name>/);
   return match ? match[1] : void 0;
 }
-function extractToolResultMeta(content, toolUseIdToName) {
+function extractToolResultMeta(content, toolUseIdToName, toolUseIdToFilePath) {
   return content.filter((c) => c.type === "tool_result" && c.tool_use_id).map((c) => {
     const contentStr = typeof c.content === "string" ? c.content : c.content ? JSON.stringify(c.content) : "";
     const lineCount = contentStr.split("\n").length;
-    const filePathMatch = contentStr.match(
-      /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/
-    );
     const toolUseId = c.tool_use_id || "";
+    let filePath = toolUseIdToFilePath.get(toolUseId);
+    if (!filePath) {
+      const filePathMatch = contentStr.match(
+        /(?:^|\s)((?:\/|\.\/)\S+\.\w+)\b/
+      );
+      filePath = filePathMatch ? filePathMatch[1] : void 0;
+    }
     return {
       toolUseId,
       toolName: toolUseIdToName.get(toolUseId),
       success: !c.is_error,
       contentLength: contentStr.length,
       lineCount: lineCount > 1 ? lineCount : void 0,
-      filePath: filePathMatch ? filePathMatch[1] : void 0
+      filePath
     };
   });
 }
@@ -267,12 +271,17 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
   const progressEvents = /* @__PURE__ */ new Map();
   for (const entry of entries) {
     if (entry.type === "progress" && entry.data?.type) {
+      if (entry.data.type === "hook_progress") continue;
       const event = {
         type: entry.data.type,
         timestamp: entry.timestamp,
         hookEvent: entry.data.hookEvent,
         hookName: entry.data.hookName,
-        toolName: entry.data.toolName
+        toolName: entry.data.toolName,
+        ...entry.data.type === "agent_progress" && {
+          prompt: entry.data.prompt,
+          agentId: entry.data.agentId
+        }
       };
       const key = entry.timestamp.slice(0, 16);
       if (!progressEvents.has(key)) {
@@ -299,11 +308,15 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     };
   });
   const toolUseIdToName = /* @__PURE__ */ new Map();
+  const toolUseIdToFilePath = /* @__PURE__ */ new Map();
   for (const entry of entries) {
     if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
       for (const c of entry.message.content) {
         if (c.type === "tool_use" && c.id && c.name) {
           toolUseIdToName.set(c.id, c.name);
+          if (c.input?.file_path) {
+            toolUseIdToFilePath.set(c.id, c.input.file_path);
+          }
         }
       }
     }
@@ -313,7 +326,8 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     if (entry.type === "user" && Array.isArray(entry.message?.content)) {
       const results = extractToolResultMeta(
         entry.message.content,
-        toolUseIdToName
+        toolUseIdToName,
+        toolUseIdToFilePath
       );
       if (results.length > 0) {
         const key = entry.timestamp.slice(0, 16);

@@ -50,6 +50,8 @@ interface TranscriptEntry {
     hookName?: string;
     status?: string;
     toolName?: string;
+    prompt?: string;
+    agentId?: string;
   };
 }
 
@@ -68,6 +70,8 @@ interface ProgressEvent {
   hookEvent?: string;
   hookName?: string;
   toolName?: string;
+  prompt?: string;
+  agentId?: string;
 }
 
 interface ParsedInteraction {
@@ -349,6 +353,7 @@ function extractToolResultMeta(
     is_error?: boolean;
   }>,
   toolUseIdToName: Map<string, string>,
+  toolUseIdToFilePath: Map<string, string>,
 ): ToolResultMeta[] {
   return content
     .filter((c) => c.type === "tool_result" && c.tool_use_id)
@@ -361,18 +366,25 @@ function extractToolResultMeta(
             ? JSON.stringify(c.content)
             : "";
       const lineCount = contentStr.split("\n").length;
-      // Try to extract file path from content
-      const filePathMatch = contentStr.match(
-        /^(?:\s*\d+[→|]\s*)?([^\n]+\.(ts|js|py|json|md|sql|sh|tsx|jsx))/,
-      );
       const toolUseId = c.tool_use_id || "";
+
+      // Use file path from tool_use input (reliable), fall back to regex on content
+      let filePath = toolUseIdToFilePath.get(toolUseId);
+      if (!filePath) {
+        // Fallback: match clean file paths starting with / or ./
+        const filePathMatch = contentStr.match(
+          /(?:^|\s)((?:\/|\.\/)\S+\.\w+)\b/,
+        );
+        filePath = filePathMatch ? filePathMatch[1] : undefined;
+      }
+
       return {
         toolUseId,
         toolName: toolUseIdToName.get(toolUseId),
         success: !c.is_error,
         contentLength: contentStr.length,
         lineCount: lineCount > 1 ? lineCount : undefined,
-        filePath: filePathMatch ? filePathMatch[1] : undefined,
+        filePath,
       };
     });
 }
@@ -438,16 +450,23 @@ async function parseTranscriptIncremental(
     return inPlanMode;
   }
 
-  // Extract progress events (hooks, MCP, etc.)
+  // Extract progress events (agent_progress only, hook_progress filtered out)
   const progressEvents: Map<string, ProgressEvent[]> = new Map();
   for (const entry of entries) {
     if (entry.type === "progress" && entry.data?.type) {
+      // Filter out hook_progress - tools used badge is sufficient
+      if (entry.data.type === "hook_progress") continue;
+
       const event: ProgressEvent = {
         type: entry.data.type,
         timestamp: entry.timestamp,
         hookEvent: entry.data.hookEvent,
         hookName: entry.data.hookName,
         toolName: entry.data.toolName,
+        ...(entry.data.type === "agent_progress" && {
+          prompt: entry.data.prompt,
+          agentId: entry.data.agentId,
+        }),
       };
       // Group by parent timestamp (approximate)
       const key = entry.timestamp.slice(0, 16); // Group by minute
@@ -480,13 +499,17 @@ async function parseTranscriptIncremental(
       };
     });
 
-  // Build toolUseId to tool name mapping from assistant messages
+  // Build toolUseId to tool name and file path mappings from assistant messages
   const toolUseIdToName: Map<string, string> = new Map();
+  const toolUseIdToFilePath: Map<string, string> = new Map();
   for (const entry of entries) {
     if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
       for (const c of entry.message.content) {
         if (c.type === "tool_use" && c.id && c.name) {
           toolUseIdToName.set(c.id, c.name);
+          if (c.input?.file_path) {
+            toolUseIdToFilePath.set(c.id, c.input.file_path);
+          }
         }
       }
     }
@@ -504,6 +527,7 @@ async function parseTranscriptIncremental(
           is_error?: boolean;
         }>,
         toolUseIdToName,
+        toolUseIdToFilePath,
       );
       if (results.length > 0) {
         const key = entry.timestamp.slice(0, 16);

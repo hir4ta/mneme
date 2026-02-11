@@ -2955,6 +2955,7 @@ function buildSessionIndexForMonth(mnemeDir2, year, month) {
       const sessionType = session.sessionType || summary.sessionType || null;
       items.push({
         id: session.id,
+        sessionId: session.sessionId || void 0,
         title: title || "Untitled",
         goal: summary.goal || session.goal || void 0,
         createdAt: session.createdAt,
@@ -3429,8 +3430,14 @@ var listDatedJsonFiles = (dir) => {
     return /^\d{4}$/.test(parts[0]) && /^\d{2}$/.test(parts[1]);
   });
 };
+var toShortId = (id) => {
+  if (id.length === 36 && id[8] === "-") {
+    return id.slice(0, 8);
+  }
+  return id;
+};
 var findJsonFileById = (dir, id) => {
-  const target = `${id}.json`;
+  const target = `${toShortId(id)}.json`;
   const queue = [dir];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -5005,7 +5012,7 @@ sessions.get("/:id/markdown", async (c) => {
   }
 });
 sessions.delete("/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
+  const id = toShortId(sanitizeId(c.req.param("id")));
   const dryRun = c.req.query("dry-run") === "true";
   const mnemeDir2 = getMnemeDir();
   const sessionsDir = path11.join(mnemeDir2, "sessions");
@@ -5148,20 +5155,24 @@ sessions.delete("/", async (c) => {
   }
 });
 sessions.get("/:id/interactions", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
+  const rawId = sanitizeId(c.req.param("id"));
+  const shortId = toShortId(rawId);
   const mnemeDir2 = getMnemeDir();
   const sessionLinksDir = path11.join(mnemeDir2, "session-links");
   const sessionsDir = path11.join(mnemeDir2, "sessions");
   try {
-    const sessionFilePath = findJsonFileById(sessionsDir, id);
+    const sessionFilePath = findJsonFileById(sessionsDir, shortId);
     let projectDir = getProjectRoot();
     let primaryClaudeSessionId = null;
+    if (rawId.length === 36 && rawId[8] === "-") {
+      primaryClaudeSessionId = rawId;
+    }
     if (sessionFilePath) {
       const sessionData = safeParseJsonFile(sessionFilePath);
       if (sessionData?.context?.projectDir) {
         projectDir = sessionData.context.projectDir;
       }
-      if (sessionData?.sessionId) {
+      if (sessionData?.sessionId && !primaryClaudeSessionId) {
         primaryClaudeSessionId = sessionData.sessionId;
       }
     }
@@ -5169,8 +5180,8 @@ sessions.get("/:id/interactions", async (c) => {
     if (!db) {
       return c.json({ interactions: [], count: 0 });
     }
-    let masterId = id;
-    const myLinkFile = path11.join(sessionLinksDir, `${id}.json`);
+    let masterId = shortId;
+    const myLinkFile = path11.join(sessionLinksDir, `${shortId}.json`);
     if (fs12.existsSync(myLinkFile)) {
       try {
         const myLinkData = JSON.parse(fs12.readFileSync(myLinkFile, "utf-8"));
@@ -5185,8 +5196,8 @@ sessions.get("/:id/interactions", async (c) => {
     if (primaryClaudeSessionId) {
       claudeSessionIds.push(primaryClaudeSessionId);
     }
-    if (masterId !== id) {
-      sessionIds.push(id);
+    if (masterId !== shortId) {
+      sessionIds.push(shortId);
     }
     if (fs12.existsSync(sessionLinksDir)) {
       const linkFiles = fs12.readdirSync(sessionLinksDir);

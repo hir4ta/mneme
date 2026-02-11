@@ -41,7 +41,7 @@ function SessionCard({ session, tags }: { session: Session; tags: Tag[] }) {
   };
 
   return (
-    <Link to={`/sessions/${session.id}`}>
+    <Link to={`/sessions/${session.sessionId || session.id}`}>
       <Card className="hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors cursor-pointer h-full">
         <CardContent className="p-3">
           <div className="flex items-start justify-between gap-2 mb-1">

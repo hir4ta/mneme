@@ -141,8 +141,12 @@ function InteractionCard({
     interaction.toolDetails && interaction.toolDetails.length > 0;
   const hasToolResults =
     interaction.toolResults && interaction.toolResults.length > 0;
+  // Filter out hook_progress events (legacy data may still contain them)
+  const filteredProgressEvents = interaction.progressEvents?.filter(
+    (e) => e.type !== "hook_progress",
+  );
   const hasProgressEvents =
-    interaction.progressEvents && interaction.progressEvents.length > 0;
+    filteredProgressEvents && filteredProgressEvents.length > 0;
   const isSubagent = !!interaction.agentId;
   // Support both legacy hasPlanMode and new inPlanMode
   const isInPlanMode = interaction.inPlanMode || interaction.hasPlanMode;
@@ -379,11 +383,16 @@ function InteractionCard({
                           {result.lineCount} lines
                         </span>
                       )}
-                      {result.contentLength && (
-                        <span className="text-emerald-500 dark:text-emerald-600">
-                          ({Math.round(result.contentLength / 1024)}KB)
-                        </span>
-                      )}
+                      {result.contentLength != null &&
+                        result.contentLength > 0 && (
+                          <span className="text-emerald-500 dark:text-emerald-600">
+                            (
+                            {result.contentLength < 1024
+                              ? `${result.contentLength}B`
+                              : `${Math.round(result.contentLength / 1024)}KB`}
+                            )
+                          </span>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -393,7 +402,7 @@ function InteractionCard({
         </div>
       )}
 
-      {/* Progress Events (expandable) */}
+      {/* Progress Events (expandable) - aggregated by agent */}
       {hasProgressEvents && (
         <div className="flex justify-start">
           <div className="max-w-[85%]">
@@ -407,37 +416,84 @@ function InteractionCard({
                 ? t("interaction.hideProgressEvents")
                 : t("interaction.showProgressEvents")}
               <span className="text-stone-400">
-                ({interaction.progressEvents?.length})
+                ({filteredProgressEvents?.length})
               </span>
             </button>
 
             {showProgressEvents && (
               <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-xl px-3 py-2">
                 <div className="space-y-1 font-mono text-xs">
-                  {interaction.progressEvents?.map((event, idx) => (
-                    <div
-                      key={`${event.timestamp}-${idx}`}
-                      className="flex items-center gap-2 text-purple-800 dark:text-purple-200"
-                    >
-                      <span className="text-purple-600 dark:text-purple-400 font-semibold shrink-0">
-                        {event.type === "hook_progress"
-                          ? "Hook"
-                          : event.type === "mcp_progress"
-                            ? "MCP"
-                            : event.type === "agent_progress"
-                              ? "Agent"
-                              : event.type}
-                      </span>
-                      <span className="text-purple-700 dark:text-purple-300">
-                        {event.hookEvent && event.hookName
-                          ? `${event.hookEvent}:${event.hookName}`
-                          : event.hookName ||
-                            event.toolName ||
-                            event.hookEvent ||
-                            ""}
-                      </span>
-                    </div>
-                  ))}
+                  {(() => {
+                    const agentGroups = new Map<
+                      string,
+                      { prompt?: string; count: number }
+                    >();
+                    const otherEvents: NonNullable<
+                      typeof filteredProgressEvents
+                    > = [];
+
+                    for (const event of filteredProgressEvents || []) {
+                      if (event.type === "agent_progress") {
+                        const key = event.agentId || "_unknown";
+                        const existing = agentGroups.get(key);
+                        if (existing) {
+                          existing.count++;
+                        } else {
+                          agentGroups.set(key, {
+                            prompt: event.prompt,
+                            count: 1,
+                          });
+                        }
+                      } else {
+                        otherEvents.push(event);
+                      }
+                    }
+
+                    return (
+                      <>
+                        {Array.from(agentGroups.entries()).map(
+                          ([agentId, { prompt, count }]) => (
+                            <div
+                              key={agentId}
+                              className="flex items-start gap-2 text-purple-800 dark:text-purple-200"
+                            >
+                              <Bot className="w-3 h-3 text-purple-500 shrink-0 mt-0.5" />
+                              <span className="text-purple-600 dark:text-purple-400 font-semibold shrink-0">
+                                {agentId === "_unknown"
+                                  ? "Agent"
+                                  : agentId.slice(0, 7)}
+                              </span>
+                              <span className="text-purple-700 dark:text-purple-300 break-all">
+                                {prompt
+                                  ? prompt.length > 100
+                                    ? `${prompt.substring(0, 100)}...`
+                                    : prompt
+                                  : ""}
+                              </span>
+                              <span className="text-purple-500 dark:text-purple-600 shrink-0">
+                                x{count}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                        {otherEvents.map((event, idx) => (
+                          <div
+                            key={`${event.timestamp}-${idx}`}
+                            className="flex items-center gap-2 text-purple-800 dark:text-purple-200"
+                          >
+                            <span className="text-purple-600 dark:text-purple-400 font-semibold shrink-0">
+                              {event.type === "mcp_progress"
+                                ? "MCP"
+                                : event.type}
+                            </span>
+                            <span className="text-purple-700 dark:text-purple-300">
+                              {event.toolName || ""}
+                            </span>
+                          </div>
+                        ))}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -466,33 +522,8 @@ function ContextRestorationCard({ session }: { session: Session }) {
   const projectDir = session.context?.projectDir;
   const branch = session.context?.branch;
 
-  // Generate restoration command
-  const generateRestoreCommand = () => {
-    const commands: string[] = [];
-
-    if (projectDir) {
-      commands.push(`cd "${projectDir}"`);
-    }
-
-    if (branch) {
-      commands.push(`git checkout ${branch}`);
-    }
-
-    return commands.join(" && ");
-  };
-
-  const restoreCommand = generateRestoreCommand();
-
-  const _copyCommand = () => {
-    if (restoreCommand) {
-      navigator.clipboard.writeText(restoreCommand);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   // Generate resume command for mneme
-  const resumeCommand = `/mneme:resume ${session.id}`;
+  const resumeCommand = `/mneme:resume ${session.sessionId || session.id}`;
 
   const copyResumeCommand = () => {
     navigator.clipboard.writeText(resumeCommand);

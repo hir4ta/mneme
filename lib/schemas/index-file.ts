@@ -4,6 +4,7 @@ import { SessionTypeSchema } from "./session.js";
 // Session index item schema
 export const SessionIndexItemSchema = z.object({
   id: z.string(),
+  sessionId: z.string().optional(),
   title: z.string(),
   goal: z.string().optional(),
   createdAt: z.string(),

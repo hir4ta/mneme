@@ -21,6 +21,7 @@ import {
   listDatedJsonFiles,
   safeParseJsonFile,
   sanitizeId,
+  toShortId,
   writeAuditLog,
 } from "../lib/helpers.js";
 import { paginateArray, parsePaginationParams } from "../lib/pagination.js";
@@ -226,7 +227,7 @@ sessions.get("/:id/markdown", async (c) => {
 
 // Delete a single session
 sessions.delete("/:id", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
+  const id = toShortId(sanitizeId(c.req.param("id")));
   const dryRun = c.req.query("dry-run") === "true";
   const mnemeDir = getMnemeDir();
   const sessionsDir = path.join(mnemeDir, "sessions");
@@ -399,15 +400,21 @@ sessions.delete("/", async (c) => {
 
 // Session Interactions API (from local SQLite)
 sessions.get("/:id/interactions", async (c) => {
-  const id = sanitizeId(c.req.param("id"));
+  const rawId = sanitizeId(c.req.param("id"));
+  const shortId = toShortId(rawId);
   const mnemeDir = getMnemeDir();
   const sessionLinksDir = path.join(mnemeDir, "session-links");
   const sessionsDir = path.join(mnemeDir, "sessions");
 
   try {
-    const sessionFilePath = findJsonFileById(sessionsDir, id);
+    const sessionFilePath = findJsonFileById(sessionsDir, shortId);
     let projectDir = getProjectRoot();
     let primaryClaudeSessionId: string | null = null;
+
+    // If a full UUID was passed in the URL, use it directly
+    if (rawId.length === 36 && rawId[8] === "-") {
+      primaryClaudeSessionId = rawId;
+    }
 
     if (sessionFilePath) {
       const sessionData = safeParseJsonFile<{
@@ -417,7 +424,7 @@ sessions.get("/:id/interactions", async (c) => {
       if (sessionData?.context?.projectDir) {
         projectDir = sessionData.context.projectDir;
       }
-      if (sessionData?.sessionId) {
+      if (sessionData?.sessionId && !primaryClaudeSessionId) {
         primaryClaudeSessionId = sessionData.sessionId;
       }
     }
@@ -427,8 +434,8 @@ sessions.get("/:id/interactions", async (c) => {
       return c.json({ interactions: [], count: 0 });
     }
 
-    let masterId = id;
-    const myLinkFile = path.join(sessionLinksDir, `${id}.json`);
+    let masterId = shortId;
+    const myLinkFile = path.join(sessionLinksDir, `${shortId}.json`);
     if (fs.existsSync(myLinkFile)) {
       try {
         const myLinkData = JSON.parse(fs.readFileSync(myLinkFile, "utf-8"));
@@ -447,8 +454,8 @@ sessions.get("/:id/interactions", async (c) => {
       claudeSessionIds.push(primaryClaudeSessionId);
     }
 
-    if (masterId !== id) {
-      sessionIds.push(id);
+    if (masterId !== shortId) {
+      sessionIds.push(shortId);
     }
 
     if (fs.existsSync(sessionLinksDir)) {
@@ -531,6 +538,8 @@ sessions.get("/:id/interactions", async (c) => {
       hookEvent?: string;
       hookName?: string;
       toolName?: string;
+      prompt?: string;
+      agentId?: string;
     };
 
     // Group by user/assistant pairs for better display

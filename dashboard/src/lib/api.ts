@@ -152,6 +152,8 @@ export interface ProgressEvent {
   hookEvent?: string;
   hookName?: string;
   toolName?: string;
+  prompt?: string;
+  agentId?: string;
 }
 
 // Session Interactions (from SQLite, owner-restricted)

@@ -91,7 +91,6 @@ function drawEffectivenessRing(
   }
 }
 
-
 function useContainerDimensions(ref: React.RefObject<HTMLDivElement | null>) {
   const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
 
@@ -172,7 +171,7 @@ export function GraphCanvas({
           <ForceGraph2D
             ref={graphRef}
             graphData={graphData}
-            nodeCanvasObject={(node, ctx, globalScale) => {
+            nodeCanvasObject={(node, ctx, _globalScale) => {
               const n = node as GraphRenderNode;
               const x = n.x ?? 0;
               const y = n.y ?? 0;
@@ -207,7 +206,6 @@ export function GraphCanvas({
                   n.acceptedCount || 0,
                 );
               }
-
             }}
             nodePointerAreaPaint={(node, color, ctx) => {
               const n = node as GraphRenderNode;

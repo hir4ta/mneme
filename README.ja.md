@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.22.6-blue)
+![Version](https://img.shields.io/badge/version-0.22.7-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)

@@ -97,6 +97,7 @@ export function buildSessionIndexForMonth(
 
       items.push({
         id: session.id as string,
+        sessionId: (session.sessionId as string) || undefined,
         title: title || "Untitled",
         goal: (summary.goal as string) || (session.goal as string) || undefined,
         createdAt: session.createdAt as string,
