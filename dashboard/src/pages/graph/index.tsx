@@ -112,8 +112,8 @@ export function GraphPage() {
   return (
     <div className="flex min-h-full flex-col gap-4 pb-6">
       <div className="mb-1">
-        <h1 className="text-xl font-bold">{t("title")}</h1>
-        <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <GraphControls

@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.22.7-blue)
+![Version](https://img.shields.io/badge/version-0.23.0-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
@@ -132,7 +132,7 @@ Detailed runtime flow (hooks, uncommitted policy, auto-compact path):
 
 ### Dashboard
 
-Run in your project directory:
+Run in your project directory
 
 ```bash
 npx @hir4ta/mneme --dashboard
@@ -157,16 +157,73 @@ npx @hir4ta/mneme --dashboard --port 8080
 
 The dashboard supports English and Japanese. Click the language toggle (EN/JA) in the header to switch. The preference is saved to localStorage.
 
-### Weekly Knowledge HTML Export
+### Development Rules
 
-Generate a shareable HTML snapshot for the last 7 days of knowledge activity:
+mneme extracts three types of knowledge from your sessions
 
-```bash
-npm run export:weekly-html
+| Type | Definition | Example |
+|------|-----------|---------|
+| **Decision** | A one-time choice with context-specific reasoning | "Chose RS256 over HS256 for JWT signing" |
+| **Pattern** | A repeatable practice observed across contexts | "Parallel testing with real data catches regressions" |
+| **Rule** | An enforceable standard promoted from decisions/patterns | "Always verify with real data tests after refactoring" |
+
+Decision and Pattern are **mutually exclusive** — the same insight goes to exactly one. Rules are promoted from either with a source reference.
+
+#### How it works
+
+1. `/mneme:save` extracts decisions, patterns, and rules from your session
+2. Candidates are saved as **draft** status
+3. Review and approve/reject in the dashboard (**Development Rules** page)
+4. **Approved rules are automatically injected** into your prompts via memory search
+
+#### Priority levels
+
+| Priority | Risk level | Application |
+|----------|-----------|-------------|
+| **p0** | Security / data loss / outage | Always enforced |
+| **p1** | Correctness / reliability | Applied by default |
+| **p2** | Maintainability / quality | Applied when relevant |
+
+### CLAUDE.md Integration
+
+Add to your project's `CLAUDE.md` to get the most out of mneme
+
+```markdown
+# mneme
+- Run `/mneme:save` before ending long sessions to preserve decisions and patterns
+- Use `/mneme:resume <id>` to continue previous work with full context
+- Approved development rules are automatically injected — follow p0 rules strictly
 ```
 
-Output:
-- `.mneme/exports/weekly-knowledge-YYYY-MM-DD.html`
+For teams, you can create `.claude/rules/mneme.md` with path-scoped rules:
+
+```markdown
+# mneme workflow
+- After implementing a feature, run `/mneme:save` to extract reusable knowledge
+- Check the dashboard for pending development rules that need approval
+- When approved rules appear in <mneme-rules>, apply them according to priority (p0 > p1 > p2)
+```
+
+> **Tip**: Keep CLAUDE.md concise. For each line, ask: "Would removing this cause Claude to make mistakes?" If not, cut it. ([Best Practices - Claude Code Docs](https://code.claude.com/docs/en/best-practices))
+
+### Knowledge Report
+
+Generate an AI-powered knowledge report. Claude Code analyzes session data and produces a rich HTML report with narrative summaries, session timelines, knowledge highlights, and usage insights.
+
+```
+/mneme:report
+```
+
+Features:
+- Choose period: 1 week (default), 2 weeks, or 1 month
+- AI-generated development activity summary
+- Expandable session timeline with goals, outcomes, discussions, and errors
+- Knowledge highlights (decisions, patterns, rules) displayed directly
+- Tag heatmap aggregated from all sources
+- Claude Code usage analysis with tool breakdown
+- Bilingual output (EN/JA) with language toggle
+
+Output: `.mneme/exports/knowledge-report-YYYY-MM-DD.html`
 
 ## Data Storage
 

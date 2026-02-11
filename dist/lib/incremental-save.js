@@ -10,373 +10,17 @@ process.emit = (event, ...args) => {
 };
 
 // lib/incremental-save.ts
+import * as fs5 from "node:fs";
+import * as path4 from "node:path";
+
+// lib/incremental-save-cleanup.ts
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
+
+// lib/incremental-save-git.ts
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as readline from "node:readline";
-var { DatabaseSync } = await import("node:sqlite");
-function getSchemaPath() {
-  const scriptDir = path.dirname(new URL(import.meta.url).pathname);
-  const candidates = [
-    path.join(scriptDir, "schema.sql"),
-    path.join(scriptDir, "..", "lib", "schema.sql"),
-    path.join(scriptDir, "..", "..", "lib", "schema.sql")
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
-}
-var FALLBACK_SCHEMA = `
-CREATE TABLE IF NOT EXISTS interactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
-    claude_session_id TEXT,
-    project_path TEXT NOT NULL,
-    repository TEXT,
-    repository_url TEXT,
-    repository_root TEXT,
-    owner TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
-    content TEXT NOT NULL,
-    thinking TEXT,
-    tool_calls TEXT,
-    timestamp TEXT NOT NULL,
-    is_compact_summary INTEGER DEFAULT 0,
-    agent_id TEXT,
-    agent_type TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
-CREATE INDEX IF NOT EXISTS idx_interactions_claude_session ON interactions(claude_session_id);
-CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
-CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp);
-CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
-CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
-
-CREATE TABLE IF NOT EXISTS session_save_state (
-    claude_session_id TEXT PRIMARY KEY,
-    mneme_session_id TEXT NOT NULL,
-    project_path TEXT NOT NULL,
-    last_saved_timestamp TEXT,
-    last_saved_line INTEGER DEFAULT 0,
-    is_committed INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_save_state_mneme_session ON session_save_state(mneme_session_id);
-CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
-
-CREATE TABLE IF NOT EXISTS pre_compact_backups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
-    project_path TEXT NOT NULL,
-    owner TEXT NOT NULL,
-    interactions TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE VIRTUAL TABLE IF NOT EXISTS interactions_fts USING fts5(
-    content,
-    thinking,
-    content=interactions,
-    content_rowid=id,
-    tokenize='unicode61'
-);
-
-CREATE TRIGGER IF NOT EXISTS interactions_ai AFTER INSERT ON interactions BEGIN
-    INSERT INTO interactions_fts(rowid, content, thinking)
-    VALUES (new.id, new.content, new.thinking);
-END;
-
-CREATE TRIGGER IF NOT EXISTS interactions_ad AFTER DELETE ON interactions BEGIN
-    INSERT INTO interactions_fts(interactions_fts, rowid, content, thinking)
-    VALUES ('delete', old.id, old.content, old.thinking);
-END;
-`;
-function initDatabase(dbPath) {
-  const mnemeDir = path.dirname(dbPath);
-  if (!fs.existsSync(mnemeDir)) {
-    fs.mkdirSync(mnemeDir, { recursive: true });
-  }
-  const db = new DatabaseSync(dbPath);
-  try {
-    db.exec("SELECT 1 FROM interactions LIMIT 1");
-  } catch {
-    const schemaPath = getSchemaPath();
-    if (schemaPath) {
-      const schema = fs.readFileSync(schemaPath, "utf8");
-      db.exec(schema);
-      console.error(`[mneme] Database initialized from schema: ${dbPath}`);
-    } else {
-      db.exec(FALLBACK_SCHEMA);
-      console.error(
-        `[mneme] Database initialized with fallback schema: ${dbPath}`
-      );
-    }
-  }
-  migrateDatabase(db);
-  db.exec("PRAGMA journal_mode = WAL");
-  db.exec("PRAGMA busy_timeout = 5000");
-  db.exec("PRAGMA synchronous = NORMAL");
-  return db;
-}
-function migrateDatabase(db) {
-  try {
-    const columns = db.prepare("PRAGMA table_info(interactions)").all();
-    const hasClaudeSessionId = columns.some(
-      (c) => c.name === "claude_session_id"
-    );
-    if (!hasClaudeSessionId) {
-      db.exec("ALTER TABLE interactions ADD COLUMN claude_session_id TEXT");
-      db.exec(
-        "CREATE INDEX IF NOT EXISTS idx_interactions_claude_session ON interactions(claude_session_id)"
-      );
-      console.error("[mneme] Migrated: added claude_session_id column");
-    }
-  } catch {
-  }
-  try {
-    db.exec("SELECT 1 FROM session_save_state LIMIT 1");
-  } catch {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS session_save_state (
-        claude_session_id TEXT PRIMARY KEY,
-        mneme_session_id TEXT NOT NULL,
-        project_path TEXT NOT NULL,
-        last_saved_timestamp TEXT,
-        last_saved_line INTEGER DEFAULT 0,
-        is_committed INTEGER DEFAULT 0,
-        created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
-      );
-      CREATE INDEX IF NOT EXISTS idx_save_state_mneme_session ON session_save_state(mneme_session_id);
-      CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
-    `);
-    console.error("[mneme] Migrated: created session_save_state table");
-  }
-}
-function getSaveState(db, claudeSessionId, mnemeSessionId, projectPath) {
-  const stmt = db.prepare(
-    "SELECT * FROM session_save_state WHERE claude_session_id = ?"
-  );
-  const row = stmt.get(claudeSessionId);
-  if (row) {
-    return {
-      claudeSessionId: row.claude_session_id,
-      mnemeSessionId: row.mneme_session_id,
-      projectPath: row.project_path,
-      lastSavedTimestamp: row.last_saved_timestamp,
-      lastSavedLine: row.last_saved_line,
-      isCommitted: row.is_committed
-    };
-  }
-  const insertStmt = db.prepare(`
-    INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path)
-    VALUES (?, ?, ?)
-  `);
-  insertStmt.run(claudeSessionId, mnemeSessionId, projectPath);
-  return {
-    claudeSessionId,
-    mnemeSessionId,
-    projectPath,
-    lastSavedTimestamp: null,
-    lastSavedLine: 0,
-    isCommitted: 0
-  };
-}
-function updateSaveState(db, claudeSessionId, lastSavedTimestamp, lastSavedLine) {
-  const stmt = db.prepare(`
-    UPDATE session_save_state
-    SET last_saved_timestamp = ?, last_saved_line = ?, updated_at = datetime('now')
-    WHERE claude_session_id = ?
-  `);
-  stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
-}
-function extractSlashCommand(content) {
-  const match = content.match(/<command-name>([^<]+)<\/command-name>/);
-  return match ? match[1] : void 0;
-}
-function extractToolResultMeta(content, toolUseIdToName, toolUseIdToFilePath) {
-  return content.filter((c) => c.type === "tool_result" && c.tool_use_id).map((c) => {
-    const contentStr = typeof c.content === "string" ? c.content : c.content ? JSON.stringify(c.content) : "";
-    const lineCount = contentStr.split("\n").length;
-    const toolUseId = c.tool_use_id || "";
-    let filePath = toolUseIdToFilePath.get(toolUseId);
-    if (!filePath) {
-      const filePathMatch = contentStr.match(
-        /(?:^|\s)((?:\/|\.\/)\S+\.\w+)\b/
-      );
-      filePath = filePathMatch ? filePathMatch[1] : void 0;
-    }
-    return {
-      toolUseId,
-      toolName: toolUseIdToName.get(toolUseId),
-      success: !c.is_error,
-      contentLength: contentStr.length,
-      lineCount: lineCount > 1 ? lineCount : void 0,
-      filePath
-    };
-  });
-}
-async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
-  const fileStream = fs.createReadStream(transcriptPath);
-  const rl = readline.createInterface({
-    input: fileStream,
-    crlfDelay: Number.POSITIVE_INFINITY
-  });
-  const entries = [];
-  let lineNumber = 0;
-  for await (const line of rl) {
-    lineNumber++;
-    if (lineNumber <= lastSavedLine) continue;
-    if (line.trim()) {
-      try {
-        entries.push(JSON.parse(line));
-      } catch {
-      }
-    }
-  }
-  const planModeEvents = [];
-  for (const entry of entries) {
-    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
-      for (const c of entry.message.content) {
-        if (c.type === "tool_use") {
-          if (c.name === "EnterPlanMode") {
-            planModeEvents.push({ timestamp: entry.timestamp, entering: true });
-          } else if (c.name === "ExitPlanMode") {
-            planModeEvents.push({
-              timestamp: entry.timestamp,
-              entering: false
-            });
-          }
-        }
-      }
-    }
-  }
-  function isInPlanMode(timestamp) {
-    let inPlanMode = false;
-    for (const event of planModeEvents) {
-      if (event.timestamp > timestamp) break;
-      inPlanMode = event.entering;
-    }
-    return inPlanMode;
-  }
-  const progressEvents = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    if (entry.type === "progress" && entry.data?.type) {
-      if (entry.data.type === "hook_progress") continue;
-      const event = {
-        type: entry.data.type,
-        timestamp: entry.timestamp,
-        hookEvent: entry.data.hookEvent,
-        hookName: entry.data.hookName,
-        toolName: entry.data.toolName,
-        ...entry.data.type === "agent_progress" && {
-          prompt: entry.data.prompt,
-          agentId: entry.data.agentId
-        }
-      };
-      const key = entry.timestamp.slice(0, 16);
-      if (!progressEvents.has(key)) {
-        progressEvents.set(key, []);
-      }
-      progressEvents.get(key)?.push(event);
-    }
-  }
-  const userMessages = entries.filter((e) => {
-    if (e.type !== "user" || e.message?.role !== "user") return false;
-    if (e.isMeta === true) return false;
-    const content = e.message?.content;
-    if (typeof content !== "string") return false;
-    if (content.startsWith("<local-command-stdout>")) return false;
-    if (content.startsWith("<local-command-caveat>")) return false;
-    return true;
-  }).map((e) => {
-    const content = e.message?.content;
-    return {
-      timestamp: e.timestamp,
-      content,
-      isCompactSummary: e.isCompactSummary || false,
-      slashCommand: extractSlashCommand(content)
-    };
-  });
-  const toolUseIdToName = /* @__PURE__ */ new Map();
-  const toolUseIdToFilePath = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
-      for (const c of entry.message.content) {
-        if (c.type === "tool_use" && c.id && c.name) {
-          toolUseIdToName.set(c.id, c.name);
-          if (c.input?.file_path) {
-            toolUseIdToFilePath.set(c.id, c.input.file_path);
-          }
-        }
-      }
-    }
-  }
-  const toolResultsByTimestamp = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
-      const results = extractToolResultMeta(
-        entry.message.content,
-        toolUseIdToName,
-        toolUseIdToFilePath
-      );
-      if (results.length > 0) {
-        const key = entry.timestamp.slice(0, 16);
-        const existing = toolResultsByTimestamp.get(key) || [];
-        toolResultsByTimestamp.set(key, [...existing, ...results]);
-      }
-    }
-  }
-  const assistantMessages = entries.filter((e) => e.type === "assistant").map((e) => {
-    const contentArray = e.message?.content;
-    if (!Array.isArray(contentArray)) return null;
-    const thinking = contentArray.filter((c) => c.type === "thinking" && c.thinking).map((c) => c.thinking).join("\n");
-    const text = contentArray.filter((c) => c.type === "text" && c.text).map((c) => c.text).join("\n");
-    const toolDetails = contentArray.filter((c) => c.type === "tool_use" && c.name).map((c) => ({
-      name: c.name ?? "",
-      detail: c.name === "Bash" ? c.input?.command : c.name === "Read" || c.name === "Edit" || c.name === "Write" ? c.input?.file_path : c.name === "Glob" || c.name === "Grep" ? c.input?.pattern : null
-    }));
-    if (!thinking && !text && toolDetails.length === 0) return null;
-    return {
-      timestamp: e.timestamp,
-      thinking,
-      text,
-      toolDetails
-    };
-  }).filter((m) => m !== null);
-  const interactions = [];
-  for (let i = 0; i < userMessages.length; i++) {
-    const user = userMessages[i];
-    const nextUserTs = i + 1 < userMessages.length ? userMessages[i + 1].timestamp : "9999-12-31T23:59:59Z";
-    const turnResponses = assistantMessages.filter(
-      (a) => a.timestamp >= user.timestamp && a.timestamp < nextUserTs
-    );
-    if (turnResponses.length > 0) {
-      const allToolDetails = turnResponses.flatMap((r) => r.toolDetails);
-      const timeKey = user.timestamp.slice(0, 16);
-      interactions.push({
-        timestamp: user.timestamp,
-        user: user.content,
-        thinking: turnResponses.filter((r) => r.thinking).map((r) => r.thinking).join("\n"),
-        assistant: turnResponses.filter((r) => r.text).map((r) => r.text).join("\n"),
-        isCompactSummary: user.isCompactSummary,
-        toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
-        toolDetails: allToolDetails,
-        // New metadata
-        inPlanMode: isInPlanMode(user.timestamp) || void 0,
-        slashCommand: user.slashCommand,
-        toolResults: toolResultsByTimestamp.get(timeKey),
-        progressEvents: progressEvents.get(timeKey)
-      });
-    }
-  }
-  return { interactions, totalLines: lineNumber };
-}
 async function getGitInfo(projectPath) {
   let owner = "unknown";
   let repository = "";
@@ -456,6 +100,474 @@ function hasSessionSummary(sessionFile) {
     return false;
   }
 }
+
+// lib/incremental-save-cleanup.ts
+var { DatabaseSync } = await import("node:sqlite");
+function cleanupUncommittedSession(claudeSessionId, projectPath) {
+  const dbPath = path2.join(projectPath, ".mneme", "local.db");
+  if (!fs2.existsSync(dbPath)) return { deleted: false, count: 0 };
+  const db = new DatabaseSync(dbPath);
+  try {
+    const stateStmt = db.prepare(
+      "SELECT is_committed FROM session_save_state WHERE claude_session_id = ?"
+    );
+    const state = stateStmt.get(claudeSessionId);
+    if (state?.is_committed === 1) return { deleted: false, count: 0 };
+    const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
+    const sessionFile = findSessionFileById(projectPath, mnemeSessionId);
+    if (hasSessionSummary(sessionFile)) return { deleted: false, count: 0 };
+    const countStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM interactions WHERE claude_session_id = ?"
+    );
+    const countResult = countStmt.get(claudeSessionId);
+    const count = countResult?.count || 0;
+    if (count > 0) {
+      db.prepare("DELETE FROM interactions WHERE claude_session_id = ?").run(
+        claudeSessionId
+      );
+    }
+    db.prepare(
+      "DELETE FROM session_save_state WHERE claude_session_id = ?"
+    ).run(claudeSessionId);
+    return { deleted: true, count };
+  } catch (error) {
+    console.error(`[mneme] Error cleaning up session: ${error}`);
+    return { deleted: false, count: 0 };
+  } finally {
+    db.close();
+  }
+}
+function cleanupStaleUncommittedSessions(projectPath, graceDays) {
+  const dbPath = path2.join(projectPath, ".mneme", "local.db");
+  if (!fs2.existsSync(dbPath))
+    return { deletedSessions: 0, deletedInteractions: 0 };
+  const db = new DatabaseSync(dbPath);
+  let deletedSessions = 0;
+  let deletedInteractions = 0;
+  const normalizedGraceDays = Math.max(1, Math.floor(graceDays));
+  try {
+    const staleRows = db.prepare(
+      `SELECT claude_session_id, mneme_session_id FROM session_save_state
+         WHERE is_committed = 0 AND updated_at <= datetime('now', ?)`
+    ).all(`-${normalizedGraceDays} days`);
+    if (staleRows.length === 0)
+      return { deletedSessions: 0, deletedInteractions: 0 };
+    const deleteInteractionStmt = db.prepare(
+      "DELETE FROM interactions WHERE claude_session_id = ?"
+    );
+    const countInteractionStmt = db.prepare(
+      "SELECT COUNT(*) as count FROM interactions WHERE claude_session_id = ?"
+    );
+    const deleteStateStmt = db.prepare(
+      "DELETE FROM session_save_state WHERE claude_session_id = ?"
+    );
+    for (const row of staleRows) {
+      const sessionFile = findSessionFileById(
+        projectPath,
+        row.mneme_session_id
+      );
+      if (hasSessionSummary(sessionFile)) continue;
+      const countResult = countInteractionStmt.get(row.claude_session_id);
+      const count = countResult?.count || 0;
+      if (count > 0) {
+        deleteInteractionStmt.run(row.claude_session_id);
+        deletedInteractions += count;
+      }
+      deleteStateStmt.run(row.claude_session_id);
+      if (sessionFile && fs2.existsSync(sessionFile)) {
+        try {
+          fs2.unlinkSync(sessionFile);
+          deletedSessions += 1;
+        } catch {
+        }
+      }
+      const linkPath = path2.join(
+        projectPath,
+        ".mneme",
+        "session-links",
+        `${row.claude_session_id.slice(0, 8)}.json`
+      );
+      if (fs2.existsSync(linkPath)) {
+        try {
+          fs2.unlinkSync(linkPath);
+        } catch {
+        }
+      }
+    }
+    return { deletedSessions, deletedInteractions };
+  } catch (error) {
+    console.error(`[mneme] Error cleaning stale sessions: ${error}`);
+    return { deletedSessions: 0, deletedInteractions: 0 };
+  } finally {
+    db.close();
+  }
+}
+
+// lib/incremental-save-db.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+var { DatabaseSync: DatabaseSync2 } = await import("node:sqlite");
+function getSchemaPath() {
+  const scriptDir = path3.dirname(new URL(import.meta.url).pathname);
+  const candidates = [
+    path3.join(scriptDir, "schema.sql"),
+    path3.join(scriptDir, "..", "lib", "schema.sql"),
+    path3.join(scriptDir, "..", "..", "lib", "schema.sql")
+  ];
+  for (const candidate of candidates) {
+    if (fs3.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+var FALLBACK_SCHEMA = `
+CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    claude_session_id TEXT,
+    project_path TEXT NOT NULL,
+    repository TEXT,
+    repository_url TEXT,
+    repository_root TEXT,
+    owner TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    thinking TEXT,
+    tool_calls TEXT,
+    timestamp TEXT NOT NULL,
+    is_compact_summary INTEGER DEFAULT 0,
+    agent_id TEXT,
+    agent_type TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_interactions_session ON interactions(session_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_claude_session ON interactions(claude_session_id);
+CREATE INDEX IF NOT EXISTS idx_interactions_owner ON interactions(owner);
+CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp);
+CREATE INDEX IF NOT EXISTS idx_interactions_project ON interactions(project_path);
+CREATE INDEX IF NOT EXISTS idx_interactions_repository ON interactions(repository);
+
+CREATE TABLE IF NOT EXISTS session_save_state (
+    claude_session_id TEXT PRIMARY KEY,
+    mneme_session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
+    last_saved_timestamp TEXT,
+    last_saved_line INTEGER DEFAULT 0,
+    is_committed INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_save_state_mneme_session ON session_save_state(mneme_session_id);
+CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
+
+CREATE TABLE IF NOT EXISTS pre_compact_backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
+    owner TEXT NOT NULL,
+    interactions TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS interactions_fts USING fts5(
+    content,
+    thinking,
+    content=interactions,
+    content_rowid=id,
+    tokenize='unicode61'
+);
+
+CREATE TRIGGER IF NOT EXISTS interactions_ai AFTER INSERT ON interactions BEGIN
+    INSERT INTO interactions_fts(rowid, content, thinking)
+    VALUES (new.id, new.content, new.thinking);
+END;
+
+CREATE TRIGGER IF NOT EXISTS interactions_ad AFTER DELETE ON interactions BEGIN
+    INSERT INTO interactions_fts(interactions_fts, rowid, content, thinking)
+    VALUES ('delete', old.id, old.content, old.thinking);
+END;
+`;
+function migrateDatabase(db) {
+  try {
+    const columns = db.prepare("PRAGMA table_info(interactions)").all();
+    const hasClaudeSessionId = columns.some(
+      (c) => c.name === "claude_session_id"
+    );
+    if (!hasClaudeSessionId) {
+      db.exec("ALTER TABLE interactions ADD COLUMN claude_session_id TEXT");
+      db.exec(
+        "CREATE INDEX IF NOT EXISTS idx_interactions_claude_session ON interactions(claude_session_id)"
+      );
+      console.error("[mneme] Migrated: added claude_session_id column");
+    }
+  } catch {
+  }
+  try {
+    db.exec("SELECT 1 FROM session_save_state LIMIT 1");
+  } catch {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS session_save_state (
+        claude_session_id TEXT PRIMARY KEY,
+        mneme_session_id TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        last_saved_timestamp TEXT,
+        last_saved_line INTEGER DEFAULT 0,
+        is_committed INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_save_state_mneme_session ON session_save_state(mneme_session_id);
+      CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
+    `);
+    console.error("[mneme] Migrated: created session_save_state table");
+  }
+}
+function initDatabase(dbPath) {
+  const mnemeDir = path3.dirname(dbPath);
+  if (!fs3.existsSync(mnemeDir)) {
+    fs3.mkdirSync(mnemeDir, { recursive: true });
+  }
+  const db = new DatabaseSync2(dbPath);
+  try {
+    db.exec("SELECT 1 FROM interactions LIMIT 1");
+  } catch {
+    const schemaPath = getSchemaPath();
+    if (schemaPath) {
+      const schema = fs3.readFileSync(schemaPath, "utf8");
+      db.exec(schema);
+      console.error(`[mneme] Database initialized from schema: ${dbPath}`);
+    } else {
+      db.exec(FALLBACK_SCHEMA);
+      console.error(
+        `[mneme] Database initialized with fallback schema: ${dbPath}`
+      );
+    }
+  }
+  migrateDatabase(db);
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec("PRAGMA synchronous = NORMAL");
+  return db;
+}
+function getSaveState(db, claudeSessionId, mnemeSessionId, projectPath) {
+  const stmt = db.prepare(
+    "SELECT * FROM session_save_state WHERE claude_session_id = ?"
+  );
+  const row = stmt.get(claudeSessionId);
+  if (row) {
+    return {
+      claudeSessionId: row.claude_session_id,
+      mnemeSessionId: row.mneme_session_id,
+      projectPath: row.project_path,
+      lastSavedTimestamp: row.last_saved_timestamp,
+      lastSavedLine: row.last_saved_line,
+      isCommitted: row.is_committed
+    };
+  }
+  const insertStmt = db.prepare(`
+    INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path)
+    VALUES (?, ?, ?)
+  `);
+  insertStmt.run(claudeSessionId, mnemeSessionId, projectPath);
+  return {
+    claudeSessionId,
+    mnemeSessionId,
+    projectPath,
+    lastSavedTimestamp: null,
+    lastSavedLine: 0,
+    isCommitted: 0
+  };
+}
+function updateSaveState(db, claudeSessionId, lastSavedTimestamp, lastSavedLine) {
+  const stmt = db.prepare(`
+    UPDATE session_save_state
+    SET last_saved_timestamp = ?, last_saved_line = ?, updated_at = datetime('now')
+    WHERE claude_session_id = ?
+  `);
+  stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
+}
+
+// lib/incremental-save-parser.ts
+import * as fs4 from "node:fs";
+import * as readline from "node:readline";
+function extractSlashCommand(content) {
+  const match = content.match(/<command-name>([^<]+)<\/command-name>/);
+  return match ? match[1] : void 0;
+}
+function extractToolResultMeta(content, toolUseIdToName, toolUseIdToFilePath) {
+  return content.filter((c) => c.type === "tool_result" && c.tool_use_id).map((c) => {
+    const contentStr = typeof c.content === "string" ? c.content : c.content ? JSON.stringify(c.content) : "";
+    const lineCount = contentStr.split("\n").length;
+    const toolUseId = c.tool_use_id || "";
+    let filePath = toolUseIdToFilePath.get(toolUseId);
+    if (!filePath) {
+      const filePathMatch = contentStr.match(
+        /(?:^|\s)((?:\/|\.\/)\S+\.\w+)\b/
+      );
+      filePath = filePathMatch ? filePathMatch[1] : void 0;
+    }
+    return {
+      toolUseId,
+      toolName: toolUseIdToName.get(toolUseId),
+      success: !c.is_error,
+      contentLength: contentStr.length,
+      lineCount: lineCount > 1 ? lineCount : void 0,
+      filePath
+    };
+  });
+}
+async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
+  const fileStream = fs4.createReadStream(transcriptPath);
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Number.POSITIVE_INFINITY
+  });
+  const entries = [];
+  let lineNumber = 0;
+  for await (const line of rl) {
+    lineNumber++;
+    if (lineNumber <= lastSavedLine) continue;
+    if (line.trim()) {
+      try {
+        entries.push(JSON.parse(line));
+      } catch {
+      }
+    }
+  }
+  const planModeEvents = [];
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use") {
+          if (c.name === "EnterPlanMode") {
+            planModeEvents.push({ timestamp: entry.timestamp, entering: true });
+          } else if (c.name === "ExitPlanMode") {
+            planModeEvents.push({
+              timestamp: entry.timestamp,
+              entering: false
+            });
+          }
+        }
+      }
+    }
+  }
+  function isInPlanMode(timestamp) {
+    let inPlanMode = false;
+    for (const event of planModeEvents) {
+      if (event.timestamp > timestamp) break;
+      inPlanMode = event.entering;
+    }
+    return inPlanMode;
+  }
+  const progressEvents = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "progress" && entry.data?.type) {
+      if (entry.data.type === "hook_progress") continue;
+      const event = {
+        type: entry.data.type,
+        timestamp: entry.timestamp,
+        hookEvent: entry.data.hookEvent,
+        hookName: entry.data.hookName,
+        toolName: entry.data.toolName,
+        ...entry.data.type === "agent_progress" && {
+          prompt: entry.data.prompt,
+          agentId: entry.data.agentId
+        }
+      };
+      const key = entry.timestamp.slice(0, 16);
+      if (!progressEvents.has(key)) progressEvents.set(key, []);
+      progressEvents.get(key)?.push(event);
+    }
+  }
+  const userMessages = entries.filter((e) => {
+    if (e.type !== "user" || e.message?.role !== "user") return false;
+    if (e.isMeta === true) return false;
+    const content = e.message?.content;
+    if (typeof content !== "string") return false;
+    if (content.startsWith("<local-command-stdout>")) return false;
+    if (content.startsWith("<local-command-caveat>")) return false;
+    return true;
+  }).map((e) => {
+    const content = e.message?.content;
+    return {
+      timestamp: e.timestamp,
+      content,
+      isCompactSummary: e.isCompactSummary || false,
+      slashCommand: extractSlashCommand(content)
+    };
+  });
+  const toolUseIdToName = /* @__PURE__ */ new Map();
+  const toolUseIdToFilePath = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
+      for (const c of entry.message.content) {
+        if (c.type === "tool_use" && c.id && c.name) {
+          toolUseIdToName.set(c.id, c.name);
+          if (c.input?.file_path) {
+            toolUseIdToFilePath.set(c.id, c.input.file_path);
+          }
+        }
+      }
+    }
+  }
+  const toolResultsByTimestamp = /* @__PURE__ */ new Map();
+  for (const entry of entries) {
+    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
+      const results = extractToolResultMeta(
+        entry.message.content,
+        toolUseIdToName,
+        toolUseIdToFilePath
+      );
+      if (results.length > 0) {
+        const key = entry.timestamp.slice(0, 16);
+        const existing = toolResultsByTimestamp.get(key) || [];
+        toolResultsByTimestamp.set(key, [...existing, ...results]);
+      }
+    }
+  }
+  const assistantMessages = entries.filter((e) => e.type === "assistant").map((e) => {
+    const contentArray = e.message?.content;
+    if (!Array.isArray(contentArray)) return null;
+    const thinking = contentArray.filter((c) => c.type === "thinking" && c.thinking).map((c) => c.thinking).join("\n");
+    const text = contentArray.filter((c) => c.type === "text" && c.text).map((c) => c.text).join("\n");
+    const toolDetails = contentArray.filter((c) => c.type === "tool_use" && c.name).map((c) => ({
+      name: c.name ?? "",
+      detail: c.name === "Bash" ? c.input?.command : c.name === "Read" || c.name === "Edit" || c.name === "Write" ? c.input?.file_path : c.name === "Glob" || c.name === "Grep" ? c.input?.pattern : null
+    }));
+    if (!thinking && !text && toolDetails.length === 0) return null;
+    return { timestamp: e.timestamp, thinking, text, toolDetails };
+  }).filter((m) => m !== null);
+  const interactions = [];
+  for (let i = 0; i < userMessages.length; i++) {
+    const user = userMessages[i];
+    const nextUserTs = i + 1 < userMessages.length ? userMessages[i + 1].timestamp : "9999-12-31T23:59:59Z";
+    const turnResponses = assistantMessages.filter(
+      (a) => a.timestamp >= user.timestamp && a.timestamp < nextUserTs
+    );
+    if (turnResponses.length > 0) {
+      const allToolDetails = turnResponses.flatMap((r) => r.toolDetails);
+      const timeKey = user.timestamp.slice(0, 16);
+      interactions.push({
+        timestamp: user.timestamp,
+        user: user.content,
+        thinking: turnResponses.filter((r) => r.thinking).map((r) => r.thinking).join("\n"),
+        assistant: turnResponses.filter((r) => r.text).map((r) => r.text).join("\n"),
+        isCompactSummary: user.isCompactSummary,
+        toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
+        toolDetails: allToolDetails,
+        inPlanMode: isInPlanMode(user.timestamp) || void 0,
+        slashCommand: user.slashCommand,
+        toolResults: toolResultsByTimestamp.get(timeKey),
+        progressEvents: progressEvents.get(timeKey)
+      });
+    }
+  }
+  return { interactions, totalLines: lineNumber };
+}
+
+// lib/incremental-save.ts
+var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
 async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
   if (!claudeSessionId || !transcriptPath || !projectPath) {
     return {
@@ -465,7 +577,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       message: "Missing required parameters"
     };
   }
-  if (!fs.existsSync(transcriptPath)) {
+  if (!fs5.existsSync(transcriptPath)) {
     return {
       success: false,
       savedCount: 0,
@@ -473,7 +585,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       message: `Transcript not found: ${transcriptPath}`
     };
   }
-  const dbPath = path.join(projectPath, ".mneme", "local.db");
+  const dbPath = path4.join(projectPath, ".mneme", "local.db");
   const db = initDatabase(dbPath);
   const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
   const saveState = getSaveState(
@@ -508,15 +620,14 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       const metadata = JSON.stringify({
         toolsUsed: interaction.toolsUsed,
         toolDetails: interaction.toolDetails,
-        // New metadata fields
         ...interaction.inPlanMode && { inPlanMode: true },
         ...interaction.slashCommand && {
           slashCommand: interaction.slashCommand
         },
-        ...interaction.toolResults && interaction.toolResults.length > 0 && {
+        ...interaction.toolResults?.length && {
           toolResults: interaction.toolResults
         },
-        ...interaction.progressEvents && interaction.progressEvents.length > 0 && {
+        ...interaction.progressEvents?.length && {
           progressEvents: interaction.progressEvents
         }
       });
@@ -541,10 +652,10 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
           toolsUsed: interaction.toolsUsed,
           toolDetails: interaction.toolDetails,
           ...interaction.inPlanMode && { inPlanMode: true },
-          ...interaction.toolResults && interaction.toolResults.length > 0 && {
+          ...interaction.toolResults?.length && {
             toolResults: interaction.toolResults
           },
-          ...interaction.progressEvents && interaction.progressEvents.length > 0 && {
+          ...interaction.progressEvents?.length && {
             progressEvents: interaction.progressEvents
           }
         });
@@ -580,11 +691,9 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
   };
 }
 function markSessionCommitted(claudeSessionId, projectPath) {
-  const dbPath = path.join(projectPath, ".mneme", "local.db");
-  if (!fs.existsSync(dbPath)) {
-    return false;
-  }
-  const db = new DatabaseSync(dbPath);
+  const dbPath = path4.join(projectPath, ".mneme", "local.db");
+  if (!fs5.existsSync(dbPath)) return false;
+  const db = new DatabaseSync3(dbPath);
   try {
     const stmt = db.prepare(`
       UPDATE session_save_state
@@ -595,122 +704,6 @@ function markSessionCommitted(claudeSessionId, projectPath) {
     return true;
   } catch {
     return false;
-  } finally {
-    db.close();
-  }
-}
-function cleanupUncommittedSession(claudeSessionId, projectPath) {
-  const dbPath = path.join(projectPath, ".mneme", "local.db");
-  if (!fs.existsSync(dbPath)) {
-    return { deleted: false, count: 0 };
-  }
-  const db = new DatabaseSync(dbPath);
-  try {
-    const stateStmt = db.prepare(
-      "SELECT is_committed FROM session_save_state WHERE claude_session_id = ?"
-    );
-    const state = stateStmt.get(claudeSessionId);
-    if (state?.is_committed === 1) {
-      return { deleted: false, count: 0 };
-    }
-    const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
-    const sessionFile = findSessionFileById(projectPath, mnemeSessionId);
-    if (hasSessionSummary(sessionFile)) {
-      return { deleted: false, count: 0 };
-    }
-    const countStmt = db.prepare(
-      "SELECT COUNT(*) as count FROM interactions WHERE claude_session_id = ?"
-    );
-    const countResult = countStmt.get(claudeSessionId);
-    const count = countResult?.count || 0;
-    if (count > 0) {
-      const deleteStmt = db.prepare(
-        "DELETE FROM interactions WHERE claude_session_id = ?"
-      );
-      deleteStmt.run(claudeSessionId);
-    }
-    const deleteStateStmt = db.prepare(
-      "DELETE FROM session_save_state WHERE claude_session_id = ?"
-    );
-    deleteStateStmt.run(claudeSessionId);
-    return { deleted: true, count };
-  } catch (error) {
-    console.error(`[mneme] Error cleaning up session: ${error}`);
-    return { deleted: false, count: 0 };
-  } finally {
-    db.close();
-  }
-}
-function cleanupStaleUncommittedSessions(projectPath, graceDays) {
-  const dbPath = path.join(projectPath, ".mneme", "local.db");
-  if (!fs.existsSync(dbPath)) {
-    return { deletedSessions: 0, deletedInteractions: 0 };
-  }
-  const db = new DatabaseSync(dbPath);
-  let deletedSessions = 0;
-  let deletedInteractions = 0;
-  const normalizedGraceDays = Math.max(1, Math.floor(graceDays));
-  try {
-    const staleStmt = db.prepare(
-      `
-      SELECT claude_session_id, mneme_session_id
-      FROM session_save_state
-      WHERE is_committed = 0
-        AND updated_at <= datetime('now', ?)
-      `
-    );
-    const staleRows = staleStmt.all(`-${normalizedGraceDays} days`);
-    if (staleRows.length === 0) {
-      return { deletedSessions: 0, deletedInteractions: 0 };
-    }
-    const deleteInteractionStmt = db.prepare(
-      "DELETE FROM interactions WHERE claude_session_id = ?"
-    );
-    const countInteractionStmt = db.prepare(
-      "SELECT COUNT(*) as count FROM interactions WHERE claude_session_id = ?"
-    );
-    const deleteStateStmt = db.prepare(
-      "DELETE FROM session_save_state WHERE claude_session_id = ?"
-    );
-    for (const row of staleRows) {
-      const sessionFile = findSessionFileById(
-        projectPath,
-        row.mneme_session_id
-      );
-      if (hasSessionSummary(sessionFile)) {
-        continue;
-      }
-      const countResult = countInteractionStmt.get(row.claude_session_id);
-      const count = countResult?.count || 0;
-      if (count > 0) {
-        deleteInteractionStmt.run(row.claude_session_id);
-        deletedInteractions += count;
-      }
-      deleteStateStmt.run(row.claude_session_id);
-      if (sessionFile && fs.existsSync(sessionFile)) {
-        try {
-          fs.unlinkSync(sessionFile);
-          deletedSessions += 1;
-        } catch {
-        }
-      }
-      const linkPath = path.join(
-        projectPath,
-        ".mneme",
-        "session-links",
-        `${row.claude_session_id.slice(0, 8)}.json`
-      );
-      if (fs.existsSync(linkPath)) {
-        try {
-          fs.unlinkSync(linkPath);
-        } catch {
-        }
-      }
-    }
-    return { deletedSessions, deletedInteractions };
-  } catch (error) {
-    console.error(`[mneme] Error cleaning stale sessions: ${error}`);
-    return { deletedSessions: 0, deletedInteractions: 0 };
   } finally {
     db.close();
   }

@@ -66,7 +66,7 @@ export type LayoutMode = "force" | "td";
 export const typeColors: Record<string, string> = {
   session: "#40513B",
   decision: "#628141",
-  pattern: "#E5D9B6",
+  pattern: "#2D8B7A",
   rule: "#E67E22",
   unknown: "#6b7280",
 };

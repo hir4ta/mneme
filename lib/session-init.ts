@@ -1,24 +1,16 @@
 #!/usr/bin/env node
-/**
- * mneme Session Initialization Module
- *
- * Handles session-start heavy processing in Node.js:
- * - Git info retrieval
- * - Recent sessions search
- * - Session JSON creation
- * - Master session workPeriods update
- * - additionalContext building
- * - Tags/rules/database initialization
- *
- * Usage:
- *   node session-init.js init --session-id <id> --cwd <path>
- */
 
-import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { getRepositoryInfo } from "./db.ts";
+import {
+  getGitInfo,
+  getRecentSessions,
+  initDatabase,
+  initRulesFile,
+  initTags,
+} from "./session-init-helpers.ts";
 import {
   ensureDir,
   findJsonFiles,
@@ -27,7 +19,13 @@ import {
   safeWriteJson,
 } from "./utils.ts";
 
-// ─── Types ───────────────────────────────────────────────────────────
+export {
+  getGitInfo,
+  getRecentSessions,
+  initDatabase,
+  initRulesFile,
+  initTags,
+} from "./session-init-helpers.ts";
 
 interface SessionJson {
   id: string;
@@ -66,144 +64,6 @@ interface InitResult {
   additionalContext: string;
 }
 
-// ─── Git Helpers ─────────────────────────────────────────────────────
-
-function getGitInfo(cwd: string): {
-  branch: string;
-  userName: string;
-  userEmail: string;
-} {
-  const result = { branch: "", userName: "unknown", userEmail: "" };
-  try {
-    execSync("git rev-parse --git-dir", {
-      cwd,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    try {
-      result.branch = execSync("git rev-parse --abbrev-ref HEAD", {
-        cwd,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim();
-    } catch {}
-    try {
-      result.userName =
-        execSync("git config user.name", {
-          cwd,
-          encoding: "utf-8",
-          stdio: ["pipe", "pipe", "pipe"],
-        }).trim() || "unknown";
-    } catch {}
-    try {
-      result.userEmail = execSync("git config user.email", {
-        cwd,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim();
-    } catch {}
-  } catch {
-    // Not a git repository
-  }
-  return result;
-}
-
-// ─── Recent Sessions ─────────────────────────────────────────────────
-
-function getRecentSessions(
-  sessionsDir: string,
-  currentId: string,
-  limit: number,
-): { id: string; createdAt: string; title: string; branch: string }[] {
-  if (!fs.existsSync(sessionsDir)) return [];
-
-  const files = findJsonFiles(sessionsDir);
-  const sessions: {
-    id: string;
-    createdAt: string;
-    title: string;
-    branch: string;
-  }[] = [];
-
-  for (const file of files) {
-    try {
-      const data = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (data.id && data.id !== currentId && data.createdAt) {
-        sessions.push({
-          id: data.id,
-          createdAt: data.createdAt,
-          title: data.title || "",
-          branch: data.context?.branch || "",
-        });
-      }
-    } catch {
-      // Skip invalid files
-    }
-  }
-
-  sessions.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return sessions.slice(0, limit);
-}
-
-// ─── Rules Initialization ────────────────────────────────────────────
-
-function initRulesFile(filePath: string): void {
-  if (fs.existsSync(filePath)) return;
-  const now = nowISO();
-  safeWriteJson(filePath, {
-    schemaVersion: 1,
-    createdAt: now,
-    updatedAt: now,
-    items: [],
-  });
-}
-
-// ─── Database Initialization ─────────────────────────────────────────
-
-function initDatabase(mnemeDir: string, pluginRoot: string): void {
-  const dbPath = path.join(mnemeDir, "local.db");
-  const schemaPath = path.join(pluginRoot, "lib", "schema.sql");
-
-  if (!fs.existsSync(dbPath) && fs.existsSync(schemaPath)) {
-    try {
-      execSync(`sqlite3 "${dbPath}" < "${schemaPath}"`, {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      });
-      console.error(`[mneme] Local database initialized: ${dbPath}`);
-    } catch (e) {
-      console.error(`[mneme] Database init failed: ${e}`);
-    }
-  }
-
-  // Configure pragmas
-  try {
-    execSync(
-      `sqlite3 "${dbPath}" "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;"`,
-      {
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      },
-    );
-  } catch {
-    // Non-critical
-  }
-}
-
-// ─── Tags Initialization ─────────────────────────────────────────────
-
-function initTags(mnemeDir: string, pluginRoot: string): void {
-  const tagsPath = path.join(mnemeDir, "tags.json");
-  const defaultTagsPath = path.join(pluginRoot, "hooks", "default-tags.json");
-
-  if (!fs.existsSync(tagsPath) && fs.existsSync(defaultTagsPath)) {
-    fs.copyFileSync(defaultTagsPath, tagsPath);
-    console.error(`[mneme] Tags master file created: ${tagsPath}`);
-  }
-}
-
-// ─── Main Init Logic ─────────────────────────────────────────────────
-
 function sessionInit(sessionId: string, cwd: string): InitResult {
   const pluginRoot = path.resolve(__dirname, "..");
   const mnemeDir = path.join(cwd, ".mneme");
@@ -211,7 +71,6 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
   const rulesDir = path.join(mnemeDir, "rules");
   const sessionLinksDir = path.join(mnemeDir, "session-links");
 
-  // Check if mneme is initialized
   if (!fs.existsSync(mnemeDir)) {
     console.error(
       "[mneme] Not initialized in this project. Run: npx @hir4ta/mneme --init",
@@ -223,12 +82,10 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
   const sessionShortId = sessionId ? sessionId.substring(0, 8) : "";
   const fileId = sessionShortId;
 
-  // Git info
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);
   const projectName = path.basename(cwd);
 
-  // Check session-links for master session
   let masterSessionId = "";
   let masterSessionPath = "";
   const sessionLinkFile = path.join(sessionLinksDir, `${fileId}.json`);
@@ -251,7 +108,6 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
     }
   }
 
-  // Find existing session file or create new one
   let sessionPath = "";
   let isResumed = false;
 
@@ -273,13 +129,11 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
     sessionPath = path.join(yearMonth, `${fileId}.json`);
   }
 
-  // Recent sessions (for new sessions only)
   let recentSessions: ReturnType<typeof getRecentSessions> = [];
   if (!isResumed) {
     recentSessions = getRecentSessions(sessionsDir, fileId, 3);
   }
 
-  // Initialize or update session JSON
   if (isResumed) {
     const data = safeReadJson<SessionJson>(sessionPath, {} as SessionJson);
     data.status = null;
@@ -317,7 +171,6 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
     console.error(`[mneme] Session initialized: ${sessionPath}`);
   }
 
-  // Update master session workPeriods (if linked)
   if (
     masterSessionId &&
     masterSessionPath &&
@@ -352,18 +205,15 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
     }
   }
 
-  // Initialize tags, rules, database
   initTags(mnemeDir, pluginRoot);
   initRulesFile(path.join(rulesDir, "review-guidelines.json"));
   initRulesFile(path.join(rulesDir, "dev-rules.json"));
   initDatabase(mnemeDir, pluginRoot);
 
-  // Build additionalContext
   const sessionRelativePath = sessionPath.startsWith(cwd)
     ? sessionPath.substring(cwd.length + 1)
     : sessionPath;
 
-  // Read using-mneme SKILL.md
   const usingMnemePath = path.join(
     pluginRoot,
     "skills",
@@ -372,6 +222,11 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
   );
   const usingMnemeContent = fs.existsSync(usingMnemePath)
     ? fs.readFileSync(usingMnemePath, "utf-8")
+    : "";
+
+  const rulesSkillPath = path.join(pluginRoot, "skills", "rules", "SKILL.md");
+  const rulesSkillContent = fs.existsSync(rulesSkillPath)
+    ? fs.readFileSync(rulesSkillPath, "utf-8")
     : "";
 
   let resumeNote = "";
@@ -411,12 +266,12 @@ When you have enough context, consider creating a summary with \`/mneme:save\` t
 - Any ongoing work or next steps`;
   }
 
-  const additionalContext = `${sessionInfo}\n\n${usingMnemeContent}`;
+  const additionalContext = [sessionInfo, usingMnemeContent, rulesSkillContent]
+    .filter(Boolean)
+    .join("\n\n");
 
   return { additionalContext };
 }
-
-// ─── CLI Entry Point ─────────────────────────────────────────────────
 
 function main() {
   const args = process.argv.slice(2);
@@ -440,7 +295,6 @@ function main() {
   }
 }
 
-// Run if executed directly
 const scriptPath = process.argv[1];
 if (
   scriptPath &&

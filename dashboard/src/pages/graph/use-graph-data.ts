@@ -1,7 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import {
+  computeClusterStats,
+  computeStructuralGaps,
+  getNeighborhood,
+  toDateSafe,
+} from "./graph-analytics";
 import type {
-  ClusterStats,
   ColorMode,
   EntityFilter,
   GraphData,
@@ -9,7 +14,6 @@ import type {
   GraphNode,
   GraphRenderLink,
   GraphRenderNode,
-  StructuralGap,
 } from "./types";
 import { clusterColors, typeColors } from "./types";
 
@@ -17,39 +21,6 @@ async function fetchGraph(): Promise<GraphData> {
   const res = await fetch("/api/knowledge-graph");
   if (!res.ok) throw new Error("Failed to fetch graph");
   return res.json();
-}
-
-function toDateSafe(value: string): number {
-  const time = new Date(value).getTime();
-  return Number.isNaN(time) ? 0 : time;
-}
-
-function getNeighborhood(
-  nodeId: string,
-  edges: GraphEdge[],
-  _allNodes: GraphNode[],
-  depth: number,
-): Set<string> {
-  const visited = new Set([nodeId]);
-  let frontier = new Set([nodeId]);
-  for (let d = 0; d < depth; d++) {
-    const next = new Set<string>();
-    for (const edge of edges) {
-      const src =
-        typeof edge.source === "string"
-          ? edge.source
-          : (edge.source as unknown as { id: string }).id;
-      const tgt =
-        typeof edge.target === "string"
-          ? edge.target
-          : (edge.target as unknown as { id: string }).id;
-      if (frontier.has(src) && !visited.has(tgt)) next.add(tgt);
-      if (frontier.has(tgt) && !visited.has(src)) next.add(src);
-    }
-    for (const id of next) visited.add(id);
-    frontier = next;
-  }
-  return visited;
 }
 
 export function useGraphData(params: {
@@ -107,9 +78,8 @@ export function useGraphData(params: {
       if (
         params.selectedTag !== "all" &&
         !(node.tags || []).includes(params.selectedTag)
-      ) {
+      )
         return false;
-      }
       if (minCreatedAt > 0 && toDateSafe(node.createdAt) < minCreatedAt)
         return false;
       if (
@@ -131,12 +101,10 @@ export function useGraphData(params: {
         edge.weight >= params.minEdgeWeight,
     );
 
-    // Focus node filtering via BFS neighborhood
     if (params.focusNodeId && nodeIds.has(params.focusNodeId)) {
       const neighborhood = getNeighborhood(
         params.focusNodeId,
         edges,
-        nodes,
         params.focusDepth,
       );
       nodes = nodes.filter((node) => neighborhood.has(node.id));
@@ -173,47 +141,10 @@ export function useGraphData(params: {
     return degree;
   }, [filteredGraph.edges, filteredGraph.nodes]);
 
-  const clusterStats = useMemo<ClusterStats>(() => {
-    const clusterByNode = new Map<string, number>();
-    const visited = new Set<string>();
-    const adjacency = new Map<string, Set<string>>();
-
-    for (const node of filteredGraph.nodes) {
-      adjacency.set(node.id, new Set());
-    }
-    for (const edge of filteredGraph.edges) {
-      adjacency.get(edge.source)?.add(edge.target);
-      adjacency.get(edge.target)?.add(edge.source);
-    }
-
-    let clusterId = 0;
-    const clusterSizes = new Map<number, number>();
-
-    for (const node of filteredGraph.nodes) {
-      if (visited.has(node.id)) continue;
-      clusterId += 1;
-      const queue = [node.id];
-      visited.add(node.id);
-      let size = 0;
-
-      while (queue.length > 0) {
-        const current = queue.shift();
-        if (!current) continue;
-        size += 1;
-        clusterByNode.set(current, clusterId);
-        for (const neighbor of adjacency.get(current) || []) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            queue.push(neighbor);
-          }
-        }
-      }
-
-      clusterSizes.set(clusterId, size);
-    }
-
-    return { clusterByNode, clusterSizes, totalClusters: clusterId };
-  }, [filteredGraph.edges, filteredGraph.nodes]);
+  const clusterStats = useMemo(
+    () => computeClusterStats(filteredGraph.nodes, filteredGraph.edges),
+    [filteredGraph.edges, filteredGraph.nodes],
+  );
 
   const graphData = useMemo(() => {
     const nodes: GraphRenderNode[] = filteredGraph.nodes.map((node) => {
@@ -266,72 +197,15 @@ export function useGraphData(params: {
     return max;
   }, [clusterStats.clusterSizes]);
 
-  const structuralGaps = useMemo<StructuralGap[]>(() => {
-    const gaps: StructuralGap[] = [];
-    const clusterIds = [...clusterStats.clusterSizes.entries()]
-      .filter(([_, size]) => size >= 3)
-      .map(([id]) => id);
-
-    // Get nodes by cluster
-    const clusterNodes = new Map<number, GraphNode[]>();
-    for (const node of filteredGraph.nodes) {
-      const cid = clusterStats.clusterByNode.get(node.id);
-      if (cid === undefined) continue;
-      if (!clusterNodes.has(cid)) clusterNodes.set(cid, []);
-      clusterNodes.get(cid)?.push(node);
-    }
-
-    // Get top tags per cluster
-    function getTopTags(nodes: GraphNode[], limit: number): string[] {
-      const counts = new Map<string, number>();
-      for (const n of nodes) {
-        for (const tag of n.tags || []) {
-          counts.set(tag, (counts.get(tag) || 0) + 1);
-        }
-      }
-      return [...counts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, limit)
-        .map(([tag]) => tag);
-    }
-
-    // Count cross-cluster edges
-    const crossEdgeCount = new Map<string, number>();
-    for (const edge of filteredGraph.edges) {
-      const cSrc = clusterStats.clusterByNode.get(edge.source);
-      const cTgt = clusterStats.clusterByNode.get(edge.target);
-      if (cSrc !== undefined && cTgt !== undefined && cSrc !== cTgt) {
-        const key = cSrc < cTgt ? `${cSrc}-${cTgt}` : `${cTgt}-${cSrc}`;
-        crossEdgeCount.set(key, (crossEdgeCount.get(key) || 0) + 1);
-      }
-    }
-
-    // Find gaps between significant clusters
-    for (let i = 0; i < clusterIds.length; i++) {
-      for (let j = i + 1; j < clusterIds.length; j++) {
-        const a = clusterIds[i];
-        const b = clusterIds[j];
-        const sizeA = clusterStats.clusterSizes.get(a) || 0;
-        const sizeB = clusterStats.clusterSizes.get(b) || 0;
-        const possibleEdges = sizeA * sizeB;
-        const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-        const actualEdges = crossEdgeCount.get(key) || 0;
-
-        if (possibleEdges > 0 && actualEdges / possibleEdges < 0.05) {
-          gaps.push({
-            clusterA: a,
-            clusterB: b,
-            tagsA: getTopTags(clusterNodes.get(a) || [], 3),
-            tagsB: getTopTags(clusterNodes.get(b) || [], 3),
-            actualEdges,
-            possibleEdges,
-          });
-        }
-      }
-    }
-
-    return gaps.sort((a, b) => b.possibleEdges - a.possibleEdges).slice(0, 3);
-  }, [filteredGraph.nodes, filteredGraph.edges, clusterStats]);
+  const structuralGaps = useMemo(
+    () =>
+      computeStructuralGaps(
+        filteredGraph.nodes,
+        filteredGraph.edges,
+        clusterStats,
+      ),
+    [filteredGraph.nodes, filteredGraph.edges, clusterStats],
+  );
 
   return {
     isLoading,

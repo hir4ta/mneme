@@ -1,3 +1,6 @@
+// lib/db.ts
+import { execSync } from "node:child_process";
+
 // lib/suppress-sqlite-warning.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
@@ -7,25 +10,13 @@ process.emit = (event, ...args) => {
   return originalEmit.apply(process, [event, ...args]);
 };
 
-// lib/db.ts
-import { execSync } from "node:child_process";
+// lib/db-init.ts
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname(__filename);
-function getCurrentUser() {
-  try {
-    return execSync("git config user.name", { encoding: "utf-8" }).trim();
-  } catch {
-    try {
-      return execSync("whoami", { encoding: "utf-8" }).trim();
-    } catch {
-      return "unknown";
-    }
-  }
-}
 function getLocalDbPath(projectPath) {
   return join(projectPath, ".mneme", "local.db");
 }
@@ -58,37 +49,9 @@ function openLocalDatabase(projectPath) {
   configurePragmas(db);
   return db;
 }
-function getRepositoryInfo(projectPath) {
-  const result = {
-    repository: null,
-    repository_url: null,
-    repository_root: null
-  };
-  try {
-    execSync("git rev-parse --git-dir", {
-      cwd: projectPath,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"]
-    });
-    result.repository_root = execSync("git rev-parse --show-toplevel", {
-      cwd: projectPath,
-      encoding: "utf-8"
-    }).trim();
-    try {
-      result.repository_url = execSync("git remote get-url origin", {
-        cwd: projectPath,
-        encoding: "utf-8"
-      }).trim();
-      const match = result.repository_url.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
-      if (match) {
-        result.repository = match[1].replace(/\.git$/, "");
-      }
-    } catch {
-    }
-  } catch {
-  }
-  return result;
-}
+
+// lib/db-mutations.ts
+var { DatabaseSync: DatabaseSync2 } = await import("node:sqlite");
 function insertInteractions(db, interactions) {
   const insert = db.prepare(`
     INSERT INTO interactions (session_id, project_path, repository, repository_url, repository_root, owner, role, content, thinking, tool_calls, timestamp, is_compact_summary)
@@ -118,6 +81,48 @@ function insertInteractions(db, interactions) {
     throw error;
   }
 }
+function insertPreCompactBackup(db, backup) {
+  const stmt = db.prepare(`
+    INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions)
+    VALUES (?, ?, ?, ?)
+  `);
+  stmt.run(
+    backup.session_id,
+    backup.project_path,
+    backup.owner,
+    backup.interactions
+  );
+}
+function deleteInteractions(db, sessionId) {
+  const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
+  stmt.run(sessionId);
+}
+function deleteBackups(db, sessionId) {
+  const stmt = db.prepare(
+    "DELETE FROM pre_compact_backups WHERE session_id = ?"
+  );
+  stmt.run(sessionId);
+}
+function deleteInteractionsByProject(db, projectPath) {
+  const stmt = db.prepare("DELETE FROM interactions WHERE project_path = ?");
+  const result = stmt.run(projectPath);
+  return Number(result.changes);
+}
+function deleteInteractionsBefore(db, beforeDate) {
+  const stmt = db.prepare("DELETE FROM interactions WHERE timestamp < ?");
+  const result = stmt.run(beforeDate);
+  return Number(result.changes);
+}
+function deleteBackupsByProject(db, projectPath) {
+  const stmt = db.prepare(
+    "DELETE FROM pre_compact_backups WHERE project_path = ?"
+  );
+  const result = stmt.run(projectPath);
+  return Number(result.changes);
+}
+
+// lib/db-queries.ts
+var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
 function getInteractions(db, sessionId) {
   const stmt = db.prepare(`
     SELECT * FROM interactions
@@ -135,9 +140,7 @@ function getInteractionsByOwner(db, sessionId, owner) {
   return stmt.all(sessionId, owner);
 }
 function getInteractionsBySessionIds(db, sessionIds) {
-  if (sessionIds.length === 0) {
-    return [];
-  }
+  if (sessionIds.length === 0) return [];
   const placeholders = sessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT * FROM interactions
@@ -147,9 +150,7 @@ function getInteractionsBySessionIds(db, sessionIds) {
   return stmt.all(...sessionIds);
 }
 function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
-  if (claudeSessionIds.length === 0) {
-    return [];
-  }
+  if (claudeSessionIds.length === 0) return [];
   const placeholders = claudeSessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT * FROM interactions
@@ -159,9 +160,7 @@ function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
   return stmt.all(...claudeSessionIds);
 }
 function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
-  if (sessionIds.length === 0) {
-    return [];
-  }
+  if (sessionIds.length === 0) return [];
   const placeholders = sessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT * FROM interactions
@@ -171,9 +170,7 @@ function getInteractionsBySessionIdsAndOwner(db, sessionIds, owner) {
   return stmt.all(...sessionIds, owner);
 }
 function hasInteractionsForSessionIds(db, sessionIds, owner) {
-  if (sessionIds.length === 0) {
-    return false;
-  }
+  if (sessionIds.length === 0) return false;
   const placeholders = sessionIds.map(() => "?").join(", ");
   const stmt = db.prepare(`
     SELECT COUNT(*) as count FROM interactions
@@ -190,35 +187,6 @@ function hasInteractions(db, sessionId, owner) {
   const result = stmt.get(sessionId, owner);
   return result.count > 0;
 }
-function insertPreCompactBackup(db, backup) {
-  const stmt = db.prepare(`
-    INSERT INTO pre_compact_backups (session_id, project_path, owner, interactions)
-    VALUES (?, ?, ?, ?)
-  `);
-  stmt.run(
-    backup.session_id,
-    backup.project_path,
-    backup.owner,
-    backup.interactions
-  );
-}
-function getLatestBackup(db, sessionId) {
-  const stmt = db.prepare(`
-    SELECT * FROM pre_compact_backups
-    WHERE session_id = ?
-    ORDER BY created_at DESC
-    LIMIT 1
-  `);
-  return stmt.get(sessionId) || null;
-}
-function getAllBackups(db, sessionId) {
-  const stmt = db.prepare(`
-    SELECT * FROM pre_compact_backups
-    WHERE session_id = ?
-    ORDER BY created_at ASC
-  `);
-  return stmt.all(sessionId);
-}
 function searchInteractions(db, query, limit = 10) {
   const stmt = db.prepare(`
     SELECT i.session_id, i.content, i.thinking
@@ -228,16 +196,6 @@ function searchInteractions(db, query, limit = 10) {
     LIMIT ?
   `);
   return stmt.all(query, limit);
-}
-function deleteInteractions(db, sessionId) {
-  const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
-  stmt.run(sessionId);
-}
-function deleteBackups(db, sessionId) {
-  const stmt = db.prepare(
-    "DELETE FROM pre_compact_backups WHERE session_id = ?"
-  );
-  stmt.run(sessionId);
 }
 function getDbStats(db) {
   const interactionsCount = db.prepare("SELECT COUNT(*) as count FROM interactions").get();
@@ -280,22 +238,22 @@ function getUniqueRepositories(db) {
   const rows = stmt.all();
   return rows.map((r) => r.repository);
 }
-function deleteInteractionsByProject(db, projectPath) {
-  const stmt = db.prepare("DELETE FROM interactions WHERE project_path = ?");
-  const result = stmt.run(projectPath);
-  return Number(result.changes);
+function getLatestBackup(db, sessionId) {
+  const stmt = db.prepare(`
+    SELECT * FROM pre_compact_backups
+    WHERE session_id = ?
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  return stmt.get(sessionId) || null;
 }
-function deleteInteractionsBefore(db, beforeDate) {
-  const stmt = db.prepare("DELETE FROM interactions WHERE timestamp < ?");
-  const result = stmt.run(beforeDate);
-  return Number(result.changes);
-}
-function deleteBackupsByProject(db, projectPath) {
-  const stmt = db.prepare(
-    "DELETE FROM pre_compact_backups WHERE project_path = ?"
-  );
-  const result = stmt.run(projectPath);
-  return Number(result.changes);
+function getAllBackups(db, sessionId) {
+  const stmt = db.prepare(`
+    SELECT * FROM pre_compact_backups
+    WHERE session_id = ?
+    ORDER BY created_at ASC
+  `);
+  return stmt.all(sessionId);
 }
 function countInteractions(db, filter) {
   const conditions = [];
@@ -322,6 +280,50 @@ function countInteractions(db, filter) {
   );
   const result = stmt.get(...params);
   return result.count;
+}
+
+// lib/db.ts
+function getCurrentUser() {
+  try {
+    return execSync("git config user.name", { encoding: "utf-8" }).trim();
+  } catch {
+    try {
+      return execSync("whoami", { encoding: "utf-8" }).trim();
+    } catch {
+      return "unknown";
+    }
+  }
+}
+function getRepositoryInfo(projectPath) {
+  const result = {
+    repository: null,
+    repository_url: null,
+    repository_root: null
+  };
+  try {
+    execSync("git rev-parse --git-dir", {
+      cwd: projectPath,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    result.repository_root = execSync("git rev-parse --show-toplevel", {
+      cwd: projectPath,
+      encoding: "utf-8"
+    }).trim();
+    try {
+      result.repository_url = execSync("git remote get-url origin", {
+        cwd: projectPath,
+        encoding: "utf-8"
+      }).trim();
+      const match = result.repository_url.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+      if (match) {
+        result.repository = match[1].replace(/\.git$/, "");
+      }
+    } catch {
+    }
+  } catch {
+  }
+  return result;
 }
 export {
   countInteractions,

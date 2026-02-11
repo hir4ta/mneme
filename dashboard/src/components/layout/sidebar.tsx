@@ -172,7 +172,7 @@ export function Sidebar() {
                     )}
                   >
                     {isActive && (
-                      <span className="absolute left-3 h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      <span className="absolute left-3 h-1.5 w-1.5 rounded-full bg-[#E67E22]" />
                     )}
                     {icons[item.icon]}
                     {t(item.labelKey)}

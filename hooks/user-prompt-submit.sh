@@ -2,8 +2,8 @@
 #
 # user-prompt-submit.sh - UserPromptSubmit hook for mneme plugin
 #
-# Purpose: Search mneme for relevant context and inject as additionalContext
-# using shared search-core logic (same ranking as search-server).
+# Purpose: Search mneme for relevant context and approved rules,
+# inject as additionalContext using shared search-core logic.
 #
 # Input (stdin): JSON with prompt, cwd
 # Output (stdout): JSON with hookSpecificOutput.additionalContext (if matches found)
@@ -65,11 +65,8 @@ if [ "$success" != "true" ]; then
   exit 0
 fi
 
-result_count=$(echo "$search_output" | jq ".results | length" 2>/dev/null || echo "0")
-if [ "$result_count" -eq 0 ]; then
-  exit 0
-fi
-
+# Format session/interaction context (existing behavior)
+context_message=""
 context_lines=$(echo "$search_output" | jq -r '
   .results
   | map(select(.score >= 3 and (.type == "session" or .type == "unit")))
@@ -78,17 +75,51 @@ context_lines=$(echo "$search_output" | jq -r '
   | join("\n")
 ')
 
-if [ -z "$context_lines" ] || [ "$context_lines" = "null" ]; then
-  exit 0
-fi
-
-context_message="<mneme-context>
+if [ -n "$context_lines" ] && [ "$context_lines" != "null" ]; then
+  context_message="<mneme-context>
 Related context found (sessions/units):
 ${context_lines}
 Use /mneme:search for details.
 </mneme-context>"
+fi
 
-jq -n --arg context "$context_message" \
+# Format approved rules
+rules_message=""
+rules_lines=$(echo "$search_output" | jq -r '
+  .rules // []
+  | map(select(.score >= 2))
+  | .[:5]
+  | map("[\(.sourceType):\(.id)] (\(.priority // "—")) \(.text)")
+  | join("\n")
+')
+
+if [ -n "$rules_lines" ] && [ "$rules_lines" != "null" ]; then
+  rules_message="<mneme-rules>
+Approved development rules (apply during this response):
+${rules_lines}
+</mneme-rules>"
+fi
+
+# Combine both sections
+full_context=""
+if [ -n "$context_message" ]; then
+  full_context="$context_message"
+fi
+if [ -n "$rules_message" ]; then
+  if [ -n "$full_context" ]; then
+    full_context="${full_context}
+
+${rules_message}"
+  else
+    full_context="$rules_message"
+  fi
+fi
+
+if [ -z "$full_context" ]; then
+  exit 0
+fi
+
+jq -n --arg context "$full_context" \
   '{
     hookSpecificOutput: {
       hookEventName: "UserPromptSubmit",

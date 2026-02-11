@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 // lib/session-init.ts
-import { execSync as execSync2 } from "node:child_process";
-import * as fs2 from "node:fs";
-import * as path2 from "node:path";
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+
+// lib/db.ts
+import { execSync } from "node:child_process";
 
 // lib/suppress-sqlite-warning.ts
 var originalEmit = process.emit;
@@ -14,13 +16,20 @@ process.emit = (event, ...args) => {
   return originalEmit.apply(process, [event, ...args]);
 };
 
-// lib/db.ts
-import { execSync } from "node:child_process";
+// lib/db-init.ts
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname2 = dirname(__filename);
+
+// lib/db-mutations.ts
+var { DatabaseSync: DatabaseSync2 } = await import("node:sqlite");
+
+// lib/db-queries.ts
+var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
+
+// lib/db.ts
 function getRepositoryInfo(projectPath) {
   const result = {
     repository: null,
@@ -52,6 +61,11 @@ function getRepositoryInfo(projectPath) {
   }
   return result;
 }
+
+// lib/session-init-helpers.ts
+import { execSync as execSync2 } from "node:child_process";
+import * as fs2 from "node:fs";
+import * as path2 from "node:path";
 
 // lib/utils.ts
 import * as fs from "node:fs";
@@ -94,7 +108,7 @@ function findJsonFiles(dir) {
   return results;
 }
 
-// lib/session-init.ts
+// lib/session-init-helpers.ts
 function getGitInfo(cwd) {
   const result = { branch: "", userName: "unknown", userEmail: "" };
   try {
@@ -195,13 +209,15 @@ function initTags(mnemeDir, pluginRoot) {
     console.error(`[mneme] Tags master file created: ${tagsPath}`);
   }
 }
+
+// lib/session-init.ts
 function sessionInit(sessionId, cwd) {
-  const pluginRoot = path2.resolve(__dirname, "..");
-  const mnemeDir = path2.join(cwd, ".mneme");
-  const sessionsDir = path2.join(mnemeDir, "sessions");
-  const rulesDir = path2.join(mnemeDir, "rules");
-  const sessionLinksDir = path2.join(mnemeDir, "session-links");
-  if (!fs2.existsSync(mnemeDir)) {
+  const pluginRoot = path3.resolve(__dirname, "..");
+  const mnemeDir = path3.join(cwd, ".mneme");
+  const sessionsDir = path3.join(mnemeDir, "sessions");
+  const rulesDir = path3.join(mnemeDir, "rules");
+  const sessionLinksDir = path3.join(mnemeDir, "session-links");
+  if (!fs3.existsSync(mnemeDir)) {
     console.error(
       "[mneme] Not initialized in this project. Run: npx @hir4ta/mneme --init"
     );
@@ -212,11 +228,11 @@ function sessionInit(sessionId, cwd) {
   const fileId = sessionShortId;
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);
-  const projectName = path2.basename(cwd);
+  const projectName = path3.basename(cwd);
   let masterSessionId = "";
   let masterSessionPath = "";
-  const sessionLinkFile = path2.join(sessionLinksDir, `${fileId}.json`);
-  if (fs2.existsSync(sessionLinkFile)) {
+  const sessionLinkFile = path3.join(sessionLinksDir, `${fileId}.json`);
+  if (fs3.existsSync(sessionLinkFile)) {
     const link = safeReadJson(sessionLinkFile, {
       masterSessionId: "",
       claudeSessionId: "",
@@ -225,7 +241,7 @@ function sessionInit(sessionId, cwd) {
     if (link.masterSessionId) {
       masterSessionId = link.masterSessionId;
       const allFiles = findJsonFiles(sessionsDir);
-      masterSessionPath = allFiles.find((f) => path2.basename(f) === `${masterSessionId}.json`) || "";
+      masterSessionPath = allFiles.find((f) => path3.basename(f) === `${masterSessionId}.json`) || "";
       if (masterSessionPath) {
         console.error(`[mneme] Session linked to master: ${masterSessionId}`);
       }
@@ -233,10 +249,10 @@ function sessionInit(sessionId, cwd) {
   }
   let sessionPath = "";
   let isResumed = false;
-  if (fs2.existsSync(sessionsDir)) {
+  if (fs3.existsSync(sessionsDir)) {
     const allFiles = findJsonFiles(sessionsDir);
     const existing = allFiles.find(
-      (f) => path2.basename(f) === `${fileId}.json`
+      (f) => path3.basename(f) === `${fileId}.json`
     );
     if (existing) {
       sessionPath = existing;
@@ -245,9 +261,9 @@ function sessionInit(sessionId, cwd) {
   }
   if (!sessionPath) {
     const dateParts = now.split("T")[0].split("-");
-    const yearMonth = path2.join(sessionsDir, dateParts[0], dateParts[1]);
+    const yearMonth = path3.join(sessionsDir, dateParts[0], dateParts[1]);
     ensureDir(yearMonth);
-    sessionPath = path2.join(yearMonth, `${fileId}.json`);
+    sessionPath = path3.join(yearMonth, `${fileId}.json`);
   }
   let recentSessions = [];
   if (!isResumed) {
@@ -288,7 +304,7 @@ function sessionInit(sessionId, cwd) {
     safeWriteJson(sessionPath, sessionJson);
     console.error(`[mneme] Session initialized: ${sessionPath}`);
   }
-  if (masterSessionId && masterSessionPath && fs2.existsSync(masterSessionPath)) {
+  if (masterSessionId && masterSessionPath && fs3.existsSync(masterSessionPath)) {
     const claudeSessionId = sessionId || sessionShortId;
     const master = safeReadJson(
       masterSessionPath,
@@ -317,17 +333,19 @@ function sessionInit(sessionId, cwd) {
     }
   }
   initTags(mnemeDir, pluginRoot);
-  initRulesFile(path2.join(rulesDir, "review-guidelines.json"));
-  initRulesFile(path2.join(rulesDir, "dev-rules.json"));
+  initRulesFile(path3.join(rulesDir, "review-guidelines.json"));
+  initRulesFile(path3.join(rulesDir, "dev-rules.json"));
   initDatabase(mnemeDir, pluginRoot);
   const sessionRelativePath = sessionPath.startsWith(cwd) ? sessionPath.substring(cwd.length + 1) : sessionPath;
-  const usingMnemePath = path2.join(
+  const usingMnemePath = path3.join(
     pluginRoot,
     "skills",
     "using-mneme",
     "SKILL.md"
   );
-  const usingMnemeContent = fs2.existsSync(usingMnemePath) ? fs2.readFileSync(usingMnemePath, "utf-8") : "";
+  const usingMnemeContent = fs3.existsSync(usingMnemePath) ? fs3.readFileSync(usingMnemePath, "utf-8") : "";
+  const rulesSkillPath = path3.join(pluginRoot, "skills", "rules", "SKILL.md");
+  const rulesSkillContent = fs3.existsSync(rulesSkillPath) ? fs3.readFileSync(rulesSkillPath, "utf-8") : "";
   let resumeNote = "";
   let needsSummary = false;
   if (isResumed) {
@@ -369,9 +387,7 @@ When you have enough context, consider creating a summary with \`/mneme:save\` t
 - Unit regeneration needs (what should become approved units)
 - Any ongoing work or next steps`;
   }
-  const additionalContext = `${sessionInfo}
-
-${usingMnemeContent}`;
+  const additionalContext = [sessionInfo, usingMnemeContent, rulesSkillContent].filter(Boolean).join("\n\n");
   return { additionalContext };
 }
 function main() {
@@ -396,3 +412,10 @@ var scriptPath = process.argv[1];
 if (scriptPath && (import.meta.url === `file://${scriptPath}` || scriptPath.endsWith("session-init.js") || scriptPath.endsWith("session-init.ts"))) {
   main();
 }
+export {
+  getGitInfo,
+  getRecentSessions,
+  initDatabase,
+  initRulesFile,
+  initTags
+};

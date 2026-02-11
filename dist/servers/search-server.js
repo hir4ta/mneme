@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path5) {
-      let input = path5;
+    function removeDotSegments(path6) {
+      let input = path6;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path5, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
+        const [path6, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path6 && path6 !== "/" ? path6 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6776,12 +6776,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs5, exportName) {
+    function addFormats(ajv, list, fs6, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs5[f]);
+        ajv.addFormat(f, fs6[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6799,8 +6799,8 @@ process.emit = (event, ...args) => {
 };
 
 // servers/search-server.ts
-import * as fs4 from "node:fs";
-import * as path4 from "node:path";
+import * as fs5 from "node:fs";
+import * as path5 from "node:path";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -7161,8 +7161,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path5, errorMaps, issueData } = params;
-  const fullPath = [...path5, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7277,11 +7277,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path5, key) {
+  constructor(parent, value, path6, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path5;
+    this._path = path6;
     this._key = key;
   }
   get path() {
@@ -11204,10 +11204,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path6) {
+  if (!path6)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path6.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11590,11 +11590,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path6, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path6);
     return iss;
   });
 }
@@ -11777,7 +11777,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path5 = []) => {
+  const processError = (error49, path6 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -11787,7 +11787,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path6, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11819,8 +11819,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path5) {
+  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path6) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -24226,13 +24226,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path5 = ref.slice(1).split("/").filter(Boolean);
-  if (path5.length === 0) {
+  const path6 = ref.slice(1).split("/").filter(Boolean);
+  if (path6.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path5[0] === defsKey) {
-    const key = path5[1];
+  if (path6[0] === defsKey) {
+    const key = path6[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -29952,6 +29952,10 @@ var StdioServerTransport = class {
 };
 
 // lib/search-core.ts
+import * as fs4 from "node:fs";
+import * as path4 from "node:path";
+
+// lib/search-helpers.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 
@@ -30164,7 +30168,7 @@ if (isMain && process.argv.length > 2) {
   });
 }
 
-// lib/search-core.ts
+// lib/search-helpers.ts
 function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -30210,6 +30214,22 @@ function expandKeywordsWithAliases(keywords, tags) {
   }
   return Array.from(expanded);
 }
+function walkJsonFiles(dir, callback) {
+  if (!fs3.existsSync(dir)) return;
+  const entries = fs3.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path3.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+
+// lib/search-core.ts
 function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
   try {
@@ -30267,28 +30287,14 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
     }
   }
 }
-function walkJsonFiles(dir, callback) {
-  if (!fs3.existsSync(dir)) return;
-  const entries = fs3.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path3.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkJsonFiles(fullPath, callback);
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".json")) {
-      callback(fullPath);
-    }
-  }
-}
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path3.join(mnemeDir, "sessions");
+  const sessionsDir = path4.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs3.readFileSync(filePath, "utf-8")
+        fs4.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
@@ -30353,13 +30359,6 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function normalizeRequestedTypes(types) {
-  const normalized = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    normalized.add(type);
-  }
-  return normalized;
-}
 function searchKnowledge(options) {
   const {
     query,
@@ -30379,7 +30378,7 @@ function searchKnowledge(options) {
   const results = [];
   const safeOffset = Math.max(0, offset);
   const fetchLimit = Math.max(limit + safeOffset, limit, 10);
-  const normalizedTypes = normalizeRequestedTypes(types);
+  const normalizedTypes = new Set(types);
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
   }
@@ -30421,16 +30420,16 @@ function getProjectPath() {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 function getMnemeDir() {
-  return path4.join(getProjectPath(), ".mneme");
+  return path5.join(getProjectPath(), ".mneme");
 }
 function getLocalDbPath() {
-  return path4.join(getMnemeDir(), "local.db");
+  return path5.join(getMnemeDir(), "local.db");
 }
 var db = null;
 function getDb() {
   if (db) return db;
   const dbPath = getLocalDbPath();
-  if (!fs4.existsSync(dbPath)) return null;
+  if (!fs5.existsSync(dbPath)) return null;
   try {
     db = new DatabaseSync(dbPath);
     db.exec("PRAGMA journal_mode = WAL");
@@ -30451,19 +30450,19 @@ function search2(query, options = {}) {
   });
 }
 function getSession(sessionId) {
-  const sessionsDir = path4.join(getMnemeDir(), "sessions");
-  if (!fs4.existsSync(sessionsDir)) return null;
+  const sessionsDir = path5.join(getMnemeDir(), "sessions");
+  if (!fs5.existsSync(sessionsDir)) return null;
   function findSession(dir) {
-    const entries = fs4.readdirSync(dir, { withFileTypes: true });
+    const entries = fs5.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const fullPath = path4.join(dir, entry.name);
+      const fullPath = path5.join(dir, entry.name);
       if (entry.isDirectory()) {
         const result = findSession(fullPath);
         if (result) return result;
       } else if (entry.name.endsWith(".json")) {
         try {
           const session = JSON.parse(
-            fs4.readFileSync(fullPath, "utf-8")
+            fs5.readFileSync(fullPath, "utf-8")
           );
           if (session.id === sessionId) return session;
         } catch {

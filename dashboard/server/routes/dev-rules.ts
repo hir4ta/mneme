@@ -38,6 +38,11 @@ export function collectDevRules(): DevRuleItem[] {
     for (const entry of entries) {
       const id = String(entry.id || "");
       if (!id) continue;
+      const alts = Array.isArray(entry.alternatives)
+        ? entry.alternatives.map((a) =>
+            typeof a === "string" ? a : String(a.option || a.name || a),
+          )
+        : undefined;
       items.push({
         id,
         type: "decision",
@@ -51,6 +56,9 @@ export function collectDevRules(): DevRuleItem[] {
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || raw.createdAt || ""),
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
+        context: entry.context ? String(entry.context) : undefined,
+        reasoning: entry.reasoning ? String(entry.reasoning) : undefined,
+        alternatives: alts,
       });
     }
   }
@@ -84,6 +92,9 @@ export function collectDevRules(): DevRuleItem[] {
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || ""),
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
+        context: entry.context ? String(entry.context) : undefined,
+        patternType: entry.type ? String(entry.type) : undefined,
+        pattern: entry.pattern ? String(entry.pattern) : undefined,
       });
     }
   }
@@ -92,9 +103,10 @@ export function collectDevRules(): DevRuleItem[] {
   const ruleFileNames = ["dev-rules", "review-guidelines"];
   for (const ruleFile of ruleFileNames) {
     const filePath = path.join(rulesDir(), `${ruleFile}.json`);
-    const doc = safeParseJsonFile<{ items?: Array<Record<string, unknown>> }>(
-      filePath,
-    );
+    const doc = safeParseJsonFile<{
+      createdAt?: string;
+      items?: Array<Record<string, unknown>>;
+    }>(filePath);
     if (!doc || !Array.isArray(doc.items)) continue;
     for (const entry of doc.items) {
       const id = String(entry.id || "");
@@ -110,8 +122,10 @@ export function collectDevRules(): DevRuleItem[] {
         status: (entry.status as DevRuleStatus) || "draft",
         priority: entry.priority ? String(entry.priority) : undefined,
         sourceFile: ruleFile,
-        createdAt: String(entry.createdAt || ""),
+        createdAt: String(entry.createdAt || doc.createdAt || ""),
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
+        rationale: entry.rationale ? String(entry.rationale) : undefined,
+        category: entry.category ? String(entry.category) : undefined,
       });
     }
   }

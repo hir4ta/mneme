@@ -11,6 +11,11 @@ disable-model-invocation: false
 
 Save session outputs and generate development rule candidates for approval.
 
+## Language
+
+All saved data (titles, descriptions, decisions, patterns, rules) MUST be written in the user's language.
+Detect the user's language from the conversation and match it consistently.
+
 ## Core intent
 
 `/mneme:save` is a source-writing command. It updates:
@@ -54,12 +59,12 @@ Always render missing required fields as blocking errors before write.
 
 3. **Session summary extraction (required MCP)**
 - Extract from the conversation: `title`, `goal`, `outcome`, `description`, `tags`, `sessionType`.
-- Additionally extract **structured context** (auto-compact で失われるデータを保全):
-  - `plan`: セッションの目標、タスク一覧（完了は `[x] ` prefix）、残タスク
-  - `discussions`: 設計議論（topic, decision, reasoning, alternatives）
-  - `errors`: 遭遇したエラーと解決策（error, context, solution, files）
-  - `handoff`: 引き継ぎ情報（stoppedReason, notes, nextSteps）
-  - `references`: 参照したドキュメントURL、ファイルパス（type, url, path, title, description）
+- Additionally extract **structured context** (data likely lost during auto-compact):
+  - `plan`: session goals, task list (completed tasks use `[x] ` prefix), remaining tasks
+  - `discussions`: design discussions (topic, decision, reasoning, alternatives)
+  - `errors`: encountered errors and solutions (error, context, solution, files)
+  - `handoff`: continuation info (stoppedReason, notes, nextSteps)
+  - `references`: referenced document URLs and file paths (type, url, path, title, description)
 - **MUST call `mneme_update_session_summary`** MCP tool with all extracted data.
   This writes the summary to `.mneme/sessions/` JSON file, ensuring the session is preserved on SessionEnd.
 - **Then call `mneme_mark_session_committed`** to finalize the commit.
@@ -72,62 +77,140 @@ Always render missing required fields as blocking errors before write.
 
 ### Structured context extraction guide
 
-Auto-compact はコンテキストウィンドウの約80%使用時に発動し、古いメッセージを要約で置換します。
-以下の情報は要約で失われやすいため、structured data として明示的に保存します。
+Auto-compact triggers at ~80% context window usage, replacing older messages with summaries.
+The following data is easily lost in summaries, so save it explicitly as structured data.
 
-**plan** — 該当する場合のみ:
-- `goals`: セッション開始時に設定された目標
-- `tasks`: 実行したタスクリスト。完了済みは `[x] タスク名`、未完了は `[ ] タスク名`
-- `remaining`: 次回以降に持ち越すタスク
+**plan** — when applicable:
+- `goals`: goals set at session start
+- `tasks`: task list. Completed: `[x] task name`, incomplete: `[ ] task name`
+- `remaining`: tasks carried over to future sessions
 
-**discussions** — 設計方針の議論があった場合:
-- 「AとBどちらにする？」→「Aにした」のような意思決定を抽出
-- `alternatives` に検討して採用しなかった選択肢を記録
+**discussions** — when design discussions occurred:
+- Extract "chose A over B" decisions
+- Record rejected alternatives in `alternatives`
 
-**errors** — ビルドエラー、テスト失敗、実行時エラーがあった場合:
-- エラーメッセージ、発生コンテキスト、解決策を記録
-- 同じエラーに再度遭遇しないための知見として保全
+**errors** — when build errors, test failures, or runtime errors occurred:
+- Record error messages, context, and solutions
+- Preserve as knowledge to avoid re-encountering the same errors
 
-**handoff** — セッション終了時に必ず:
-- `stoppedReason`: なぜここで止めるか（完了、時間切れ、ブロッカー等）
-- `notes`: 次のセッションで知っておくべき注意点
-- `nextSteps`: 次にやるべき具体的アクション
+**handoff** — always at session end:
+- `stoppedReason`: why stopping here (completed, time limit, blocker, etc.)
+- `notes`: important notes for the next session
+- `nextSteps`: specific next actions
 
-**references** — 外部リソースを参照した場合:
-- WebFetch/WebSearch で確認した公式ドキュメントURL
-- 重要な参照ファイルパス
+**references** — when external resources were referenced:
+- Official documentation URLs confirmed via WebFetch/WebSearch
+- Important file paths referenced
 
 4. **Decision extraction (source)**
 - Persist concrete choices and rationale to `decisions/YYYY/MM/*.json`.
+- Apply the classification matrix: only extract items that are **one-time choices with context-specific reasoning**.
+- Do NOT extract repeatable practices here (those belong in patterns/).
+
+<required>
+Decision content quality:
+- `title`: one-line summary of the choice ("Chose Y over X" format)
+- `context`: why this decision was needed (background, constraints)
+- `decision`: what was concretely done (include code examples or file paths)
+- `reasoning`: why this choice is best (trade-off analysis)
+- `alternatives`: MUST include rejection reason for each alternative
+  - BAD: `["Use HS256"]`
+  - GOOD: `["Use HS256 -> rejected: key rotation difficult in production"]`
+  If alternatives is a string array, append " -> rejected: reason" to each entry.
+</required>
 
 5. **Pattern extraction (source)**
 - Persist repeatable success/failure patterns to `patterns/{user}.json`.
+- Apply the classification matrix: only extract **repeatable practices observed across contexts**.
+- Do NOT extract one-time context-specific choices here (those belong in decisions/).
+
+<required>
+Pattern content quality:
+- `title`: pattern summary ("Doing X leads to Y" format)
+- `context`: when and in what situations this pattern applies
+- `pattern`: concrete steps/approach (reproducible level of detail)
+  - BAD: "Testing is good"
+  - GOOD: "Launch 3 independent agents in parallel, verify all module exports, function calls, and MCP startup with real data. Achieved 160+ tests with 0 regressions"
+- **Application conditions**: when to use, with concrete thresholds or triggers
+  - BAD: "when impact is limited"
+  - GOOD: "when call sites are 5 or fewer and the interface is stable"
+- **Expected outcomes**: concrete effects when this pattern is applied
+</required>
 
 6. **Rule extraction (source)**
 - Persist enforceable standards to:
-  - `rules/dev-rules.json`
-  - `rules/review-guidelines.json`
+  - `rules/dev-rules.json` — development rules (applied during implementation)
+  - `rules/review-guidelines.json` — review guidelines (applied during code review)
+- Rules are promoted from decisions or patterns. Include `sourceRef` linking to the source.
+- A rule coexists with its source — do NOT delete the source when promoting.
 
 <required>
+Rule content quality:
+- `text`: imperative and specific ("Do X", "Never do Y")
+  - BAD: "Maintain type safety"
+  - GOOD: "Use as assertion at call sites instead of any at type boundaries with external libraries"
+- `rationale`: why this rule is needed + risk of violation
+  - BAD: "For type safety"
+  - GOOD: "any undermines type safety across the entire interface. as assertion limits impact scope and makes type boundaries explicitly reviewable"
+- `category`: rule classification (type-safety, testing, security, performance, etc.)
 - Active rule must include: `id`, `key`, `text`, `category`, `tags`, `priority`, `rationale`
 - `priority` must be one of: `p0`, `p1`, `p2`
 </required>
 
-7. **開発ルール候補のレポート**
-- 保存した decisions/patterns/rules の内容をユーザーに一覧表示。
-- status は設定不要（デフォルトで draft）。
-- エンジニアがダッシュボードで承認したものだけが開発ルールとして有効になる。
-- インライン承認は行わない。
+7. **Development rule candidates report**
+- Display saved decisions/patterns/rules to the user.
+- Do not set status (defaults to draft).
+- Only items approved by the engineer in the dashboard become active development rules.
+- Do not perform inline approval.
 
 8. **Auto quality checks (required MCP)**
 - Run `mneme_rule_linter` (`ruleType: "all"`).
 - Run `mneme_search_eval` (`mode: "run"`).
 
-## Source definitions (must follow)
+## Source definitions and exclusivity (must follow)
 
-- **Decision**: what option was chosen and why.
-- **Pattern**: what repeatedly works or fails.
-- **Rule**: what should be enforced in future work.
+### Classification matrix
+
+| Category | Definition | Primary question | Example |
+|----------|-----------|-----------------|---------|
+| **Decision** | A one-time choice in a specific context, with alternatives and reasoning | "What was chosen and why?" | "Chose RS256 over HS256 for JWT signing due to production security requirements" |
+| **Pattern** | A repeatable practice observed across contexts (good/bad/error-solution) | "What repeatedly works or fails?" | "Parallel agent testing with real data after large-scale refactoring is effective" |
+| **Rule** | An enforceable standard promoted from a Decision or Pattern | "What should be enforced going forward?" | "After refactoring, verify with real data tests, not just build and lint" |
+
+### Exclusivity rules
+
+<required>
+- **Decision vs Pattern are mutually exclusive**: the same insight goes to exactly one
+  - One-time choice in a specific context -> Decision
+  - Repeatable practice across contexts -> Pattern
+- **Rule is a promotion**: may be promoted from Decision or Pattern. Source data is preserved.
+- **No duplication**: the same insight MUST NOT exist in both decisions/ and patterns/
+</required>
+
+### Classification decision tree
+
+```text
+Is this a one-time choice in a specific context?
+  YES -> Decision (decisions/)
+    Should this be enforced going forward?
+      YES -> Also promote to Rule (rules/) with sourceRef
+      NO  -> Decision only
+  NO -> Is this a repeatable practice?
+    YES -> Pattern (patterns/)
+      Should this be enforced going forward?
+        YES -> Also promote to Rule (rules/) with sourceRef
+        NO  -> Pattern only
+    NO -> Do not extract
+```
+
+### sourceRef format (when promoting to Rule)
+
+When promoting a Rule from a Decision/Pattern, include a reference to the source:
+```json
+{
+  "sourceRef": { "type": "decision", "id": "dec-xxx" }
+}
+```
 
 ## Priority rubric (must use)
 

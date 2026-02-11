@@ -66,7 +66,7 @@ export function GuideWorkflowPage() {
                         key={benefit}
                         className="text-sm flex items-start gap-2"
                       >
-                        <span className="text-green-600 dark:text-green-400 mt-0.5">
+                        <span className="mt-0.5" style={{ color: "#628141" }}>
                           +
                         </span>
                         <span>{benefit}</span>

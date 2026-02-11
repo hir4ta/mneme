@@ -2,6 +2,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { searchApprovedRules } from "./approved-rules-search.js";
 import { searchKnowledge } from "./search-core.js";
 
 // Suppress Node.js SQLite experimental warning.
@@ -63,7 +64,9 @@ function main() {
       limit: Number.isFinite(limit) ? Math.max(1, Math.min(limit, 10)) : 5,
     });
 
-    console.log(JSON.stringify({ success: true, results }));
+    const rules = searchApprovedRules({ query, mnemeDir, limit: 5 });
+
+    console.log(JSON.stringify({ success: true, results, rules }));
   } catch (error) {
     console.log(
       JSON.stringify({ success: false, error: (error as Error).message }),

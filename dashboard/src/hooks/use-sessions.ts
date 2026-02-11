@@ -36,6 +36,8 @@ export function useSessions(params: SessionsQueryParams = {}) {
               hasPrev: false,
             },
           })),
+    staleTime: 10_000,
+    refetchInterval: 30_000,
   });
 }
 

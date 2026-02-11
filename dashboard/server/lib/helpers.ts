@@ -98,6 +98,14 @@ export interface DevRuleItem {
   sourceFile: string;
   createdAt: string;
   updatedAt?: string;
+  // Type-specific detail fields
+  context?: string;
+  reasoning?: string;
+  alternatives?: string[];
+  rationale?: string;
+  category?: string;
+  patternType?: string;
+  pattern?: string;
 }
 
 export const listDatedJsonFiles = (dir: string): string[] => {

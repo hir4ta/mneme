@@ -48,10 +48,20 @@ misc.get("/project", (c) => {
     // Ignore git config errors
   }
 
+  let version: string | null = null;
+  try {
+    const pkgPath = path.resolve(import.meta.dirname, "../package.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    version = pkg.version || null;
+  } catch {
+    // Ignore package.json read errors
+  }
+
   return c.json({
     name: projectName,
     path: projectRoot,
     repository,
+    version,
   });
 });
 

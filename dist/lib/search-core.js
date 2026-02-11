@@ -1,4 +1,8 @@
 // lib/search-core.ts
+import * as fs4 from "node:fs";
+import * as path4 from "node:path";
+
+// lib/search-helpers.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 
@@ -211,7 +215,7 @@ if (isMain && process.argv.length > 2) {
   });
 }
 
-// lib/search-core.ts
+// lib/search-helpers.ts
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -257,6 +261,22 @@ function expandKeywordsWithAliases(keywords, tags) {
   }
   return Array.from(expanded);
 }
+function walkJsonFiles(dir, callback) {
+  if (!fs3.existsSync(dir)) return;
+  const entries = fs3.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path3.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+
+// lib/search-core.ts
 function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
   try {
@@ -314,28 +334,14 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
     }
   }
 }
-function walkJsonFiles(dir, callback) {
-  if (!fs3.existsSync(dir)) return;
-  const entries = fs3.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path3.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkJsonFiles(fullPath, callback);
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".json")) {
-      callback(fullPath);
-    }
-  }
-}
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path3.join(mnemeDir, "sessions");
+  const sessionsDir = path4.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs3.readFileSync(filePath, "utf-8")
+        fs4.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
@@ -400,13 +406,6 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function normalizeRequestedTypes(types) {
-  const normalized = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    normalized.add(type);
-  }
-  return normalized;
-}
 function searchKnowledge(options) {
   const {
     query,
@@ -426,7 +425,7 @@ function searchKnowledge(options) {
   const results = [];
   const safeOffset = Math.max(0, offset);
   const fetchLimit = Math.max(limit + safeOffset, limit, 10);
-  const normalizedTypes = normalizeRequestedTypes(types);
+  const normalizedTypes = new Set(types);
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
   }

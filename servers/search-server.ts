@@ -7,7 +7,11 @@ import * as path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { type SearchType, searchKnowledge } from "../lib/search-core.js";
+import {
+  type QueryableDb,
+  type SearchType,
+  searchKnowledge,
+} from "../lib/search-core.js";
 
 const { DatabaseSync } = await import("node:sqlite");
 type DatabaseSyncType = InstanceType<typeof DatabaseSync>;
@@ -84,7 +88,7 @@ function search(
     query,
     mnemeDir: getMnemeDir(),
     projectPath: getProjectPath(),
-    database: getDb(),
+    database: getDb() as QueryableDb | null,
     types: options.types,
     limit: options.limit,
     offset: options.offset,

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { searchKnowledge } from "../lib/search-core.js";
+import { type QueryableDb, searchKnowledge } from "../lib/search-core.js";
 
 // Suppress Node.js SQLite experimental warning.
 const originalEmit = process.emit;
@@ -71,7 +71,7 @@ function main() {
         query: item.query,
         mnemeDir,
         projectPath: projectRoot,
-        database: db,
+        database: db as QueryableDb | null,
         limit: 5,
       });
 

@@ -12,6 +12,11 @@ disable-model-invocation: true
 
 Harvest PR comments into source artifacts, then refresh units.
 
+## Language
+
+All saved data (titles, descriptions, decisions, patterns, rules) MUST be written in the user's language.
+Detect the user's language from the conversation and match it consistently.
+
 ## Required emphasis format (Claude Code safe)
 
 Claude Code docs do not provide a built-in "required badge" syntax for skills.
@@ -36,11 +41,26 @@ Use explicit section markers and XML-style tags for hard constraints:
 - **Pattern source** -> `patterns/`
 - **Rule source** -> `rules/dev-rules.json` or `rules/review-guidelines.json`
 
-## Source definitions (must follow)
+## Source definitions and exclusivity (must follow)
 
-- **Decision**: what option was chosen and why.
-- **Pattern**: what repeatedly works or fails.
-- **Rule**: what should be enforced in future work.
+| Category | Definition | Primary question |
+|----------|-----------|-----------------|
+| **Decision** | A one-time choice in a specific context, with alternatives and reasoning | "What was chosen and why?" |
+| **Pattern** | A repeatable practice observed across contexts (good/bad/error-solution) | "What repeatedly works or fails?" |
+| **Rule** | An enforceable standard promoted from a Decision or Pattern | "What should be enforced going forward?" |
+
+<required>
+- Decision vs Pattern are mutually exclusive. The same insight goes to exactly one.
+- Rule may be promoted from Decision/Pattern (with sourceRef). Source data is preserved.
+</required>
+
+## Content quality requirements
+
+<required>
+- Decisions: `alternatives` MUST include rejection reason for each option
+- Patterns: MUST include application conditions (concrete thresholds) and expected outcomes
+- Rules: `text` MUST be imperative and specific; `rationale` MUST explain risk of violation
+</required>
 
 ## Priority rubric (for rules, must use)
 

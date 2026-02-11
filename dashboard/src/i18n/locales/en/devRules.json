@@ -44,7 +44,17 @@
     "source": "Source File",
     "tags": "Tags",
     "created": "Created",
-    "updated": "Updated"
+    "updated": "Updated",
+    "context": "Context",
+    "reasoning": "Reasoning",
+    "alternatives": "Alternatives",
+    "rationale": "Rationale",
+    "category": "Category",
+    "patternType": "Type",
+    "pattern": "Pattern",
+    "decisionDetail": "Decision Detail",
+    "patternDetail": "Pattern Detail",
+    "ruleDetail": "Rule Detail"
   },
   "deleteConfirm": {
     "title": "Delete Rule",

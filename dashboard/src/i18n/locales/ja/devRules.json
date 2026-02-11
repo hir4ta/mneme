@@ -29,9 +29,9 @@
     "rejected": "却下"
   },
   "type": {
-    "decision": "Decision",
-    "pattern": "Pattern",
-    "rule": "Rule"
+    "decision": "意思決定",
+    "pattern": "パターン",
+    "rule": "ルール"
   },
   "filter": {
     "allTypes": "すべてのタイプ",
@@ -44,7 +44,17 @@
     "source": "ソースファイル",
     "tags": "タグ",
     "created": "作成日",
-    "updated": "更新日"
+    "updated": "更新日",
+    "context": "コンテキスト",
+    "reasoning": "理由",
+    "alternatives": "代替案",
+    "rationale": "根拠",
+    "category": "カテゴリ",
+    "patternType": "タイプ",
+    "pattern": "パターン",
+    "decisionDetail": "意思決定の詳細",
+    "patternDetail": "パターンの詳細",
+    "ruleDetail": "ルールの詳細"
   },
   "deleteConfirm": {
     "title": "ルールを削除",

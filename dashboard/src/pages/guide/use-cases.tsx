@@ -71,7 +71,10 @@ export function GuideUseCasesPage() {
                       </div>
                       <div className="flex-1 pb-2">
                         <p className="text-sm font-medium">{step.action}</p>
-                        <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                        <p
+                          className="text-sm mt-1"
+                          style={{ color: "#628141" }}
+                        >
                           → {step.result}
                         </p>
                       </div>

@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
 // lib/prompt-search.ts
+import * as fs6 from "node:fs";
+import * as path6 from "node:path";
+
+// lib/approved-rules-search.ts
 import * as fs4 from "node:fs";
 import * as path4 from "node:path";
 
-// lib/search-core.ts
+// lib/search-helpers.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 
@@ -217,7 +221,7 @@ if (isMain && process.argv.length > 2) {
   });
 }
 
-// lib/search-core.ts
+// lib/search-helpers.ts
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -263,6 +267,187 @@ function expandKeywordsWithAliases(keywords, tags) {
   }
   return Array.from(expanded);
 }
+function walkJsonFiles(dir, callback) {
+  if (!fs3.existsSync(dir)) return;
+  const entries = fs3.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path3.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+
+// lib/approved-rules-search.ts
+function isApproved(status) {
+  if (typeof status !== "string") return false;
+  const s = status.toLowerCase();
+  return s === "approved" || s === "active";
+}
+function priorityBoost(priority) {
+  if (priority === "p0") return 2;
+  if (priority === "p1") return 1;
+  return 0;
+}
+function searchRuleFiles(mnemeDir, pattern) {
+  const results = [];
+  const rulesDir = path4.join(mnemeDir, "rules");
+  if (!fs4.existsSync(rulesDir)) return results;
+  for (const fileName of ["dev-rules.json", "review-guidelines.json"]) {
+    const filePath = path4.join(rulesDir, fileName);
+    if (!fs4.existsSync(filePath)) continue;
+    try {
+      const doc = JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+      const items = doc.items || doc.rules || [];
+      for (const item of items) {
+        if (!isApproved(item.status)) continue;
+        let score = 0;
+        const matched = [];
+        const textScore = fieldScore(item.text, pattern, 4);
+        if (textScore > 0) {
+          score += textScore;
+          matched.push("text");
+        }
+        const keyScore = fieldScore(item.key, pattern, 3);
+        if (keyScore > 0) {
+          score += keyScore;
+          matched.push("key");
+        }
+        if (item.tags?.some((t) => pattern.test(t))) {
+          score += 1;
+          matched.push("tags");
+        }
+        score += priorityBoost(item.priority);
+        if (score > 0) {
+          results.push({
+            sourceType: "rule",
+            id: item.id || item.key || "",
+            title: item.text || item.key || "",
+            text: item.text || "",
+            priority: item.priority,
+            tags: item.tags || [],
+            score,
+            matchedFields: matched
+          });
+        }
+      }
+    } catch {
+    }
+  }
+  return results;
+}
+function searchDecisionFiles(mnemeDir, pattern) {
+  const results = [];
+  const decisionsDir = path4.join(mnemeDir, "decisions");
+  walkJsonFiles(decisionsDir, (filePath) => {
+    try {
+      const doc = JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+      if (!isApproved(doc.status)) return;
+      let score = 0;
+      const matched = [];
+      const titleScore = fieldScore(doc.title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
+        matched.push("title");
+      }
+      const decisionScore = fieldScore(doc.decision, pattern, 4);
+      if (decisionScore > 0) {
+        score += decisionScore;
+        matched.push("decision");
+      }
+      const reasoningScore = fieldScore(doc.reasoning, pattern, 2);
+      if (reasoningScore > 0) {
+        score += reasoningScore;
+        matched.push("reasoning");
+      }
+      if (doc.tags?.some((t) => pattern.test(t))) {
+        score += 1;
+        matched.push("tags");
+      }
+      if (score > 0) {
+        results.push({
+          sourceType: "decision",
+          id: doc.id || "",
+          title: doc.title || "",
+          text: doc.decision || doc.title || "",
+          tags: doc.tags || [],
+          score,
+          matchedFields: matched
+        });
+      }
+    } catch {
+    }
+  });
+  return results;
+}
+function searchPatternFiles(mnemeDir, pattern) {
+  const results = [];
+  const patternsDir = path4.join(mnemeDir, "patterns");
+  walkJsonFiles(patternsDir, (filePath) => {
+    try {
+      const doc = JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+      const items = doc.items || doc.patterns || [];
+      for (const item of items) {
+        if (!isApproved(item.status)) continue;
+        let score = 0;
+        const matched = [];
+        const titleScore = fieldScore(item.title, pattern, 3);
+        if (titleScore > 0) {
+          score += titleScore;
+          matched.push("title");
+        }
+        const patternScore = fieldScore(item.pattern, pattern, 3);
+        if (patternScore > 0) {
+          score += patternScore;
+          matched.push("pattern");
+        }
+        if (item.tags?.some((t) => pattern.test(t))) {
+          score += 1;
+          matched.push("tags");
+        }
+        if (score > 0) {
+          results.push({
+            sourceType: "pattern",
+            id: item.id || "",
+            title: item.title || "",
+            text: item.pattern || item.title || "",
+            tags: item.tags || [],
+            score,
+            matchedFields: matched
+          });
+        }
+      }
+    } catch {
+    }
+  });
+  return results;
+}
+function searchApprovedRules(options) {
+  const { query, mnemeDir, limit = 5 } = options;
+  const keywords = query.toLowerCase().split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 2);
+  if (keywords.length === 0) return [];
+  const expanded = expandKeywordsWithAliases(keywords, loadTags(mnemeDir));
+  const pattern = new RegExp(expanded.map(escapeRegex).join("|"), "i");
+  const results = [
+    ...searchRuleFiles(mnemeDir, pattern),
+    ...searchDecisionFiles(mnemeDir, pattern),
+    ...searchPatternFiles(mnemeDir, pattern)
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  return results.sort((a, b) => b.score - a.score).filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  }).slice(0, limit);
+}
+
+// lib/search-core.ts
+import * as fs5 from "node:fs";
+import * as path5 from "node:path";
 function searchInteractions(keywords, projectPath, database, limit = 5) {
   if (!database) return [];
   try {
@@ -320,28 +505,14 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
     }
   }
 }
-function walkJsonFiles(dir, callback) {
-  if (!fs3.existsSync(dir)) return;
-  const entries = fs3.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path3.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkJsonFiles(fullPath, callback);
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".json")) {
-      callback(fullPath);
-    }
-  }
-}
 function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path3.join(mnemeDir, "sessions");
+  const sessionsDir = path5.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
   walkJsonFiles(sessionsDir, (filePath) => {
     try {
       const session = JSON.parse(
-        fs3.readFileSync(filePath, "utf-8")
+        fs5.readFileSync(filePath, "utf-8")
       );
       const title = session.title || session.summary?.title || "";
       let score = 0;
@@ -406,13 +577,6 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
-function normalizeRequestedTypes(types) {
-  const normalized = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    normalized.add(type);
-  }
-  return normalized;
-}
 function searchKnowledge(options) {
   const {
     query,
@@ -432,7 +596,7 @@ function searchKnowledge(options) {
   const results = [];
   const safeOffset = Math.max(0, offset);
   const fetchLimit = Math.max(limit + safeOffset, limit, 10);
-  const normalizedTypes = normalizeRequestedTypes(types);
+  const normalizedTypes = new Set(types);
   if (normalizedTypes.has("session")) {
     results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
   }
@@ -479,11 +643,11 @@ function main() {
     );
     process.exit(1);
   }
-  const mnemeDir = path4.join(projectPath, ".mneme");
-  const dbPath = path4.join(mnemeDir, "local.db");
+  const mnemeDir = path6.join(projectPath, ".mneme");
+  const dbPath = path6.join(mnemeDir, "local.db");
   let database = null;
   try {
-    if (fs4.existsSync(dbPath)) {
+    if (fs6.existsSync(dbPath)) {
       database = new DatabaseSync(dbPath);
       database.exec("PRAGMA journal_mode = WAL");
     }
@@ -494,7 +658,8 @@ function main() {
       database,
       limit: Number.isFinite(limit) ? Math.max(1, Math.min(limit, 10)) : 5
     });
-    console.log(JSON.stringify({ success: true, results }));
+    const rules = searchApprovedRules({ query, mnemeDir, limit: 5 });
+    console.log(JSON.stringify({ success: true, results, rules }));
   } catch (error) {
     console.log(
       JSON.stringify({ success: false, error: error.message })

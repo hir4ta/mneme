@@ -3222,8 +3222,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path5) {
-      let input = path5;
+    function removeDotSegments(path9) {
+      let input = path9;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3422,8 +3422,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path5, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path5 && path5 !== "/" ? path5 : void 0;
+        const [path9, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path9 && path9 !== "/" ? path9 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -6776,12 +6776,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs5, exportName) {
+    function addFormats(ajv, list, fs8, exportName) {
       var _a2;
       var _b;
       (_a2 = (_b = ajv.opts.code).formats) !== null && _a2 !== void 0 ? _a2 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs5[f]);
+        ajv.addFormat(f, fs8[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6797,12 +6797,6 @@ process.emit = (event, ...args) => {
   }
   return originalEmit.apply(process, [event, ...args]);
 };
-
-// servers/db-server.ts
-import * as fs4 from "node:fs";
-import * as os from "node:os";
-import * as path4 from "node:path";
-import * as readline from "node:readline";
 
 // node_modules/zod/v3/helpers/util.js
 var util;
@@ -7163,8 +7157,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path5, errorMaps, issueData } = params;
-  const fullPath = [...path5, ...issueData.path || []];
+  const { data, path: path9, errorMaps, issueData } = params;
+  const fullPath = [...path9, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -7279,11 +7273,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path5, key) {
+  constructor(parent, value, path9, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path5;
+    this._path = path9;
     this._key = key;
   }
   get path() {
@@ -11206,10 +11200,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path5) {
-  if (!path5)
+function getElementAtPath(obj, path9) {
+  if (!path9)
     return obj;
-  return path5.reduce((acc, key) => acc?.[key], obj);
+  return path9.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -11592,11 +11586,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path5, issues) {
+function prefixIssues(path9, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path5);
+    iss.path.unshift(path9);
     return iss;
   });
 }
@@ -11779,7 +11773,7 @@ function formatError(error48, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error48, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error49, path5 = []) => {
+  const processError = (error49, path9 = []) => {
     var _a2, _b;
     for (const issue2 of error49.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
@@ -11789,7 +11783,7 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
       } else if (issue2.code === "invalid_element") {
         processError({ issues: issue2.issues }, issue2.path);
       } else {
-        const fullpath = [...path5, ...issue2.path];
+        const fullpath = [...path9, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -11821,8 +11815,8 @@ function treeifyError(error48, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path5 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path5) {
+  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path9) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -24228,13 +24222,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path5 = ref.slice(1).split("/").filter(Boolean);
-  if (path5.length === 0) {
+  const path9 = ref.slice(1).split("/").filter(Boolean);
+  if (path9.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path5[0] === defsKey) {
-    const key = path5[1];
+  if (path9[0] === defsKey) {
+    const key = path9[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -29953,458 +29947,11 @@ var StdioServerTransport = class {
   }
 };
 
-// lib/search-core.ts
-import * as fs3 from "node:fs";
-import * as path3 from "node:path";
-
-// lib/fuzzy-search.ts
-import * as fs2 from "node:fs";
-import * as path2 from "node:path";
-
-// lib/utils.ts
+// servers/db-utils.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
-function safeReadJson(filePath, fallback) {
-  try {
-    const content = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(content);
-  } catch {
-    return fallback;
-  }
-}
-function findJsonFiles(dir) {
-  const results = [];
-  if (!fs.existsSync(dir)) return results;
-  const items = fs.readdirSync(dir, { withFileTypes: true });
-  for (const item of items) {
-    const fullPath = path.join(dir, item.name);
-    if (item.isDirectory()) {
-      results.push(...findJsonFiles(fullPath));
-    } else if (item.name.endsWith(".json")) {
-      results.push(fullPath);
-    }
-  }
-  return results;
-}
 
-// lib/fuzzy-search.ts
-function levenshtein(a, b) {
-  const matrix = [];
-  for (let i = 0; i <= a.length; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= b.length; j++) {
-    matrix[0][j] = j;
-  }
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        // deletion
-        matrix[i][j - 1] + 1,
-        // insertion
-        matrix[i - 1][j - 1] + cost
-        // substitution
-      );
-    }
-  }
-  return matrix[a.length][b.length];
-}
-function expandAliases(query, tags) {
-  const results = /* @__PURE__ */ new Set([query]);
-  const lowerQuery = query.toLowerCase();
-  for (const tag of tags) {
-    const allTerms = [tag.id, tag.label, ...tag.aliases].map(
-      (t) => t.toLowerCase()
-    );
-    if (allTerms.includes(lowerQuery)) {
-      results.add(tag.id);
-      results.add(tag.label);
-      for (const alias of tag.aliases) {
-        results.add(alias);
-      }
-    }
-  }
-  return Array.from(results);
-}
-function calculateSimilarity(text, query) {
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  if (lowerText === lowerQuery) return 10;
-  if (lowerText.includes(lowerQuery)) return 5;
-  if (lowerQuery.includes(lowerText)) return 3;
-  const distance = levenshtein(lowerText, lowerQuery);
-  if (distance <= 2) return 2;
-  if (distance <= 3) return 1;
-  return 0;
-}
-async function search(options) {
-  const {
-    query,
-    mnemeDir,
-    targets = ["sessions", "decisions"],
-    limit = 20,
-    timeout = 1e4
-  } = options;
-  const startTime = Date.now();
-  const results = [];
-  const tagsPath = path2.join(mnemeDir, "tags.json");
-  const tagsData = safeReadJson(tagsPath, { tags: [] });
-  const expandedQueries = expandAliases(query, tagsData.tags);
-  if (targets.includes("sessions")) {
-    const sessionsDir = path2.join(mnemeDir, "sessions");
-    if (fs2.existsSync(sessionsDir)) {
-      const files = findJsonFiles(sessionsDir);
-      for (const file2 of files) {
-        if (Date.now() - startTime > timeout) break;
-        const session = safeReadJson(file2, {});
-        const score = scoreDocument(session, expandedQueries, [
-          "title",
-          "goal",
-          "tags"
-        ]);
-        if (score > 0) {
-          results.push({
-            type: "session",
-            id: session.id || path2.basename(file2, ".json"),
-            score,
-            title: session.title || "Untitled",
-            highlights: []
-          });
-        }
-      }
-    }
-  }
-  if (targets.includes("decisions")) {
-    const decisionsDir = path2.join(mnemeDir, "decisions");
-    if (fs2.existsSync(decisionsDir)) {
-      const files = findJsonFiles(decisionsDir);
-      for (const file2 of files) {
-        if (Date.now() - startTime > timeout) break;
-        const decision = safeReadJson(file2, {});
-        const score = scoreDocument(decision, expandedQueries, [
-          "title",
-          "decision",
-          "tags"
-        ]);
-        if (score > 0) {
-          results.push({
-            type: "decision",
-            id: decision.id || path2.basename(file2, ".json"),
-            score,
-            title: decision.title || "Untitled",
-            highlights: []
-          });
-        }
-      }
-    }
-  }
-  if (targets.includes("patterns")) {
-    const patternsDir = path2.join(mnemeDir, "patterns");
-    if (fs2.existsSync(patternsDir)) {
-      const files = findJsonFiles(patternsDir);
-      for (const file2 of files) {
-        if (Date.now() - startTime > timeout) break;
-        const pattern = safeReadJson(file2, {});
-        const patterns = pattern.patterns || [];
-        for (const p of patterns) {
-          const score = scoreDocument(p, expandedQueries, [
-            "description",
-            "errorPattern",
-            "tags"
-          ]);
-          if (score > 0) {
-            results.push({
-              type: "pattern",
-              id: `${path2.basename(file2, ".json")}-${p.type || "unknown"}`,
-              score,
-              title: p.description || "Untitled pattern",
-              highlights: []
-            });
-          }
-        }
-      }
-    }
-  }
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
-function scoreDocument(doc, queries, fields) {
-  let totalScore = 0;
-  for (const field of fields) {
-    const value = doc[field];
-    if (typeof value === "string") {
-      for (const q of queries) {
-        totalScore += calculateSimilarity(value, q);
-      }
-    } else if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === "string") {
-          for (const q of queries) {
-            totalScore += calculateSimilarity(item, q);
-          }
-        }
-      }
-    }
-  }
-  return totalScore;
-}
-var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
-if (isMain && process.argv.length > 2) {
-  const args = process.argv.slice(2);
-  const queryIndex = args.indexOf("--query");
-  const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
-  const mnemeDir = `${process.cwd()}/.mneme`;
-  if (!query) {
-    console.error(JSON.stringify({ success: false, error: "Missing --query" }));
-    process.exit(0);
-  }
-  search({ query, mnemeDir }).then((results) => {
-    console.log(JSON.stringify({ success: true, results }));
-  }).catch((error48) => {
-    console.error(JSON.stringify({ success: false, error: String(error48) }));
-  });
-}
-
-// lib/search-core.ts
-function escapeRegex2(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function countMatches(text, pattern) {
-  const matches = text.match(new RegExp(pattern.source, "gi"));
-  return matches ? matches.length : 0;
-}
-function fieldScore(text, pattern, baseScore) {
-  if (!text) return 0;
-  const count = countMatches(text, pattern);
-  if (count === 0) return 0;
-  return baseScore + (count > 1 ? Math.log2(count) * 0.5 : 0);
-}
-function isFuzzyMatch(word, target, maxDistance = 2) {
-  if (word.length < 4) return false;
-  const distance = levenshtein(word.toLowerCase(), target.toLowerCase());
-  const threshold = Math.min(maxDistance, Math.floor(word.length / 3));
-  return distance <= threshold;
-}
-function loadTags(mnemeDir) {
-  const tagsPath = path3.join(mnemeDir, "tags.json");
-  if (!fs3.existsSync(tagsPath)) return null;
-  try {
-    return JSON.parse(fs3.readFileSync(tagsPath, "utf-8"));
-  } catch {
-    return null;
-  }
-}
-function expandKeywordsWithAliases(keywords, tags) {
-  if (!tags) return keywords;
-  const expanded = new Set(keywords.map((k) => k.toLowerCase()));
-  for (const keyword of keywords) {
-    const lowerKeyword = keyword.toLowerCase();
-    for (const tag of tags.tags) {
-      const matches = tag.id.toLowerCase() === lowerKeyword || tag.label.toLowerCase() === lowerKeyword || tag.aliases?.some((alias) => alias.toLowerCase() === lowerKeyword);
-      if (!matches) continue;
-      expanded.add(tag.id.toLowerCase());
-      expanded.add(tag.label.toLowerCase());
-      for (const alias of tag.aliases || []) {
-        expanded.add(alias.toLowerCase());
-      }
-    }
-  }
-  return Array.from(expanded);
-}
-function searchInteractions(keywords, projectPath, database, limit = 5) {
-  if (!database) return [];
-  try {
-    const stmt = database.prepare(`
-      SELECT
-        i.session_id,
-        i.content,
-        i.timestamp,
-        highlight(interactions_fts, 0, '[', ']') as content_highlight
-      FROM interactions_fts
-      JOIN interactions i ON interactions_fts.rowid = i.id
-      WHERE interactions_fts MATCH ?
-        AND i.project_path = ?
-      ORDER BY rank
-      LIMIT ?
-    `);
-    const rows = stmt.all(keywords.join(" OR "), projectPath, limit);
-    return rows.map((row) => ({
-      type: "interaction",
-      id: row.session_id,
-      title: `Interaction from ${row.timestamp}`,
-      snippet: (row.content_highlight || row.content).substring(0, 150),
-      score: 5,
-      matchedFields: ["content"]
-    }));
-  } catch {
-    try {
-      const clauses = keywords.map(() => "(content LIKE ? OR thinking LIKE ?)");
-      const sql = `
-        SELECT DISTINCT session_id, substr(content, 1, 120) as snippet, timestamp
-        FROM interactions
-        WHERE project_path = ?
-          AND (${clauses.join(" OR ")})
-        ORDER BY timestamp DESC
-        LIMIT ?
-      `;
-      const args = [projectPath];
-      for (const keyword of keywords) {
-        const pattern = `%${keyword}%`;
-        args.push(pattern, pattern);
-      }
-      args.push(limit);
-      const stmt = database.prepare(sql);
-      const rows = stmt.all(...args);
-      return rows.map((row) => ({
-        type: "interaction",
-        id: row.session_id,
-        title: `Interaction from ${row.timestamp}`,
-        snippet: row.snippet,
-        score: 3,
-        matchedFields: ["content"]
-      }));
-    } catch {
-      return [];
-    }
-  }
-}
-function walkJsonFiles(dir, callback) {
-  if (!fs3.existsSync(dir)) return;
-  const entries = fs3.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path3.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkJsonFiles(fullPath, callback);
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith(".json")) {
-      callback(fullPath);
-    }
-  }
-}
-function searchSessions(mnemeDir, keywords, limit = 5) {
-  const sessionsDir = path3.join(mnemeDir, "sessions");
-  const results = [];
-  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
-  walkJsonFiles(sessionsDir, (filePath) => {
-    try {
-      const session = JSON.parse(
-        fs3.readFileSync(filePath, "utf-8")
-      );
-      const title = session.title || session.summary?.title || "";
-      let score = 0;
-      const matchedFields = [];
-      const titleScore = fieldScore(title, pattern, 3);
-      if (titleScore > 0) {
-        score += titleScore;
-        matchedFields.push("title");
-      }
-      if (session.tags?.some((t) => pattern.test(t))) {
-        score += 1;
-        matchedFields.push("tags");
-      }
-      const goalScore = fieldScore(session.summary?.goal, pattern, 2);
-      if (goalScore > 0) {
-        score += goalScore;
-        matchedFields.push("summary.goal");
-      }
-      const descScore = fieldScore(session.summary?.description, pattern, 2);
-      if (descScore > 0) {
-        score += descScore;
-        matchedFields.push("summary.description");
-      }
-      if (session.discussions?.some(
-        (d) => pattern.test(d.topic || "") || pattern.test(d.decision || "")
-      )) {
-        score += 2;
-        matchedFields.push("discussions");
-      }
-      if (session.errors?.some(
-        (e) => pattern.test(e.error || "") || pattern.test(e.solution || "")
-      )) {
-        score += 2;
-        matchedFields.push("errors");
-      }
-      if (score === 0 && keywords.length <= 2) {
-        const titleWords = (title || "").toLowerCase().split(/\s+/);
-        const tagWords = session.tags || [];
-        for (const keyword of keywords) {
-          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
-            score += 1;
-            matchedFields.push("title~fuzzy");
-          }
-          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
-            score += 0.5;
-            matchedFields.push("tags~fuzzy");
-          }
-        }
-      }
-      if (score > 0) {
-        results.push({
-          type: "session",
-          id: session.id,
-          title: title || session.id,
-          snippet: session.summary?.description || session.summary?.goal || "",
-          score,
-          matchedFields
-        });
-      }
-    } catch {
-    }
-  });
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
-}
-function normalizeRequestedTypes(types) {
-  const normalized = /* @__PURE__ */ new Set();
-  for (const type of types) {
-    normalized.add(type);
-  }
-  return normalized;
-}
-function searchKnowledge(options) {
-  const {
-    query,
-    mnemeDir,
-    projectPath,
-    database = null,
-    types = ["session", "interaction"],
-    limit = 10,
-    offset = 0
-  } = options;
-  const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
-  if (keywords.length === 0) return [];
-  const expandedKeywords = expandKeywordsWithAliases(
-    keywords,
-    loadTags(mnemeDir)
-  );
-  const results = [];
-  const safeOffset = Math.max(0, offset);
-  const fetchLimit = Math.max(limit + safeOffset, limit, 10);
-  const normalizedTypes = normalizeRequestedTypes(types);
-  if (normalizedTypes.has("session")) {
-    results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
-  }
-  if (normalizedTypes.has("interaction")) {
-    results.push(
-      ...searchInteractions(
-        expandedKeywords,
-        projectPath,
-        database,
-        fetchLimit
-      )
-    );
-  }
-  const seen = /* @__PURE__ */ new Set();
-  return results.sort((a, b) => b.score - a.score).filter((result) => {
-    const key = `${result.type}:${result.id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(safeOffset, safeOffset + limit);
-}
-
-// servers/db-server.ts
+// servers/db-types.ts
 var { DatabaseSync } = await import("node:sqlite");
 var LIST_LIMIT_MIN = 1;
 var LIST_LIMIT_MAX = 200;
@@ -30420,28 +29967,30 @@ function fail(message) {
     isError: true
   };
 }
+
+// servers/db-utils.ts
 function getProjectPath() {
   return process.env.MNEME_PROJECT_PATH || process.cwd();
 }
 function getLocalDbPath() {
-  return path4.join(getProjectPath(), ".mneme", "local.db");
+  return path.join(getProjectPath(), ".mneme", "local.db");
 }
 function getMnemeDir() {
-  return path4.join(getProjectPath(), ".mneme");
+  return path.join(getProjectPath(), ".mneme");
 }
 function readJsonFile(filePath) {
-  if (!fs4.existsSync(filePath)) return null;
+  if (!fs.existsSync(filePath)) return null;
   try {
-    return JSON.parse(fs4.readFileSync(filePath, "utf-8"));
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
   } catch {
     return null;
   }
 }
 function listJsonFiles(dir) {
-  if (!fs4.existsSync(dir)) return [];
-  const entries = fs4.readdirSync(dir, { withFileTypes: true });
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
   return entries.flatMap((entry) => {
-    const fullPath = path4.join(dir, entry.name);
+    const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       return listJsonFiles(fullPath);
     }
@@ -30449,13 +29998,13 @@ function listJsonFiles(dir) {
   });
 }
 function readRuleItems(ruleType) {
-  const filePath = path4.join(getMnemeDir(), "rules", `${ruleType}.json`);
+  const filePath = path.join(getMnemeDir(), "rules", `${ruleType}.json`);
   const parsed = readJsonFile(filePath);
   const items = parsed?.items ?? parsed?.rules;
   return Array.isArray(items) ? items : [];
 }
 function readSessionsById() {
-  const sessionsDir = path4.join(getMnemeDir(), "sessions");
+  const sessionsDir = path.join(getMnemeDir(), "sessions");
   const map2 = /* @__PURE__ */ new Map();
   for (const filePath of listJsonFiles(sessionsDir)) {
     const parsed = readJsonFile(filePath);
@@ -30469,7 +30018,7 @@ var db = null;
 function getDb() {
   if (db) return db;
   const dbPath = getLocalDbPath();
-  if (!fs4.existsSync(dbPath)) {
+  if (!fs.existsSync(dbPath)) {
     return null;
   }
   try {
@@ -30479,6 +30028,17 @@ function getDb() {
   } catch {
     return null;
   }
+}
+
+// servers/db-queries.ts
+function mapSearchRow(row) {
+  return {
+    sessionId: row.session_id,
+    projectPath: row.project_path,
+    repository: row.repository,
+    snippet: row.snippet,
+    timestamp: row.timestamp
+  };
 }
 function listProjects() {
   const database = getDb();
@@ -30651,69 +30211,52 @@ function crossProjectSearch(query, options = {}) {
   if (!database) return [];
   const { limit = 10 } = options;
   try {
-    const ftsStmt = database.prepare(`
-      SELECT
-        i.session_id,
-        i.project_path,
-        i.repository,
-        snippet(interactions_fts, 0, '[', ']', '...', 32) as snippet,
-        i.timestamp
+    const rows = database.prepare(
+      `SELECT i.session_id, i.project_path, i.repository,
+        snippet(interactions_fts, 0, '[', ']', '...', 32) as snippet, i.timestamp
       FROM interactions_fts
       JOIN interactions i ON interactions_fts.rowid = i.id
-      WHERE interactions_fts MATCH ?
-      ORDER BY rank
-      LIMIT ?
-    `);
-    const rows = ftsStmt.all(query, limit);
-    return rows.map((row) => ({
-      sessionId: row.session_id,
-      projectPath: row.project_path,
-      repository: row.repository,
-      snippet: row.snippet,
-      timestamp: row.timestamp
-    }));
+      WHERE interactions_fts MATCH ? ORDER BY rank LIMIT ?`
+    ).all(query, limit);
+    return rows.map(mapSearchRow);
   } catch {
     try {
-      const likeStmt = database.prepare(`
-        SELECT DISTINCT
-          session_id,
-          project_path,
-          repository,
-          substr(content, 1, 100) as snippet,
-          timestamp
-        FROM interactions
-        WHERE content LIKE ? OR thinking LIKE ?
-        ORDER BY timestamp DESC
-        LIMIT ?
-      `);
       const pattern = `%${query}%`;
-      const rows = likeStmt.all(pattern, pattern, limit);
-      return rows.map((row) => ({
-        sessionId: row.session_id,
-        projectPath: row.project_path,
-        repository: row.repository,
-        snippet: row.snippet,
-        timestamp: row.timestamp
-      }));
+      const rows = database.prepare(
+        `SELECT DISTINCT session_id, project_path, repository,
+          substr(content, 1, 100) as snippet, timestamp
+        FROM interactions WHERE content LIKE ? OR thinking LIKE ?
+        ORDER BY timestamp DESC LIMIT ?`
+      ).all(pattern, pattern, limit);
+      return rows.map(mapSearchRow);
     } catch {
       return [];
     }
   }
 }
+
+// servers/db-save.ts
+import * as os2 from "node:os";
+
+// servers/db-transcript.ts
+import * as fs2 from "node:fs";
+import * as os from "node:os";
+import * as path2 from "node:path";
+import * as readline from "node:readline";
 function getTranscriptPath(claudeSessionId) {
   const projectPath = getProjectPath();
   const encodedPath = projectPath.replace(/\//g, "-");
-  const transcriptPath = path4.join(
+  const transcriptPath = path2.join(
     os.homedir(),
     ".claude",
     "projects",
     encodedPath,
     `${claudeSessionId}.jsonl`
   );
-  return fs4.existsSync(transcriptPath) ? transcriptPath : null;
+  return fs2.existsSync(transcriptPath) ? transcriptPath : null;
 }
 async function parseTranscript(transcriptPath) {
-  const fileStream = fs4.createReadStream(transcriptPath);
+  const fileStream = fs2.createReadStream(transcriptPath);
   const rl = readline.createInterface({
     input: fileStream,
     crlfDelay: Number.POSITIVE_INFINITY
@@ -30729,7 +30272,25 @@ async function parseTranscript(transcriptPath) {
       }
     }
   }
-  const userMessages = entries.filter((e) => {
+  const userMessages = extractUserMessages(entries);
+  const assistantMessages = extractAssistantMessages(entries);
+  const toolUsage = extractToolUsage(entries);
+  const files = extractFileChanges(entries);
+  const interactions = buildInteractions(userMessages, assistantMessages);
+  return {
+    interactions,
+    toolUsage,
+    files,
+    metrics: {
+      userMessages: userMessages.length,
+      assistantResponses: assistantMessages.length,
+      thinkingBlocks: assistantMessages.filter((a) => a.thinking).length
+    },
+    totalLines
+  };
+}
+function extractUserMessages(entries) {
+  return entries.filter((e) => {
     if (e.type !== "user" || e.message?.role !== "user") return false;
     if (e.isMeta === true) return false;
     const content = e.message?.content;
@@ -30742,18 +30303,18 @@ async function parseTranscript(transcriptPath) {
     content: e.message?.content,
     isCompactSummary: e.isCompactSummary || false
   }));
-  const assistantMessages = entries.filter((e) => e.type === "assistant").map((e) => {
+}
+function extractAssistantMessages(entries) {
+  return entries.filter((e) => e.type === "assistant").map((e) => {
     const contentArray = e.message?.content;
     if (!Array.isArray(contentArray)) return null;
     const thinking = contentArray.filter((c) => c.type === "thinking" && c.thinking).map((c) => c.thinking).join("\n");
     const text = contentArray.filter((c) => c.type === "text" && c.text).map((c) => c.text).join("\n");
     if (!thinking && !text) return null;
-    return {
-      timestamp: e.timestamp,
-      thinking,
-      text
-    };
+    return { timestamp: e.timestamp, thinking, text };
   }).filter((m) => m !== null);
+}
+function extractToolUsage(entries) {
   const toolUsageMap = /* @__PURE__ */ new Map();
   for (const entry of entries) {
     if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
@@ -30764,7 +30325,9 @@ async function parseTranscript(transcriptPath) {
       }
     }
   }
-  const toolUsage = Array.from(toolUsageMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+  return Array.from(toolUsageMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+}
+function extractFileChanges(entries) {
   const filesMap = /* @__PURE__ */ new Map();
   for (const entry of entries) {
     if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
@@ -30778,10 +30341,12 @@ async function parseTranscript(transcriptPath) {
       }
     }
   }
-  const files = Array.from(filesMap.entries()).map(([p, action]) => ({
+  return Array.from(filesMap.entries()).map(([p, action]) => ({
     path: p,
     action
   }));
+}
+function buildInteractions(userMessages, assistantMessages) {
   const interactions = [];
   for (let i = 0; i < userMessages.length; i++) {
     const user = userMessages[i];
@@ -30800,18 +30365,10 @@ async function parseTranscript(transcriptPath) {
       });
     }
   }
-  return {
-    interactions,
-    toolUsage,
-    files,
-    metrics: {
-      userMessages: userMessages.length,
-      assistantResponses: assistantMessages.length,
-      thinkingBlocks: assistantMessages.filter((a) => a.thinking).length
-    },
-    totalLines
-  };
+  return interactions;
 }
+
+// servers/db-save.ts
 async function saveInteractions(claudeSessionId, mnemeSessionId) {
   const transcriptPath = getTranscriptPath(claudeSessionId);
   if (!transcriptPath) {
@@ -30842,7 +30399,7 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
     }).trim() || owner;
   } catch {
     try {
-      owner = os.userInfo().username || owner;
+      owner = os2.userInfo().username || owner;
     } catch {
     }
   }
@@ -30969,11 +30526,11 @@ async function saveInteractions(claudeSessionId, mnemeSessionId) {
       `);
       updateStmt.run(parsed.totalLines, lastTimestamp, claudeSessionId);
     } else {
-      const insertStmt2 = database.prepare(`
+      const insertStateStmt = database.prepare(`
         INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, last_saved_line, last_saved_timestamp)
         VALUES (?, ?, ?, ?, ?)
       `);
-      insertStmt2.run(
+      insertStateStmt.run(
         claudeSessionId,
         sessionId,
         projectPath,
@@ -31019,8 +30576,463 @@ function markSessionCommitted(claudeSessionId) {
     return false;
   }
 }
-function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT) {
-  const queryPath = path4.join(
+
+// servers/db-benchmark.ts
+import * as path7 from "node:path";
+
+// lib/search-core.ts
+import * as fs6 from "node:fs";
+import * as path6 from "node:path";
+
+// lib/search-helpers.ts
+import * as fs5 from "node:fs";
+import * as path5 from "node:path";
+
+// lib/fuzzy-search.ts
+import * as fs4 from "node:fs";
+import * as path4 from "node:path";
+
+// lib/utils.ts
+import * as fs3 from "node:fs";
+import * as path3 from "node:path";
+function safeReadJson(filePath, fallback) {
+  try {
+    const content = fs3.readFileSync(filePath, "utf-8");
+    return JSON.parse(content);
+  } catch {
+    return fallback;
+  }
+}
+function findJsonFiles(dir) {
+  const results = [];
+  if (!fs3.existsSync(dir)) return results;
+  const items = fs3.readdirSync(dir, { withFileTypes: true });
+  for (const item of items) {
+    const fullPath = path3.join(dir, item.name);
+    if (item.isDirectory()) {
+      results.push(...findJsonFiles(fullPath));
+    } else if (item.name.endsWith(".json")) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+// lib/fuzzy-search.ts
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        // deletion
+        matrix[i][j - 1] + 1,
+        // insertion
+        matrix[i - 1][j - 1] + cost
+        // substitution
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+function expandAliases(query, tags) {
+  const results = /* @__PURE__ */ new Set([query]);
+  const lowerQuery = query.toLowerCase();
+  for (const tag of tags) {
+    const allTerms = [tag.id, tag.label, ...tag.aliases].map(
+      (t) => t.toLowerCase()
+    );
+    if (allTerms.includes(lowerQuery)) {
+      results.add(tag.id);
+      results.add(tag.label);
+      for (const alias of tag.aliases) {
+        results.add(alias);
+      }
+    }
+  }
+  return Array.from(results);
+}
+function calculateSimilarity(text, query) {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  if (lowerText === lowerQuery) return 10;
+  if (lowerText.includes(lowerQuery)) return 5;
+  if (lowerQuery.includes(lowerText)) return 3;
+  const distance = levenshtein(lowerText, lowerQuery);
+  if (distance <= 2) return 2;
+  if (distance <= 3) return 1;
+  return 0;
+}
+async function search(options) {
+  const {
+    query,
+    mnemeDir,
+    targets = ["sessions", "decisions"],
+    limit = 20,
+    timeout = 1e4
+  } = options;
+  const startTime = Date.now();
+  const results = [];
+  const tagsPath = path4.join(mnemeDir, "tags.json");
+  const tagsData = safeReadJson(tagsPath, { tags: [] });
+  const expandedQueries = expandAliases(query, tagsData.tags);
+  if (targets.includes("sessions")) {
+    const sessionsDir = path4.join(mnemeDir, "sessions");
+    if (fs4.existsSync(sessionsDir)) {
+      const files = findJsonFiles(sessionsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const session = safeReadJson(file2, {});
+        const score = scoreDocument(session, expandedQueries, [
+          "title",
+          "goal",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "session",
+            id: session.id || path4.basename(file2, ".json"),
+            score,
+            title: session.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("decisions")) {
+    const decisionsDir = path4.join(mnemeDir, "decisions");
+    if (fs4.existsSync(decisionsDir)) {
+      const files = findJsonFiles(decisionsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const decision = safeReadJson(file2, {});
+        const score = scoreDocument(decision, expandedQueries, [
+          "title",
+          "decision",
+          "tags"
+        ]);
+        if (score > 0) {
+          results.push({
+            type: "decision",
+            id: decision.id || path4.basename(file2, ".json"),
+            score,
+            title: decision.title || "Untitled",
+            highlights: []
+          });
+        }
+      }
+    }
+  }
+  if (targets.includes("patterns")) {
+    const patternsDir = path4.join(mnemeDir, "patterns");
+    if (fs4.existsSync(patternsDir)) {
+      const files = findJsonFiles(patternsDir);
+      for (const file2 of files) {
+        if (Date.now() - startTime > timeout) break;
+        const pattern = safeReadJson(file2, {});
+        const patterns = pattern.patterns || [];
+        for (const p of patterns) {
+          const score = scoreDocument(p, expandedQueries, [
+            "description",
+            "errorPattern",
+            "tags"
+          ]);
+          if (score > 0) {
+            results.push({
+              type: "pattern",
+              id: `${path4.basename(file2, ".json")}-${p.type || "unknown"}`,
+              score,
+              title: p.description || "Untitled pattern",
+              highlights: []
+            });
+          }
+        }
+      }
+    }
+  }
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function scoreDocument(doc, queries, fields) {
+  let totalScore = 0;
+  for (const field of fields) {
+    const value = doc[field];
+    if (typeof value === "string") {
+      for (const q of queries) {
+        totalScore += calculateSimilarity(value, q);
+      }
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (typeof item === "string") {
+          for (const q of queries) {
+            totalScore += calculateSimilarity(item, q);
+          }
+        }
+      }
+    }
+  }
+  return totalScore;
+}
+var isMain = process.argv[1]?.endsWith("fuzzy-search.js") || process.argv[1]?.endsWith("fuzzy-search.ts");
+if (isMain && process.argv.length > 2) {
+  const args = process.argv.slice(2);
+  const queryIndex = args.indexOf("--query");
+  const query = queryIndex !== -1 ? args[queryIndex + 1] : "";
+  const mnemeDir = `${process.cwd()}/.mneme`;
+  if (!query) {
+    console.error(JSON.stringify({ success: false, error: "Missing --query" }));
+    process.exit(0);
+  }
+  search({ query, mnemeDir }).then((results) => {
+    console.log(JSON.stringify({ success: true, results }));
+  }).catch((error48) => {
+    console.error(JSON.stringify({ success: false, error: String(error48) }));
+  });
+}
+
+// lib/search-helpers.ts
+function escapeRegex2(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function countMatches(text, pattern) {
+  const matches = text.match(new RegExp(pattern.source, "gi"));
+  return matches ? matches.length : 0;
+}
+function fieldScore(text, pattern, baseScore) {
+  if (!text) return 0;
+  const count = countMatches(text, pattern);
+  if (count === 0) return 0;
+  return baseScore + (count > 1 ? Math.log2(count) * 0.5 : 0);
+}
+function isFuzzyMatch(word, target, maxDistance = 2) {
+  if (word.length < 4) return false;
+  const distance = levenshtein(word.toLowerCase(), target.toLowerCase());
+  const threshold = Math.min(maxDistance, Math.floor(word.length / 3));
+  return distance <= threshold;
+}
+function loadTags(mnemeDir) {
+  const tagsPath = path5.join(mnemeDir, "tags.json");
+  if (!fs5.existsSync(tagsPath)) return null;
+  try {
+    return JSON.parse(fs5.readFileSync(tagsPath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+function expandKeywordsWithAliases(keywords, tags) {
+  if (!tags) return keywords;
+  const expanded = new Set(keywords.map((k) => k.toLowerCase()));
+  for (const keyword of keywords) {
+    const lowerKeyword = keyword.toLowerCase();
+    for (const tag of tags.tags) {
+      const matches = tag.id.toLowerCase() === lowerKeyword || tag.label.toLowerCase() === lowerKeyword || tag.aliases?.some((alias) => alias.toLowerCase() === lowerKeyword);
+      if (!matches) continue;
+      expanded.add(tag.id.toLowerCase());
+      expanded.add(tag.label.toLowerCase());
+      for (const alias of tag.aliases || []) {
+        expanded.add(alias.toLowerCase());
+      }
+    }
+  }
+  return Array.from(expanded);
+}
+function walkJsonFiles(dir, callback) {
+  if (!fs5.existsSync(dir)) return;
+  const entries = fs5.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path5.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJsonFiles(fullPath, callback);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      callback(fullPath);
+    }
+  }
+}
+
+// lib/search-core.ts
+function searchInteractions(keywords, projectPath, database, limit = 5) {
+  if (!database) return [];
+  try {
+    const stmt = database.prepare(`
+      SELECT
+        i.session_id,
+        i.content,
+        i.timestamp,
+        highlight(interactions_fts, 0, '[', ']') as content_highlight
+      FROM interactions_fts
+      JOIN interactions i ON interactions_fts.rowid = i.id
+      WHERE interactions_fts MATCH ?
+        AND i.project_path = ?
+      ORDER BY rank
+      LIMIT ?
+    `);
+    const rows = stmt.all(keywords.join(" OR "), projectPath, limit);
+    return rows.map((row) => ({
+      type: "interaction",
+      id: row.session_id,
+      title: `Interaction from ${row.timestamp}`,
+      snippet: (row.content_highlight || row.content).substring(0, 150),
+      score: 5,
+      matchedFields: ["content"]
+    }));
+  } catch {
+    try {
+      const clauses = keywords.map(() => "(content LIKE ? OR thinking LIKE ?)");
+      const sql = `
+        SELECT DISTINCT session_id, substr(content, 1, 120) as snippet, timestamp
+        FROM interactions
+        WHERE project_path = ?
+          AND (${clauses.join(" OR ")})
+        ORDER BY timestamp DESC
+        LIMIT ?
+      `;
+      const args = [projectPath];
+      for (const keyword of keywords) {
+        const pattern = `%${keyword}%`;
+        args.push(pattern, pattern);
+      }
+      args.push(limit);
+      const stmt = database.prepare(sql);
+      const rows = stmt.all(...args);
+      return rows.map((row) => ({
+        type: "interaction",
+        id: row.session_id,
+        title: `Interaction from ${row.timestamp}`,
+        snippet: row.snippet,
+        score: 3,
+        matchedFields: ["content"]
+      }));
+    } catch {
+      return [];
+    }
+  }
+}
+function searchSessions(mnemeDir, keywords, limit = 5) {
+  const sessionsDir = path6.join(mnemeDir, "sessions");
+  const results = [];
+  const pattern = new RegExp(keywords.map(escapeRegex2).join("|"), "i");
+  walkJsonFiles(sessionsDir, (filePath) => {
+    try {
+      const session = JSON.parse(
+        fs6.readFileSync(filePath, "utf-8")
+      );
+      const title = session.title || session.summary?.title || "";
+      let score = 0;
+      const matchedFields = [];
+      const titleScore = fieldScore(title, pattern, 3);
+      if (titleScore > 0) {
+        score += titleScore;
+        matchedFields.push("title");
+      }
+      if (session.tags?.some((t) => pattern.test(t))) {
+        score += 1;
+        matchedFields.push("tags");
+      }
+      const goalScore = fieldScore(session.summary?.goal, pattern, 2);
+      if (goalScore > 0) {
+        score += goalScore;
+        matchedFields.push("summary.goal");
+      }
+      const descScore = fieldScore(session.summary?.description, pattern, 2);
+      if (descScore > 0) {
+        score += descScore;
+        matchedFields.push("summary.description");
+      }
+      if (session.discussions?.some(
+        (d) => pattern.test(d.topic || "") || pattern.test(d.decision || "")
+      )) {
+        score += 2;
+        matchedFields.push("discussions");
+      }
+      if (session.errors?.some(
+        (e) => pattern.test(e.error || "") || pattern.test(e.solution || "")
+      )) {
+        score += 2;
+        matchedFields.push("errors");
+      }
+      if (score === 0 && keywords.length <= 2) {
+        const titleWords = (title || "").toLowerCase().split(/\s+/);
+        const tagWords = session.tags || [];
+        for (const keyword of keywords) {
+          if (titleWords.some((w) => isFuzzyMatch(keyword, w))) {
+            score += 1;
+            matchedFields.push("title~fuzzy");
+          }
+          if (tagWords.some((t) => isFuzzyMatch(keyword, t))) {
+            score += 0.5;
+            matchedFields.push("tags~fuzzy");
+          }
+        }
+      }
+      if (score > 0) {
+        results.push({
+          type: "session",
+          id: session.id,
+          title: title || session.id,
+          snippet: session.summary?.description || session.summary?.goal || "",
+          score,
+          matchedFields
+        });
+      }
+    } catch {
+    }
+  });
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function searchKnowledge(options) {
+  const {
+    query,
+    mnemeDir,
+    projectPath,
+    database = null,
+    types = ["session", "interaction"],
+    limit = 10,
+    offset = 0
+  } = options;
+  const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
+  if (keywords.length === 0) return [];
+  const expandedKeywords = expandKeywordsWithAliases(
+    keywords,
+    loadTags(mnemeDir)
+  );
+  const results = [];
+  const safeOffset = Math.max(0, offset);
+  const fetchLimit = Math.max(limit + safeOffset, limit, 10);
+  const normalizedTypes = new Set(types);
+  if (normalizedTypes.has("session")) {
+    results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
+  }
+  if (normalizedTypes.has("interaction")) {
+    results.push(
+      ...searchInteractions(
+        expandedKeywords,
+        projectPath,
+        database,
+        fetchLimit
+      )
+    );
+  }
+  const seen = /* @__PURE__ */ new Set();
+  return results.sort((a, b) => b.score - a.score).filter((result) => {
+    const key = `${result.type}:${result.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(safeOffset, safeOffset + limit);
+}
+
+// servers/db-benchmark.ts
+function runSearchBenchmark(limit) {
+  const queryPath = path7.join(
     getProjectPath(),
     "scripts",
     "search-benchmark.queries.json"
@@ -31063,6 +31075,402 @@ function runSearchBenchmark(limit = SEARCH_EVAL_DEFAULT_LIMIT) {
     details
   };
 }
+function lintRules(ruleType) {
+  const targets = ruleType && ruleType !== "all" ? [ruleType] : ["dev-rules", "review-guidelines"];
+  const issues = [];
+  for (const type of targets) {
+    const items = readRuleItems(type);
+    const seenKeys = /* @__PURE__ */ new Set();
+    for (const raw of items) {
+      const id = typeof raw.id === "string" ? raw.id : "(unknown)";
+      const text = typeof raw.text === "string" ? raw.text : typeof raw.rule === "string" ? raw.rule : "";
+      const priority = typeof raw.priority === "string" ? raw.priority.toLowerCase() : "";
+      const tags = Array.isArray(raw.tags) ? raw.tags : [];
+      const key = `${type}:${String(raw.key || id)}`;
+      if (!raw.id)
+        issues.push({
+          ruleType: type,
+          id,
+          level: "error",
+          message: "Missing id"
+        });
+      if (!raw.key)
+        issues.push({
+          ruleType: type,
+          id,
+          level: "error",
+          message: "Missing key"
+        });
+      if (!text.trim())
+        issues.push({
+          ruleType: type,
+          id,
+          level: "error",
+          message: "Missing text/rule"
+        });
+      if (!raw.category)
+        issues.push({
+          ruleType: type,
+          id,
+          level: "warning",
+          message: "Missing category"
+        });
+      if (tags.length === 0)
+        issues.push({
+          ruleType: type,
+          id,
+          level: "warning",
+          message: "Missing tags"
+        });
+      if (!["p0", "p1", "p2"].includes(priority))
+        issues.push({
+          ruleType: type,
+          id,
+          level: "error",
+          message: "Invalid priority (p0|p1|p2 required)"
+        });
+      if (seenKeys.has(key))
+        issues.push({
+          ruleType: type,
+          id,
+          level: "warning",
+          message: "Duplicate key"
+        });
+      seenKeys.add(key);
+      if (text.trim().length > 180)
+        issues.push({
+          ruleType: type,
+          id,
+          level: "warning",
+          message: "Rule text too long (consider splitting)"
+        });
+    }
+  }
+  return {
+    checked: [...targets],
+    totalIssues: issues.length,
+    errors: issues.filter((i) => i.level === "error").length,
+    warnings: issues.filter((i) => i.level === "warning").length,
+    issues
+  };
+}
+
+// servers/db-server-tools.ts
+function registerExtendedTools(server2) {
+  server2.registerTool(
+    "mneme_mark_session_committed",
+    {
+      description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",
+      inputSchema: {
+        claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)")
+      }
+    },
+    async ({ claudeSessionId }) => {
+      if (!claudeSessionId.trim())
+        return fail("claudeSessionId must not be empty.");
+      const success2 = markSessionCommitted(claudeSessionId);
+      return {
+        ...ok(JSON.stringify({ success: success2, claudeSessionId }, null, 2)),
+        isError: !success2
+      };
+    }
+  );
+  server2.registerTool(
+    "mneme_session_timeline",
+    {
+      description: "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
+      inputSchema: {
+        sessionId: external_exports3.string().min(1).describe("Session ID (short or full)"),
+        includeChain: external_exports3.boolean().optional().describe(
+          "Include resumedFrom chain and workPeriods (default: true)"
+        )
+      }
+    },
+    async ({ sessionId, includeChain }) => {
+      const sessions = readSessionsById();
+      const shortId = sessionId.slice(0, 8);
+      const root = sessions.get(shortId);
+      if (!root) return fail(`Session not found: ${shortId}`);
+      const chain = [shortId];
+      if (includeChain !== false) {
+        let current = root;
+        let guard = 0;
+        while (current && typeof current.resumedFrom === "string" && current.resumedFrom && guard < 30) {
+          chain.push(current.resumedFrom);
+          current = sessions.get(current.resumedFrom);
+          guard += 1;
+        }
+      }
+      const dbAvailable = !!getDb();
+      const timeline = chain.map((id) => {
+        const session = sessions.get(id) || {};
+        let interactionCount = 0;
+        if (dbAvailable) {
+          interactionCount = getInteractions(id, {
+            limit: 1e3,
+            offset: 0
+          }).length;
+        }
+        return {
+          id,
+          title: typeof session.title === "string" ? session.title : null,
+          createdAt: typeof session.createdAt === "string" ? session.createdAt : null,
+          endedAt: typeof session.endedAt === "string" ? session.endedAt : null,
+          resumedFrom: typeof session.resumedFrom === "string" ? session.resumedFrom : null,
+          interactionCount
+        };
+      });
+      return ok(
+        JSON.stringify(
+          {
+            rootSessionId: shortId,
+            dbAvailable,
+            chainLength: timeline.length,
+            timeline
+          },
+          null,
+          2
+        )
+      );
+    }
+  );
+  server2.registerTool(
+    "mneme_rule_linter",
+    {
+      description: "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
+      inputSchema: {
+        ruleType: external_exports3.enum(["dev-rules", "review-guidelines", "all"]).optional().describe("Rule set to lint (default: all)")
+      }
+    },
+    async ({ ruleType }) => {
+      return ok(JSON.stringify(lintRules(ruleType), null, 2));
+    }
+  );
+  server2.registerTool(
+    "mneme_search_eval",
+    {
+      description: "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
+      inputSchema: {
+        mode: external_exports3.enum(["run", "compare", "regression"]).optional().describe(
+          "run=single, compare=against baseline, regression=threshold check"
+        ),
+        baselineRecall: external_exports3.number().min(0).max(1).optional().describe("Baseline recall for compare/regression"),
+        thresholdDrop: external_exports3.number().min(0).max(1).optional().describe("Allowed recall drop for regression (default: 0.05)"),
+        limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(50).optional().describe("Top-k results per query (default: 5)")
+      }
+    },
+    async ({ mode, baselineRecall, thresholdDrop, limit }) => {
+      const run = runSearchBenchmark(limit ?? SEARCH_EVAL_DEFAULT_LIMIT);
+      const payload = {
+        mode: mode || "run",
+        queryCount: run.queryCount,
+        hits: run.hits,
+        recall: run.recall,
+        details: run.details
+      };
+      if ((mode === "compare" || mode === "regression") && baselineRecall !== void 0) {
+        const delta = run.recall - baselineRecall;
+        payload.baselineRecall = baselineRecall;
+        payload.delta = delta;
+        if (mode === "regression") {
+          const allowed = thresholdDrop ?? 0.05;
+          payload.thresholdDrop = allowed;
+          payload.regression = delta < -allowed;
+        }
+      }
+      return ok(JSON.stringify(payload, null, 2));
+    }
+  );
+}
+
+// servers/db-session-summary.ts
+import * as fs7 from "node:fs";
+import * as path8 from "node:path";
+async function updateSessionSummary(params) {
+  const {
+    claudeSessionId,
+    title,
+    summary,
+    tags,
+    sessionType,
+    plan,
+    discussions,
+    errors,
+    handoff,
+    references
+  } = params;
+  const projectPath = getProjectPath();
+  const sessionsDir = path8.join(projectPath, ".mneme", "sessions");
+  const shortId = claudeSessionId.slice(0, 8);
+  let sessionFile = null;
+  const searchDir = (dir) => {
+    if (!fs7.existsSync(dir)) return null;
+    for (const entry of fs7.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path8.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const result = searchDir(fullPath);
+        if (result) return result;
+      } else if (entry.name === `${shortId}.json`) {
+        return fullPath;
+      }
+    }
+    return null;
+  };
+  sessionFile = searchDir(sessionsDir);
+  if (sessionFile) {
+    const existingData = readJsonFile(sessionFile);
+    if (existingData?.sessionId && existingData.sessionId !== claudeSessionId) {
+      sessionFile = null;
+    }
+  }
+  if (!sessionFile) {
+    const now = /* @__PURE__ */ new Date();
+    const yearMonth = path8.join(
+      sessionsDir,
+      String(now.getFullYear()),
+      String(now.getMonth() + 1).padStart(2, "0")
+    );
+    if (!fs7.existsSync(yearMonth)) fs7.mkdirSync(yearMonth, { recursive: true });
+    sessionFile = path8.join(yearMonth, `${shortId}.json`);
+    const initial = {
+      id: shortId,
+      sessionId: claudeSessionId,
+      createdAt: now.toISOString(),
+      title: "",
+      tags: [],
+      context: {
+        projectDir: projectPath,
+        projectName: path8.basename(projectPath)
+      },
+      metrics: {
+        userMessages: 0,
+        assistantResponses: 0,
+        thinkingBlocks: 0,
+        toolUsage: []
+      },
+      files: [],
+      status: null
+    };
+    fs7.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
+  }
+  const data = readJsonFile(sessionFile) ?? {};
+  data.title = title;
+  data.summary = summary;
+  data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  if (tags) data.tags = tags;
+  if (sessionType) data.sessionType = sessionType;
+  if (plan) data.plan = plan;
+  if (discussions && discussions.length > 0) data.discussions = discussions;
+  if (errors && errors.length > 0) data.errors = errors;
+  if (handoff) data.handoff = handoff;
+  if (references && references.length > 0) data.references = references;
+  const transcriptPath = getTranscriptPath(claudeSessionId);
+  if (transcriptPath) {
+    try {
+      const parsed = await parseTranscript(transcriptPath);
+      data.metrics = {
+        userMessages: parsed.metrics.userMessages,
+        assistantResponses: parsed.metrics.assistantResponses,
+        thinkingBlocks: parsed.metrics.thinkingBlocks,
+        toolUsage: parsed.toolUsage
+      };
+      if (parsed.files.length > 0) data.files = parsed.files;
+    } catch {
+    }
+  }
+  const ctx = data.context;
+  if (ctx && !ctx.repository) {
+    try {
+      const { execSync } = await import("node:child_process");
+      const cwd = ctx.projectDir || projectPath;
+      const git = (cmd) => execSync(cmd, { encoding: "utf8", cwd }).trim();
+      const branch = git("git rev-parse --abbrev-ref HEAD");
+      if (branch) ctx.branch = branch;
+      const remoteUrl = git("git remote get-url origin");
+      const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
+      if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
+      const userName = git("git config user.name");
+      const userEmail = git("git config user.email");
+      if (userName)
+        ctx.user = {
+          name: userName,
+          ...userEmail ? { email: userEmail } : {}
+        };
+    } catch {
+    }
+  }
+  fs7.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
+  markSessionCommitted(claudeSessionId);
+  return {
+    success: true,
+    sessionFile: sessionFile.replace(projectPath, "."),
+    shortId
+  };
+}
+function registerSessionSummaryTool(server2) {
+  server2.registerTool(
+    "mneme_update_session_summary",
+    {
+      description: "Update session JSON file with summary data. MUST be called during /mneme:save Phase 3 to persist session metadata. Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
+      inputSchema: {
+        claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
+        title: external_exports3.string().describe("Session title"),
+        summary: external_exports3.object({
+          goal: external_exports3.string().describe("What the session aimed to accomplish"),
+          outcome: external_exports3.string().describe("What was actually accomplished"),
+          description: external_exports3.string().optional().describe("Detailed description of the session")
+        }).describe("Session summary object"),
+        tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
+        sessionType: external_exports3.string().optional().describe(
+          "Session type (e.g. implementation, research, bugfix, refactor)"
+        ),
+        plan: external_exports3.object({
+          goals: external_exports3.array(external_exports3.string()).optional().describe("Session goals"),
+          tasks: external_exports3.array(external_exports3.string()).optional().describe('Task list (prefix with "[x] " for completed)'),
+          remaining: external_exports3.array(external_exports3.string()).optional().describe("Remaining tasks")
+        }).optional().describe("Session plan with tasks and progress"),
+        discussions: external_exports3.array(
+          external_exports3.object({
+            topic: external_exports3.string().describe("Discussion topic"),
+            decision: external_exports3.string().describe("Final decision"),
+            reasoning: external_exports3.string().optional().describe("Reasoning"),
+            alternatives: external_exports3.array(external_exports3.string()).optional().describe("Considered alternatives")
+          })
+        ).optional().describe("Design discussions and decisions made during session"),
+        errors: external_exports3.array(
+          external_exports3.object({
+            error: external_exports3.string().describe("Error message or description"),
+            context: external_exports3.string().optional().describe("Where/when it occurred"),
+            solution: external_exports3.string().optional().describe("How it was resolved"),
+            files: external_exports3.array(external_exports3.string()).optional().describe("Related file paths")
+          })
+        ).optional().describe("Errors encountered and their solutions"),
+        handoff: external_exports3.object({
+          stoppedReason: external_exports3.string().optional().describe("Why the session stopped"),
+          notes: external_exports3.array(external_exports3.string()).optional().describe("Important notes for next session"),
+          nextSteps: external_exports3.array(external_exports3.string()).optional().describe("What to do next")
+        }).optional().describe("Handoff context for session continuity"),
+        references: external_exports3.array(
+          external_exports3.object({
+            type: external_exports3.string().optional().describe('Reference type: "doc", "file", "url"'),
+            url: external_exports3.string().optional().describe("URL if external"),
+            path: external_exports3.string().optional().describe("File path if local"),
+            title: external_exports3.string().optional().describe("Title or label"),
+            description: external_exports3.string().optional().describe("Brief description")
+          })
+        ).optional().describe("Documents and resources referenced during session")
+      }
+    },
+    async (params) => {
+      if (!params.claudeSessionId.trim())
+        return fail("claudeSessionId must not be empty.");
+      const result = await updateSessionSummary(params);
+      return ok(JSON.stringify(result, null, 2));
+    }
+  );
+}
+
+// servers/db-server.ts
 var server = new McpServer({
   name: "mneme-db",
   version: "0.1.0"
@@ -31074,11 +31482,8 @@ server.registerTool(
     inputSchema: {}
   },
   async () => {
-    if (!getDb()) {
-      return fail("Database not available.");
-    }
-    const projects = listProjects();
-    return ok(JSON.stringify(projects, null, 2));
+    if (!getDb()) return fail("Database not available.");
+    return ok(JSON.stringify(listProjects(), null, 2));
   }
 );
 server.registerTool(
@@ -31094,11 +31499,10 @@ server.registerTool(
     }
   },
   async ({ projectPath, repository, limit }) => {
-    if (!getDb()) {
-      return fail("Database not available.");
-    }
-    const sessions = listSessions({ projectPath, repository, limit });
-    return ok(JSON.stringify(sessions, null, 2));
+    if (!getDb()) return fail("Database not available.");
+    return ok(
+      JSON.stringify(listSessions({ projectPath, repository, limit }), null, 2)
+    );
   }
 );
 server.registerTool(
@@ -31114,16 +31518,11 @@ server.registerTool(
     }
   },
   async ({ sessionId, limit, offset }) => {
-    if (!sessionId.trim()) {
-      return fail("sessionId must not be empty.");
-    }
-    if (!getDb()) {
-      return fail("Database not available.");
-    }
+    if (!sessionId.trim()) return fail("sessionId must not be empty.");
+    if (!getDb()) return fail("Database not available.");
     const interactions = getInteractions(sessionId, { limit, offset });
-    if (interactions.length === 0) {
+    if (interactions.length === 0)
       return fail(`No interactions found for session: ${sessionId}`);
-    }
     return ok(JSON.stringify(interactions, null, 2));
   }
 );
@@ -31135,9 +31534,7 @@ server.registerTool(
   },
   async () => {
     const stats = getStats();
-    if (!stats) {
-      return fail("Database not available.");
-    }
+    if (!stats) return fail("Database not available.");
     return ok(JSON.stringify(stats, null, 2));
   }
 );
@@ -31154,14 +31551,11 @@ server.registerTool(
   },
   async ({ query, limit }) => {
     const trimmedQuery = query.trim();
-    if (!trimmedQuery) {
-      return fail("query must not be empty.");
-    }
-    if (!getDb()) {
-      return fail("Database not available.");
-    }
-    const results = crossProjectSearch(trimmedQuery, { limit });
-    return ok(JSON.stringify(results, null, 2));
+    if (!trimmedQuery) return fail("query must not be empty.");
+    if (!getDb()) return fail("Database not available.");
+    return ok(
+      JSON.stringify(crossProjectSearch(trimmedQuery, { limit }), null, 2)
+    );
   }
 );
 server.registerTool(
@@ -31176,9 +31570,8 @@ server.registerTool(
     }
   },
   async ({ claudeSessionId, mnemeSessionId }) => {
-    if (!claudeSessionId.trim()) {
+    if (!claudeSessionId.trim())
       return fail("claudeSessionId must not be empty.");
-    }
     const result = await saveInteractions(claudeSessionId, mnemeSessionId);
     return {
       ...ok(JSON.stringify(result, null, 2)),
@@ -31186,417 +31579,8 @@ server.registerTool(
     };
   }
 );
-server.registerTool(
-  "mneme_update_session_summary",
-  {
-    description: "Update session JSON file with summary data. MUST be called during /mneme:save Phase 3 to persist session metadata. Creates the session file if it does not exist (e.g. when SessionStart hook was skipped).",
-    inputSchema: {
-      claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)"),
-      title: external_exports3.string().describe("Session title"),
-      summary: external_exports3.object({
-        goal: external_exports3.string().describe("What the session aimed to accomplish"),
-        outcome: external_exports3.string().describe("What was actually accomplished"),
-        description: external_exports3.string().optional().describe("Detailed description of the session")
-      }).describe("Session summary object"),
-      tags: external_exports3.array(external_exports3.string()).optional().describe("Semantic tags for the session"),
-      sessionType: external_exports3.string().optional().describe(
-        "Session type (e.g. implementation, research, bugfix, refactor)"
-      ),
-      plan: external_exports3.object({
-        goals: external_exports3.array(external_exports3.string()).optional().describe("Session goals"),
-        tasks: external_exports3.array(external_exports3.string()).optional().describe('Task list (prefix with "[x] " for completed)'),
-        remaining: external_exports3.array(external_exports3.string()).optional().describe("Remaining tasks")
-      }).optional().describe("Session plan with tasks and progress"),
-      discussions: external_exports3.array(
-        external_exports3.object({
-          topic: external_exports3.string().describe("Discussion topic"),
-          decision: external_exports3.string().describe("Final decision"),
-          reasoning: external_exports3.string().optional().describe("Reasoning"),
-          alternatives: external_exports3.array(external_exports3.string()).optional().describe("Considered alternatives")
-        })
-      ).optional().describe("Design discussions and decisions made during session"),
-      errors: external_exports3.array(
-        external_exports3.object({
-          error: external_exports3.string().describe("Error message or description"),
-          context: external_exports3.string().optional().describe("Where/when it occurred"),
-          solution: external_exports3.string().optional().describe("How it was resolved"),
-          files: external_exports3.array(external_exports3.string()).optional().describe("Related file paths")
-        })
-      ).optional().describe("Errors encountered and their solutions"),
-      handoff: external_exports3.object({
-        stoppedReason: external_exports3.string().optional().describe("Why the session stopped"),
-        notes: external_exports3.array(external_exports3.string()).optional().describe("Important notes for next session"),
-        nextSteps: external_exports3.array(external_exports3.string()).optional().describe("What to do next")
-      }).optional().describe("Handoff context for session continuity"),
-      references: external_exports3.array(
-        external_exports3.object({
-          type: external_exports3.string().optional().describe('Reference type: "doc", "file", "url"'),
-          url: external_exports3.string().optional().describe("URL if external"),
-          path: external_exports3.string().optional().describe("File path if local"),
-          title: external_exports3.string().optional().describe("Title or label"),
-          description: external_exports3.string().optional().describe("Brief description")
-        })
-      ).optional().describe("Documents and resources referenced during session")
-    }
-  },
-  async ({
-    claudeSessionId,
-    title,
-    summary,
-    tags,
-    sessionType,
-    plan,
-    discussions,
-    errors,
-    handoff,
-    references
-  }) => {
-    if (!claudeSessionId.trim()) {
-      return fail("claudeSessionId must not be empty.");
-    }
-    const projectPath = getProjectPath();
-    const sessionsDir = path4.join(projectPath, ".mneme", "sessions");
-    const shortId = claudeSessionId.slice(0, 8);
-    let sessionFile = null;
-    const searchDir = (dir) => {
-      if (!fs4.existsSync(dir)) return null;
-      for (const entry of fs4.readdirSync(dir, { withFileTypes: true })) {
-        const fullPath = path4.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          const result = searchDir(fullPath);
-          if (result) return result;
-        } else if (entry.name === `${shortId}.json`) {
-          return fullPath;
-        }
-      }
-      return null;
-    };
-    sessionFile = searchDir(sessionsDir);
-    if (sessionFile) {
-      const existingData = readJsonFile(sessionFile);
-      if (existingData?.sessionId && existingData.sessionId !== claudeSessionId) {
-        sessionFile = null;
-      }
-    }
-    if (!sessionFile) {
-      const now = /* @__PURE__ */ new Date();
-      const yearMonth = path4.join(
-        sessionsDir,
-        String(now.getFullYear()),
-        String(now.getMonth() + 1).padStart(2, "0")
-      );
-      if (!fs4.existsSync(yearMonth)) {
-        fs4.mkdirSync(yearMonth, { recursive: true });
-      }
-      sessionFile = path4.join(yearMonth, `${shortId}.json`);
-      const initial = {
-        id: shortId,
-        sessionId: claudeSessionId,
-        createdAt: now.toISOString(),
-        title: "",
-        tags: [],
-        context: {
-          projectDir: projectPath,
-          projectName: path4.basename(projectPath)
-        },
-        metrics: {
-          userMessages: 0,
-          assistantResponses: 0,
-          thinkingBlocks: 0,
-          toolUsage: []
-        },
-        files: [],
-        status: null
-      };
-      fs4.writeFileSync(sessionFile, JSON.stringify(initial, null, 2));
-    }
-    const data = readJsonFile(sessionFile) ?? {};
-    data.title = title;
-    data.summary = summary;
-    data.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-    if (tags) data.tags = tags;
-    if (sessionType) data.sessionType = sessionType;
-    if (plan) data.plan = plan;
-    if (discussions && discussions.length > 0) data.discussions = discussions;
-    if (errors && errors.length > 0) data.errors = errors;
-    if (handoff) data.handoff = handoff;
-    if (references && references.length > 0) data.references = references;
-    const transcriptPath = getTranscriptPath(claudeSessionId);
-    if (transcriptPath) {
-      try {
-        const parsed = await parseTranscript(transcriptPath);
-        data.metrics = {
-          userMessages: parsed.metrics.userMessages,
-          assistantResponses: parsed.metrics.assistantResponses,
-          thinkingBlocks: parsed.metrics.thinkingBlocks,
-          toolUsage: parsed.toolUsage
-        };
-        if (parsed.files.length > 0) {
-          data.files = parsed.files;
-        }
-      } catch {
-      }
-    }
-    const ctx = data.context;
-    if (ctx && !ctx.repository) {
-      try {
-        const { execSync } = await import("node:child_process");
-        const cwd = ctx.projectDir || projectPath;
-        const branch = execSync("git rev-parse --abbrev-ref HEAD", {
-          encoding: "utf8",
-          cwd
-        }).trim();
-        if (branch) ctx.branch = branch;
-        const remoteUrl = execSync("git remote get-url origin", {
-          encoding: "utf8",
-          cwd
-        }).trim();
-        const repoMatch = remoteUrl.match(/[:/]([^/]+\/[^/]+?)(\.git)?$/);
-        if (repoMatch) ctx.repository = repoMatch[1].replace(/\.git$/, "");
-        const userName = execSync("git config user.name", {
-          encoding: "utf8",
-          cwd
-        }).trim();
-        const userEmail = execSync("git config user.email", {
-          encoding: "utf8",
-          cwd
-        }).trim();
-        if (userName)
-          ctx.user = {
-            name: userName,
-            ...userEmail ? { email: userEmail } : {}
-          };
-      } catch {
-      }
-    }
-    fs4.writeFileSync(sessionFile, JSON.stringify(data, null, 2));
-    markSessionCommitted(claudeSessionId);
-    return ok(
-      JSON.stringify(
-        {
-          success: true,
-          sessionFile: sessionFile.replace(projectPath, "."),
-          shortId
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_mark_session_committed",
-  {
-    description: "Mark a session as committed (saved with /mneme:save). This prevents the session's interactions from being deleted on SessionEnd. Call this after successfully saving session data.",
-    inputSchema: {
-      claudeSessionId: external_exports3.string().min(8).describe("Full Claude Code session UUID (36 chars)")
-    }
-  },
-  async ({ claudeSessionId }) => {
-    if (!claudeSessionId.trim()) {
-      return fail("claudeSessionId must not be empty.");
-    }
-    const success2 = markSessionCommitted(claudeSessionId);
-    return {
-      ...ok(JSON.stringify({ success: success2, claudeSessionId }, null, 2)),
-      isError: !success2
-    };
-  }
-);
-server.registerTool(
-  "mneme_session_timeline",
-  {
-    description: "Build timeline for one session or a resume-chain using sessions metadata and interactions.",
-    inputSchema: {
-      sessionId: external_exports3.string().min(1).describe("Session ID (short or full)"),
-      includeChain: external_exports3.boolean().optional().describe("Include resumedFrom chain and workPeriods (default: true)")
-    }
-  },
-  async ({ sessionId, includeChain }) => {
-    const sessions = readSessionsById();
-    const shortId = sessionId.slice(0, 8);
-    const root = sessions.get(shortId);
-    if (!root) return fail(`Session not found: ${shortId}`);
-    const chain = [shortId];
-    if (includeChain !== false) {
-      let current = root;
-      let guard = 0;
-      while (current && typeof current.resumedFrom === "string" && current.resumedFrom && guard < 30) {
-        chain.push(current.resumedFrom);
-        current = sessions.get(current.resumedFrom);
-        guard += 1;
-      }
-    }
-    const dbAvailable = !!getDb();
-    const timeline = chain.map((id) => {
-      const session = sessions.get(id) || {};
-      let interactionCount = 0;
-      if (dbAvailable) {
-        interactionCount = getInteractions(id, {
-          limit: 1e3,
-          offset: 0
-        }).length;
-      }
-      return {
-        id,
-        title: typeof session.title === "string" ? session.title : null,
-        createdAt: typeof session.createdAt === "string" ? session.createdAt : null,
-        endedAt: typeof session.endedAt === "string" ? session.endedAt : null,
-        resumedFrom: typeof session.resumedFrom === "string" ? session.resumedFrom : null,
-        interactionCount
-      };
-    });
-    return ok(
-      JSON.stringify(
-        {
-          rootSessionId: shortId,
-          dbAvailable,
-          chainLength: timeline.length,
-          timeline
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_rule_linter",
-  {
-    description: "Lint rules for schema and quality (required fields, priority, clarity, duplicates).",
-    inputSchema: {
-      ruleType: external_exports3.enum(["dev-rules", "review-guidelines", "all"]).optional().describe("Rule set to lint (default: all)")
-    }
-  },
-  async ({ ruleType }) => {
-    const targets = ruleType && ruleType !== "all" ? [ruleType] : ["dev-rules", "review-guidelines"];
-    const issues = [];
-    for (const type of targets) {
-      const items = readRuleItems(type);
-      const seenKeys = /* @__PURE__ */ new Set();
-      for (const raw of items) {
-        const id = typeof raw.id === "string" ? raw.id : "(unknown)";
-        const text = typeof raw.text === "string" ? raw.text : typeof raw.rule === "string" ? raw.rule : "";
-        const priority = typeof raw.priority === "string" ? raw.priority.toLowerCase() : "";
-        const tags = Array.isArray(raw.tags) ? raw.tags : [];
-        const key = `${type}:${String(raw.key || id)}`;
-        if (!raw.id) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "error",
-            message: "Missing id"
-          });
-        }
-        if (!raw.key) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "error",
-            message: "Missing key"
-          });
-        }
-        if (!text.trim()) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "error",
-            message: "Missing text/rule"
-          });
-        }
-        if (!raw.category) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "warning",
-            message: "Missing category"
-          });
-        }
-        if (tags.length === 0) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "warning",
-            message: "Missing tags"
-          });
-        }
-        if (!["p0", "p1", "p2"].includes(priority)) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "error",
-            message: "Invalid priority (p0|p1|p2 required)"
-          });
-        }
-        if (seenKeys.has(key)) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "warning",
-            message: "Duplicate key"
-          });
-        }
-        seenKeys.add(key);
-        if (text.trim().length > 180) {
-          issues.push({
-            ruleType: type,
-            id,
-            level: "warning",
-            message: "Rule text too long (consider splitting)"
-          });
-        }
-      }
-    }
-    return ok(
-      JSON.stringify(
-        {
-          checked: targets,
-          totalIssues: issues.length,
-          errors: issues.filter((issue2) => issue2.level === "error").length,
-          warnings: issues.filter((issue2) => issue2.level === "warning").length,
-          issues
-        },
-        null,
-        2
-      )
-    );
-  }
-);
-server.registerTool(
-  "mneme_search_eval",
-  {
-    description: "Run/compare search benchmark and emit regression summary. Intended for CI and save-time quality checks.",
-    inputSchema: {
-      mode: external_exports3.enum(["run", "compare", "regression"]).optional().describe(
-        "run=single, compare=against baseline, regression=threshold check"
-      ),
-      baselineRecall: external_exports3.number().min(0).max(1).optional().describe("Baseline recall for compare/regression"),
-      thresholdDrop: external_exports3.number().min(0).max(1).optional().describe("Allowed recall drop for regression (default: 0.05)"),
-      limit: external_exports3.number().int().min(LIST_LIMIT_MIN).max(50).optional().describe("Top-k results per query (default: 5)")
-    }
-  },
-  async ({ mode, baselineRecall, thresholdDrop, limit }) => {
-    const run = runSearchBenchmark(limit ?? SEARCH_EVAL_DEFAULT_LIMIT);
-    const payload = {
-      mode: mode || "run",
-      queryCount: run.queryCount,
-      hits: run.hits,
-      recall: run.recall,
-      details: run.details
-    };
-    if ((mode === "compare" || mode === "regression") && baselineRecall !== void 0) {
-      const delta = run.recall - baselineRecall;
-      payload.baselineRecall = baselineRecall;
-      payload.delta = delta;
-      if (mode === "regression") {
-        const allowed = thresholdDrop ?? 0.05;
-        payload.thresholdDrop = allowed;
-        payload.regression = delta < -allowed;
-      }
-    }
-    return ok(JSON.stringify(payload, null, 2));
-  }
-);
+registerSessionSummaryTool(server);
+registerExtendedTools(server);
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

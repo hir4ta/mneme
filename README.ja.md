@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.22.7-blue)
+![Version](https://img.shields.io/badge/version-0.23.0-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
@@ -157,20 +157,77 @@ npx @hir4ta/mneme --dashboard --port 8080
 
 ダッシュボードは日本語と英語に対応しています。ヘッダーの言語切り替えボタン（EN/JA）をクリックして切り替えできます。設定はlocalStorageに保存されます。
 
-### 週次ナレッジHTML出力
+### 開発ルール
 
-直近7日間の知見活動を共有用HTMLとして出力できます:
+mnemeはセッションから3種類の知見を抽出します
 
-```bash
-npm run export:weekly-html
+| タイプ | 定義 | 例 |
+|--------|------|------|
+| **Decision（意思決定）** | 特定コンテキストでの一回限りの判断 | 「JWT署名でHS256ではなくRS256を選択」 |
+| **Pattern（パターン）** | 複数コンテキストで繰り返し適用可能な実践 | 「実データによる並列テストでリグレッションを検出」 |
+| **Rule（ルール）** | Decision/Patternから昇格した強制基準 | 「リファクタリング後は必ず実データテストで検証」 |
+
+DecisionとPatternは**排他的**です — 同じ知見はどちらか一方のみに分類されます。Ruleはどちらからでも昇格でき、元データへの参照を保持します。
+
+#### 仕組み
+
+1. `/mneme:save` でセッションから decisions, patterns, rules を抽出
+2. 候補は **draft** ステータスで保存
+3. ダッシュボードの**開発ルール**ページで承認/却下
+4. **承認済みルールは自動記憶検索で毎プロンプトに自動注入**
+
+#### 優先度
+
+| 優先度 | リスクレベル | 適用 |
+|--------|-------------|------|
+| **p0** | セキュリティ / データ損失 / 障害 | 常に強制 |
+| **p1** | 正確性 / 信頼性 | 基本的に適用 |
+| **p2** | 保守性 / 品質 | 状況に応じて適用 |
+
+### CLAUDE.md 連携
+
+プロジェクトの `CLAUDE.md` に以下を追加すると、mnemeをより効果的に活用できます
+
+```markdown
+# mneme
+- 長いセッションの終了前に `/mneme:save` を実行して判断・パターンを保存
+- `/mneme:resume <id>` で過去のセッションのコンテキストを復元して作業を継続
+- 承認済み開発ルールは自動で注入される — p0ルールは厳守すること
 ```
 
-出力先:
-- `.mneme/exports/weekly-knowledge-YYYY-MM-DD.html`
+チームでは `.claude/rules/mneme.md` を作成してパス指定のルールを設定できます
+
+```markdown
+# mneme workflow
+- 機能実装後は `/mneme:save` を実行して再利用可能な知見を抽出
+- ダッシュボードで承認待ちの開発ルールを確認
+- <mneme-rules> に承認済みルールが表示されたら、優先度に従って適用（p0 > p1 > p2）
+```
+
+> **ヒント**: CLAUDE.md は簡潔に。各行について「これを消したらClaudeがミスするか？」と問い、不要なら削除してください。（[ベストプラクティス - Claude Code Docs](https://code.claude.com/docs/en/best-practices)）
+
+### ナレッジレポート
+
+Claude Code がセッションデータを分析し、開発活動の要約・セッションタイムライン・ナレッジハイライト・活用状況を含むリッチなHTMLレポートを生成します。
+
+```
+/mneme:report
+```
+
+機能:
+- 期間選択: 1週間（デフォルト）、2週間、1ヶ月
+- AI生成の開発活動サマリー
+- 展開可能なセッションタイムライン（目標、成果、議論、エラー）
+- ナレッジハイライト（意思決定・パターン・ルール）を直接表示
+- 全ソースからのタグヒートマップ
+- Claude Code活用状況の分析（ツール使用率）
+- バイリンガル出力（EN/JA）言語切替付き
+
+出力先: `.mneme/exports/knowledge-report-YYYY-MM-DD.html`
 
 ## データ保存
 
-mnemeは**ハイブリッドストレージ**方式でプライバシーと共有を両立：JSON（Git管理）でチーム共有、SQLite（gitignored）で会話をプライベートに保存。
+mnemeは**ハイブリッドストレージ**方式でプライバシーと共有を両立：JSON（Git管理）でチーム共有、SQLite（gitignored）で会話をプライベートに保存
 
 | ストレージ | 場所              | 用途                         | 共有                       |
 | ---------- | ----------------- | ---------------------------- | -------------------------- |

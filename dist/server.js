@@ -1,6 +1,6 @@
 // dashboard/server/index.ts
-import fs13 from "node:fs";
-import path12 from "node:path";
+import fs16 from "node:fs";
+import path15 from "node:path";
 
 // node_modules/@hono/node-server/dist/index.mjs
 import { createServer as createServerHTTP } from "http";
@@ -666,10 +666,10 @@ var createStreamBody = (stream) => {
   });
   return body;
 };
-var getStats = (path13) => {
+var getStats = (path16) => {
   let stats;
   try {
-    stats = statSync(path13);
+    stats = statSync(path16);
   } catch {
   }
   return stats;
@@ -698,21 +698,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path13 = join(
+    let path16 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path13);
+    let stats = getStats(path16);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path13 = join(path13, indexFile);
-      stats = getStats(path13);
+      path16 = join(path16, indexFile);
+      stats = getStats(path16);
     }
     if (!stats) {
-      await options.onNotFound?.(path13, c);
+      await options.onNotFound?.(path16, c);
       return next();
     }
-    const mimeType = getMimeType(path13);
+    const mimeType = getMimeType(path16);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -722,12 +722,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path13 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path16 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path13 = path13 + ENCODINGS[encoding];
+          path16 = path16 + ENCODINGS[encoding];
           break;
         }
       }
@@ -741,7 +741,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path13)), 200);
+      result = c.body(createStreamBody(createReadStream(path16)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -752,12 +752,12 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream = createReadStream(path13, { start, end });
+      const stream = createReadStream(path16, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream), 206);
     }
-    await options.onFound?.(path13, c);
+    await options.onFound?.(path16, c);
     return result;
   };
 };
@@ -879,26 +879,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path13) => {
-  const paths = path13.split("/");
+var splitPath = (path16) => {
+  const paths = path16.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path13 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path13);
+  const { groups, path: path16 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path16);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path13) => {
+var extractGroupsFromPath = (path16) => {
   const groups = [];
-  path13 = path13.replace(/\{[^}]+\}/g, (match2, index) => {
+  path16 = path16.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path13 };
+  return { groups, path: path16 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -955,8 +955,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path13 = url.slice(start, end);
-      return tryDecodeURI(path13.includes("%25") ? path13.replace(/%25/g, "%2525") : path13);
+      const path16 = url.slice(start, end);
+      return tryDecodeURI(path16.includes("%25") ? path16.replace(/%25/g, "%2525") : path16);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -973,11 +973,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path13) => {
-  if (path13.charCodeAt(path13.length - 1) !== 63 || !path13.includes(":")) {
+var checkOptionalParameter = (path16) => {
+  if (path16.charCodeAt(path16.length - 1) !== 63 || !path16.includes(":")) {
     return null;
   }
-  const segments = path13.split("/");
+  const segments = path16.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1118,9 +1118,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path13 = "/", matchResult = [[]]) {
+  constructor(request, path16 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path13;
+    this.path = path16;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1856,8 +1856,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path13, ...handlers) => {
-      for (const p of [path13].flat()) {
+    this.on = (method, path16, ...handlers) => {
+      for (const p of [path16].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1914,8 +1914,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path13, app2) {
-    const subApp = this.basePath(path13);
+  route(path16, app2) {
+    const subApp = this.basePath(path16);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1941,9 +1941,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path13) {
+  basePath(path16) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path13);
+    subApp._basePath = mergePath(this._basePath, path16);
     return subApp;
   }
   /**
@@ -2017,7 +2017,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path13, applicationHandler, options) {
+  mount(path16, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2044,7 +2044,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path13);
+      const mergedPath = mergePath(this._basePath, path16);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -2059,14 +2059,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path13, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path16, "*"), handler);
     return this;
   }
-  #addRoute(method, path13, handler) {
+  #addRoute(method, path16, handler) {
     method = method.toUpperCase();
-    path13 = mergePath(this._basePath, path13);
-    const r = { basePath: this._basePath, path: path13, method, handler };
-    this.router.add(method, path13, [handler, r]);
+    path16 = mergePath(this._basePath, path16);
+    const r = { basePath: this._basePath, path: path16, method, handler };
+    this.router.add(method, path16, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2079,10 +2079,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path13 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path13);
+    const path16 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path16);
     const c = new Context(request, {
-      path: path13,
+      path: path16,
       matchResult,
       env,
       executionCtx,
@@ -2182,7 +2182,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path13) {
+function match(method, path16) {
   const matchers = this.buildAllMatchers();
   const match2 = ((method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -2198,7 +2198,7 @@ function match(method, path13) {
     return [matcher[1][index], match3];
   });
   this.match = match2;
-  return match2(method, path13);
+  return match2(method, path16);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -2313,12 +2313,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path13, index, pathErrorCheckOnly) {
+  insert(path16, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path13 = path13.replace(/\{[^}]+\}/g, (m) => {
+      path16 = path16.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -2329,7 +2329,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path13.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path16.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -2368,9 +2368,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path13) {
-  return wildcardRegExpCache[path13] ??= new RegExp(
-    path13 === "*" ? "" : `^${path13.replace(
+function buildWildcardRegExp(path16) {
+  return wildcardRegExpCache[path16] ??= new RegExp(
+    path16 === "*" ? "" : `^${path16.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -2392,17 +2392,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path13, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path16, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path13] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path16] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path13, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path16, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path13) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path16) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -2436,12 +2436,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path13) {
+function findMiddleware(middleware, path16) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path13)) {
+    if (buildWildcardRegExp(k).test(path16)) {
       return [...middleware[k]];
     }
   }
@@ -2455,7 +2455,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path13, handler) {
+  add(method, path16, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -2470,18 +2470,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path13 === "/*") {
-      path13 = "*";
+    if (path16 === "/*") {
+      path16 = "*";
     }
-    const paramCount = (path13.match(/\/:/g) || []).length;
-    if (/\*$/.test(path13)) {
-      const re = buildWildcardRegExp(path13);
+    const paramCount = (path16.match(/\/:/g) || []).length;
+    if (/\*$/.test(path16)) {
+      const re = buildWildcardRegExp(path16);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path13] ||= findMiddleware(middleware[m], path13) || findMiddleware(middleware[METHOD_NAME_ALL], path13) || [];
+          middleware[m][path16] ||= findMiddleware(middleware[m], path16) || findMiddleware(middleware[METHOD_NAME_ALL], path16) || [];
         });
       } else {
-        middleware[method][path13] ||= findMiddleware(middleware[method], path13) || findMiddleware(middleware[METHOD_NAME_ALL], path13) || [];
+        middleware[method][path16] ||= findMiddleware(middleware[method], path16) || findMiddleware(middleware[METHOD_NAME_ALL], path16) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -2499,7 +2499,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path13) || [path13];
+    const paths = checkOptionalParameter(path16) || [path16];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -2526,13 +2526,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path13) => [path13, r[method][path13]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path16) => [path16, r[method][path16]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path13) => [path13, r[METHOD_NAME_ALL][path13]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path16) => [path16, r[METHOD_NAME_ALL][path16]])
         );
       }
     });
@@ -2552,13 +2552,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path13, handler) {
+  add(method, path16, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path13, handler]);
+    this.#routes.push([method, path16, handler]);
   }
-  match(method, path13) {
+  match(method, path16) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -2573,7 +2573,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path13);
+        res = router.match(method, path16);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -2617,10 +2617,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path13, handler) {
+  insert(method, path16, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path13);
+    const parts = splitRoutingPath(path16);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -2671,12 +2671,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path13) {
+  search(method, path16) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path13);
+    const parts = splitPath(path16);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -2764,18 +2764,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path13, handler) {
-    const results = checkOptionalParameter(path13);
+  add(method, path16, handler) {
+    const results = checkOptionalParameter(path16);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path13, handler);
+    this.#node.insert(method, path16, handler);
   }
-  match(method, path13) {
-    return this.#node.search(method, path13);
+  match(method, path16) {
+    return this.#node.search(method, path16);
   }
 };
 
@@ -3092,33 +3092,21 @@ function writeDecisionIndexForMonth(mnemeDir2, year, month, index) {
 }
 function rebuildSessionIndexForMonth(mnemeDir2, year, month) {
   const index = buildSessionIndexForMonth(mnemeDir2, year, month);
-  const indexPath = path2.join(
-    mnemeDir2,
-    INDEXES_DIR,
-    "sessions",
-    year,
-    `${month}.json`
-  );
   if (index.items.length > 0) {
     writeSessionIndexForMonth(mnemeDir2, year, month, index);
-  } else if (fs3.existsSync(indexPath)) {
-    fs3.unlinkSync(indexPath);
+  } else {
+    const indexPath = getSessionIndexPath(mnemeDir2, year, month);
+    if (fs3.existsSync(indexPath)) fs3.unlinkSync(indexPath);
   }
   return index;
 }
 function rebuildDecisionIndexForMonth(mnemeDir2, year, month) {
   const index = buildDecisionIndexForMonth(mnemeDir2, year, month);
-  const indexPath = path2.join(
-    mnemeDir2,
-    INDEXES_DIR,
-    "decisions",
-    year,
-    `${month}.json`
-  );
   if (index.items.length > 0) {
     writeDecisionIndexForMonth(mnemeDir2, year, month, index);
-  } else if (fs3.existsSync(indexPath)) {
-    fs3.unlinkSync(indexPath);
+  } else {
+    const indexPath = getDecisionIndexPath(mnemeDir2, year, month);
+    if (fs3.existsSync(indexPath)) fs3.unlinkSync(indexPath);
   }
   return index;
 }
@@ -3191,54 +3179,10 @@ function readRecentDecisionIndexes(mnemeDir2, monthCount = 6) {
   };
 }
 function readAllSessionIndexes(mnemeDir2) {
-  const yearMonths = getSessionYearMonths(mnemeDir2);
-  const allItems = [];
-  let latestUpdate = "";
-  for (const { year, month } of yearMonths) {
-    let index = readSessionIndexForMonth(mnemeDir2, year, month);
-    if (!index || isIndexStale(index)) {
-      index = rebuildSessionIndexForMonth(mnemeDir2, year, month);
-    }
-    if (index.items.length > 0) {
-      allItems.push(...index.items);
-      if (index.updatedAt > latestUpdate) {
-        latestUpdate = index.updatedAt;
-      }
-    }
-  }
-  allItems.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  return {
-    version: 1,
-    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
-    items: allItems
-  };
+  return readRecentSessionIndexes(mnemeDir2, Number.MAX_SAFE_INTEGER);
 }
 function readAllDecisionIndexes(mnemeDir2) {
-  const yearMonths = getDecisionYearMonths(mnemeDir2);
-  const allItems = [];
-  let latestUpdate = "";
-  for (const { year, month } of yearMonths) {
-    let index = readDecisionIndexForMonth(mnemeDir2, year, month);
-    if (!index || isIndexStale(index)) {
-      index = rebuildDecisionIndexForMonth(mnemeDir2, year, month);
-    }
-    if (index.items.length > 0) {
-      allItems.push(...index.items);
-      if (index.updatedAt > latestUpdate) {
-        latestUpdate = index.updatedAt;
-      }
-    }
-  }
-  allItems.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-  return {
-    version: 1,
-    updatedAt: latestUpdate || (/* @__PURE__ */ new Date()).toISOString(),
-    items: allItems
-  };
+  return readRecentDecisionIndexes(mnemeDir2, Number.MAX_SAFE_INTEGER);
 }
 function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
   if (!index || !index.updatedAt) {
@@ -3253,6 +3197,9 @@ function isIndexStale(index, maxAgeMs = 5 * 60 * 1e3) {
 import fs4 from "node:fs";
 import path3 from "node:path";
 
+// lib/db.ts
+import { execSync } from "node:child_process";
+
 // lib/suppress-sqlite-warning.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
@@ -3262,25 +3209,13 @@ process.emit = (event, ...args) => {
   return originalEmit.apply(process, [event, ...args]);
 };
 
-// lib/db.ts
-import { execSync } from "node:child_process";
+// lib/db-init.ts
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync2 } from "node:fs";
 import { dirname as dirname2, join as join4 } from "node:path";
 import { fileURLToPath } from "node:url";
 var { DatabaseSync } = await import("node:sqlite");
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = dirname2(__filename);
-function getCurrentUser() {
-  try {
-    return execSync("git config user.name", { encoding: "utf-8" }).trim();
-  } catch {
-    try {
-      return execSync("whoami", { encoding: "utf-8" }).trim();
-    } catch {
-      return "unknown";
-    }
-  }
-}
 function getLocalDbPath(projectPath) {
   return join4(projectPath, ".mneme", "local.db");
 }
@@ -3298,30 +3233,9 @@ function openLocalDatabase(projectPath) {
   configurePragmas(db);
   return db;
 }
-function getInteractionsBySessionIds(db, sessionIds) {
-  if (sessionIds.length === 0) {
-    return [];
-  }
-  const placeholders = sessionIds.map(() => "?").join(", ");
-  const stmt = db.prepare(`
-    SELECT * FROM interactions
-    WHERE session_id IN (${placeholders})
-    ORDER BY timestamp ASC, id ASC
-  `);
-  return stmt.all(...sessionIds);
-}
-function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
-  if (claudeSessionIds.length === 0) {
-    return [];
-  }
-  const placeholders = claudeSessionIds.map(() => "?").join(", ");
-  const stmt = db.prepare(`
-    SELECT * FROM interactions
-    WHERE claude_session_id IN (${placeholders})
-    ORDER BY timestamp ASC, id ASC
-  `);
-  return stmt.all(...claudeSessionIds);
-}
+
+// lib/db-mutations.ts
+var { DatabaseSync: DatabaseSync2 } = await import("node:sqlite");
 function deleteInteractions(db, sessionId) {
   const stmt = db.prepare("DELETE FROM interactions WHERE session_id = ?");
   stmt.run(sessionId);
@@ -3331,6 +3245,29 @@ function deleteBackups(db, sessionId) {
     "DELETE FROM pre_compact_backups WHERE session_id = ?"
   );
   stmt.run(sessionId);
+}
+
+// lib/db-queries.ts
+var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
+function getInteractionsBySessionIds(db, sessionIds) {
+  if (sessionIds.length === 0) return [];
+  const placeholders = sessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...sessionIds);
+}
+function getInteractionsByClaudeSessionIds(db, claudeSessionIds) {
+  if (claudeSessionIds.length === 0) return [];
+  const placeholders = claudeSessionIds.map(() => "?").join(", ");
+  const stmt = db.prepare(`
+    SELECT * FROM interactions
+    WHERE claude_session_id IN (${placeholders})
+    ORDER BY timestamp ASC, id ASC
+  `);
+  return stmt.all(...claudeSessionIds);
 }
 function countInteractions(db, filter) {
   const conditions = [];
@@ -3357,6 +3294,19 @@ function countInteractions(db, filter) {
   );
   const result = stmt.get(...params);
   return result.count;
+}
+
+// lib/db.ts
+function getCurrentUser() {
+  try {
+    return execSync("git config user.name", { encoding: "utf-8" }).trim();
+  } catch {
+    try {
+      return execSync("whoami", { encoding: "utf-8" }).trim();
+    } catch {
+      return "unknown";
+    }
+  }
 }
 
 // dashboard/server/lib/helpers.ts
@@ -3464,6 +3414,10 @@ var rulesDir = () => path3.join(getMnemeDir(), "rules");
 var patternsDir = () => path3.join(getMnemeDir(), "patterns");
 
 // dashboard/server/routes/analytics.ts
+import fs7 from "node:fs";
+import path6 from "node:path";
+
+// dashboard/server/routes/analytics-graph.ts
 import fs6 from "node:fs";
 import path5 from "node:path";
 
@@ -3488,6 +3442,9 @@ function collectDevRules() {
     for (const entry of entries) {
       const id = String(entry.id || "");
       if (!id) continue;
+      const alts = Array.isArray(entry.alternatives) ? entry.alternatives.map(
+        (a) => typeof a === "string" ? a : String(a.option || a.name || a)
+      ) : void 0;
       items.push({
         id,
         type: "decision",
@@ -3500,7 +3457,10 @@ function collectDevRules() {
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || raw2.createdAt || ""),
-        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
+        context: entry.context ? String(entry.context) : void 0,
+        reasoning: entry.reasoning ? String(entry.reasoning) : void 0,
+        alternatives: alts
       });
     }
   }
@@ -3526,16 +3486,17 @@ function collectDevRules() {
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: sourceName,
         createdAt: String(entry.createdAt || ""),
-        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
+        context: entry.context ? String(entry.context) : void 0,
+        patternType: entry.type ? String(entry.type) : void 0,
+        pattern: entry.pattern ? String(entry.pattern) : void 0
       });
     }
   }
   const ruleFileNames = ["dev-rules", "review-guidelines"];
   for (const ruleFile of ruleFileNames) {
     const filePath = path4.join(rulesDir(), `${ruleFile}.json`);
-    const doc = safeParseJsonFile(
-      filePath
-    );
+    const doc = safeParseJsonFile(filePath);
     if (!doc || !Array.isArray(doc.items)) continue;
     for (const entry of doc.items) {
       const id = String(entry.id || "");
@@ -3549,8 +3510,10 @@ function collectDevRules() {
         status: entry.status || "draft",
         priority: entry.priority ? String(entry.priority) : void 0,
         sourceFile: ruleFile,
-        createdAt: String(entry.createdAt || ""),
-        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0
+        createdAt: String(entry.createdAt || doc.createdAt || ""),
+        updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
+        rationale: entry.rationale ? String(entry.rationale) : void 0,
+        category: entry.category ? String(entry.category) : void 0
       });
     }
   }
@@ -3679,79 +3642,9 @@ devRules.delete("/:type/:sourceFile/:id", async (c) => {
 });
 var dev_rules_default = devRules;
 
-// dashboard/server/routes/analytics.ts
-var analytics = new Hono2();
-analytics.get("/timeline", async (c) => {
-  const sessionsDir = path5.join(getMnemeDir(), "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    if (files.length === 0) {
-      return c.json({ timeline: {} });
-    }
-    const sessions2 = files.map((filePath) => {
-      const content = fs6.readFileSync(filePath, "utf-8");
-      return JSON.parse(content);
-    });
-    const grouped = {};
-    for (const session of sessions2) {
-      const date = session.createdAt?.split("T")[0] || "unknown";
-      if (!grouped[date]) grouped[date] = [];
-      grouped[date].push({
-        id: session.id,
-        title: session.title || "Untitled",
-        sessionType: session.sessionType,
-        branch: session.context?.branch,
-        tags: session.tags || [],
-        createdAt: session.createdAt
-      });
-    }
-    const sortedTimeline = {};
-    for (const date of Object.keys(grouped).sort().reverse()) {
-      sortedTimeline[date] = grouped[date].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    }
-    return c.json({ timeline: sortedTimeline });
-  } catch (error) {
-    console.error("Failed to build timeline:", error);
-    return c.json({ error: "Failed to build timeline" }, 500);
-  }
-});
-analytics.get("/tag-network", async (c) => {
-  const sessionsDir = path5.join(getMnemeDir(), "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    const tagCounts = /* @__PURE__ */ new Map();
-    const coOccurrences = /* @__PURE__ */ new Map();
-    for (const filePath of files) {
-      const content = fs6.readFileSync(filePath, "utf-8");
-      const session = JSON.parse(content);
-      const tags = session.tags || [];
-      for (const tag of tags) {
-        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-      }
-      for (let i = 0; i < tags.length; i++) {
-        for (let j = i + 1; j < tags.length; j++) {
-          const key = [tags[i], tags[j]].sort().join("|");
-          coOccurrences.set(key, (coOccurrences.get(key) || 0) + 1);
-        }
-      }
-    }
-    const nodes = Array.from(tagCounts.entries()).map(([id, count]) => ({
-      id,
-      count
-    }));
-    const edges = Array.from(coOccurrences.entries()).map(([key, weight]) => {
-      const [source, target] = key.split("|");
-      return { source, target, weight };
-    });
-    return c.json({ nodes, edges });
-  } catch (error) {
-    console.error("Failed to build tag network:", error);
-    return c.json({ error: "Failed to build tag network" }, 500);
-  }
-});
-analytics.get("/knowledge-graph", async (c) => {
+// dashboard/server/routes/analytics-graph.ts
+var analyticsGraph = new Hono2();
+analyticsGraph.get("/knowledge-graph", async (c) => {
   try {
     const mnemeDir2 = getMnemeDir();
     const sessionItems = readAllSessionIndexes(mnemeDir2).items;
@@ -3858,6 +3751,81 @@ analytics.get("/knowledge-graph", async (c) => {
     return c.json({ error: "Failed to build knowledge graph" }, 500);
   }
 });
+var analytics_graph_default = analyticsGraph;
+
+// dashboard/server/routes/analytics.ts
+var analytics = new Hono2();
+analytics.route("/", analytics_graph_default);
+analytics.get("/timeline", async (c) => {
+  const sessionsDir = path6.join(getMnemeDir(), "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    if (files.length === 0) {
+      return c.json({ timeline: {} });
+    }
+    const sessions2 = files.map((filePath) => {
+      const content = fs7.readFileSync(filePath, "utf-8");
+      return JSON.parse(content);
+    });
+    const grouped = {};
+    for (const session of sessions2) {
+      const date = session.createdAt?.split("T")[0] || "unknown";
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push({
+        id: session.id,
+        title: session.title || "Untitled",
+        sessionType: session.sessionType,
+        branch: session.context?.branch,
+        tags: session.tags || [],
+        createdAt: session.createdAt
+      });
+    }
+    const sortedTimeline = {};
+    for (const date of Object.keys(grouped).sort().reverse()) {
+      sortedTimeline[date] = grouped[date].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return c.json({ timeline: sortedTimeline });
+  } catch (error) {
+    console.error("Failed to build timeline:", error);
+    return c.json({ error: "Failed to build timeline" }, 500);
+  }
+});
+analytics.get("/tag-network", async (c) => {
+  const sessionsDir = path6.join(getMnemeDir(), "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    const tagCounts = /* @__PURE__ */ new Map();
+    const coOccurrences = /* @__PURE__ */ new Map();
+    for (const filePath of files) {
+      const content = fs7.readFileSync(filePath, "utf-8");
+      const session = JSON.parse(content);
+      const tags = session.tags || [];
+      for (const tag of tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+      for (let i = 0; i < tags.length; i++) {
+        for (let j = i + 1; j < tags.length; j++) {
+          const key = [tags[i], tags[j]].sort().join("|");
+          coOccurrences.set(key, (coOccurrences.get(key) || 0) + 1);
+        }
+      }
+    }
+    const nodes = Array.from(tagCounts.entries()).map(([id, count]) => ({
+      id,
+      count
+    }));
+    const edges = Array.from(coOccurrences.entries()).map(([key, weight]) => {
+      const [source, target] = key.split("|");
+      return { source, target, weight };
+    });
+    return c.json({ nodes, edges });
+  } catch (error) {
+    console.error("Failed to build tag network:", error);
+    return c.json({ error: "Failed to build tag network" }, 500);
+  }
+});
 analytics.get("/stats/overview", async (c) => {
   const mnemeDir2 = getMnemeDir();
   try {
@@ -3873,14 +3841,14 @@ analytics.get("/stats/overview", async (c) => {
     }
     let totalPatterns = 0;
     const patternsByType = {};
-    const patternsPath = path5.join(mnemeDir2, "patterns");
-    if (fs6.existsSync(patternsPath)) {
+    const patternsPath = path6.join(mnemeDir2, "patterns");
+    if (fs7.existsSync(patternsPath)) {
       const patternFiles = listJsonFiles(patternsPath);
       for (const filePath of patternFiles) {
         try {
-          const content = fs6.readFileSync(filePath, "utf-8");
+          const content = fs7.readFileSync(filePath, "utf-8");
           const data = JSON.parse(content);
-          const patterns2 = data.patterns || [];
+          const patterns2 = data.items || data.patterns || [];
           for (const pattern of patterns2) {
             totalPatterns++;
             const type = pattern.type || "unknown";
@@ -3892,20 +3860,17 @@ analytics.get("/stats/overview", async (c) => {
     }
     let totalRules = 0;
     const rulesByType = {};
-    const rulesPath = path5.join(mnemeDir2, "rules");
-    if (fs6.existsSync(rulesPath)) {
+    const rulesPath = path6.join(mnemeDir2, "rules");
+    if (fs7.existsSync(rulesPath)) {
       for (const ruleType of ["dev-rules", "review-guidelines"]) {
-        const rulePath = path5.join(rulesPath, `${ruleType}.json`);
-        if (fs6.existsSync(rulePath)) {
+        const rulePath = path6.join(rulesPath, `${ruleType}.json`);
+        if (fs7.existsSync(rulePath)) {
           try {
-            const content = fs6.readFileSync(rulePath, "utf-8");
+            const content = fs7.readFileSync(rulePath, "utf-8");
             const data = JSON.parse(content);
             const items = data.items || [];
-            const activeItems = items.filter(
-              (item) => item.status === "active"
-            );
-            rulesByType[ruleType] = activeItems.length;
-            totalRules += activeItems.length;
+            rulesByType[ruleType] = items.length;
+            totalRules += items.length;
           } catch {
           }
         }
@@ -3990,8 +3955,8 @@ analytics.get("/stats/tags", async (c) => {
 var analytics_default = analytics;
 
 // dashboard/server/routes/decisions.ts
-import fs7 from "node:fs";
-import path6 from "node:path";
+import fs8 from "node:fs";
+import path7 from "node:path";
 
 // dashboard/server/lib/pagination.ts
 function parsePaginationParams(c) {
@@ -4040,7 +4005,7 @@ decisions.get("/", async (c) => {
       const index = params.allMonths ? readAllDecisionIndexes(mnemeDir2) : readRecentDecisionIndexes(mnemeDir2);
       items = index.items;
     } else {
-      const decisionsDir = path6.join(mnemeDir2, "decisions");
+      const decisionsDir = path7.join(mnemeDir2, "decisions");
       const files = listDatedJsonFiles(decisionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
@@ -4056,7 +4021,7 @@ decisions.get("/", async (c) => {
         }) : c.json([]);
       }
       items = files.map((filePath) => {
-        const content = fs7.readFileSync(filePath, "utf-8");
+        const content = fs8.readFileSync(filePath, "utf-8");
         return JSON.parse(content);
       });
       items.sort(
@@ -4088,7 +4053,7 @@ decisions.get("/", async (c) => {
 });
 decisions.get("/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path6.join(getMnemeDir(), "decisions");
+  const decisionsDir = path7.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
@@ -4106,14 +4071,14 @@ decisions.get("/:id", async (c) => {
 });
 decisions.get("/:id/impact", async (c) => {
   const decisionId = sanitizeId(c.req.param("id"));
-  const sessionsDir = path6.join(getMnemeDir(), "sessions");
-  const patternsPath = path6.join(getMnemeDir(), "patterns");
+  const sessionsDir = path7.join(getMnemeDir(), "sessions");
+  const patternsPath = path7.join(getMnemeDir(), "patterns");
   try {
     const impactedSessions = [];
     const impactedPatterns = [];
     const sessionFiles = listDatedJsonFiles(sessionsDir);
     for (const filePath of sessionFiles) {
-      const content = fs7.readFileSync(filePath, "utf-8");
+      const content = fs8.readFileSync(filePath, "utf-8");
       const session = JSON.parse(content);
       const hasReference = session.relatedSessions?.includes(decisionId) || session.interactions?.some(
         (i) => i.reasoning?.includes(decisionId) || i.choice?.includes(decisionId)
@@ -4127,13 +4092,13 @@ decisions.get("/:id/impact", async (c) => {
     }
     const patternFiles = listJsonFiles(patternsPath);
     for (const filePath of patternFiles) {
-      const content = fs7.readFileSync(filePath, "utf-8");
+      const content = fs8.readFileSync(filePath, "utf-8");
       const data = JSON.parse(content);
       const patterns2 = data.patterns || [];
       for (const pattern of patterns2) {
         if (pattern.sourceId?.includes(decisionId) || pattern.description?.includes(decisionId)) {
           impactedPatterns.push({
-            id: `${path6.basename(filePath, ".json")}-${pattern.type}`,
+            id: `${path7.basename(filePath, ".json")}-${pattern.type}`,
             description: pattern.description || "No description"
           });
         }
@@ -4151,13 +4116,13 @@ decisions.get("/:id/impact", async (c) => {
 });
 decisions.delete("/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path6.join(getMnemeDir(), "decisions");
+  const decisionsDir = path7.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
-    fs7.unlinkSync(filePath);
+    fs8.unlinkSync(filePath);
     rebuildAllDecisionIndexes(getMnemeDir());
     writeAuditLog({
       entity: "decision",
@@ -4173,8 +4138,8 @@ decisions.delete("/:id", async (c) => {
 var decisions_default = decisions;
 
 // dashboard/server/routes/export.ts
-import fs8 from "node:fs";
-import path7 from "node:path";
+import fs9 from "node:fs";
+import path8 from "node:path";
 function sessionToMarkdown(session) {
   const lines = [];
   lines.push(`# ${session.title || "Untitled Session"}`);
@@ -4314,13 +4279,13 @@ function decisionToMarkdown(decision) {
 var exportRoutes = new Hono2();
 exportRoutes.get("/sessions/:id/markdown", async (c) => {
   const id = c.req.param("id");
-  const sessionsDir = path7.join(getMnemeDir(), "sessions");
+  const sessionsDir = path8.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
       return c.json({ error: "Session not found" }, 404);
     }
-    const content = fs8.readFileSync(filePath, "utf-8");
+    const content = fs9.readFileSync(filePath, "utf-8");
     const session = JSON.parse(content);
     const markdown = sessionToMarkdown(session);
     const filename = `session-${id}.md`;
@@ -4334,13 +4299,13 @@ exportRoutes.get("/sessions/:id/markdown", async (c) => {
 });
 exportRoutes.get("/decisions/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const decisionsDir = path7.join(getMnemeDir(), "decisions");
+  const decisionsDir = path8.join(getMnemeDir(), "decisions");
   try {
     const filePath = findJsonFileById(decisionsDir, id);
     if (!filePath) {
       return c.json({ error: "Decision not found" }, 404);
     }
-    const content = fs8.readFileSync(filePath, "utf-8");
+    const content = fs9.readFileSync(filePath, "utf-8");
     const decision = JSON.parse(content);
     const markdown = decisionToMarkdown(decision);
     const filename = `decision-${id}.md`;
@@ -4358,13 +4323,13 @@ exportRoutes.post("/sessions/bulk", async (c) => {
   if (!ids || ids.length === 0) {
     return c.json({ error: "No session IDs provided" }, 400);
   }
-  const sessionsDir = path7.join(getMnemeDir(), "sessions");
+  const sessionsDir = path8.join(getMnemeDir(), "sessions");
   const markdowns = [];
   try {
     for (const id of ids) {
       const filePath = findJsonFileById(sessionsDir, id);
       if (filePath) {
-        const content = fs8.readFileSync(filePath, "utf-8");
+        const content = fs9.readFileSync(filePath, "utf-8");
         const session = JSON.parse(content);
         markdowns.push(sessionToMarkdown(session));
       }
@@ -4385,8 +4350,8 @@ exportRoutes.post("/sessions/bulk", async (c) => {
 var export_default = exportRoutes;
 
 // dashboard/server/routes/misc.ts
-import fs9 from "node:fs";
-import path8 from "node:path";
+import fs10 from "node:fs";
+import path9 from "node:path";
 
 // dashboard/server/lib/ai-summary.ts
 var getOpenAIKey = () => {
@@ -4447,12 +4412,12 @@ async function generateAISummary(apiKey, prompt) {
 var misc = new Hono2();
 misc.get("/project", (c) => {
   const projectRoot = getProjectRoot();
-  const projectName = path8.basename(projectRoot);
+  const projectName = path9.basename(projectRoot);
   let repository = null;
   try {
-    const gitConfigPath = path8.join(projectRoot, ".git", "config");
-    if (fs9.existsSync(gitConfigPath)) {
-      const gitConfig = fs9.readFileSync(gitConfigPath, "utf-8");
+    const gitConfigPath = path9.join(projectRoot, ".git", "config");
+    if (fs10.existsSync(gitConfigPath)) {
+      const gitConfig = fs10.readFileSync(gitConfigPath, "utf-8");
       const match2 = gitConfig.match(
         /url\s*=\s*.*[:/]([^/]+\/[^/]+?)(?:\.git)?$/m
       );
@@ -4462,10 +4427,18 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
+  let version = null;
+  try {
+    const pkgPath = path9.resolve(import.meta.dirname, "../package.json");
+    const pkg = JSON.parse(fs10.readFileSync(pkgPath, "utf-8"));
+    version = pkg.version || null;
+  } catch {
+  }
   return c.json({
     name: projectName,
     path: projectRoot,
-    repository
+    repository,
+    version
   });
 });
 misc.get("/info", async (c) => {
@@ -4474,7 +4447,7 @@ misc.get("/info", async (c) => {
   return c.json({
     projectRoot,
     mnemeDir: mnemeDir2,
-    exists: fs9.existsSync(mnemeDir2)
+    exists: fs10.existsSync(mnemeDir2)
   });
 });
 misc.get("/current-user", async (c) => {
@@ -4487,9 +4460,9 @@ misc.get("/current-user", async (c) => {
   }
 });
 misc.get("/tags", async (c) => {
-  const tagsPath = path8.join(getMnemeDir(), "tags.json");
+  const tagsPath = path9.join(getMnemeDir(), "tags.json");
   try {
-    if (!fs9.existsSync(tagsPath)) {
+    if (!fs10.existsSync(tagsPath)) {
       return c.json({ version: 1, tags: [] });
     }
     const tags = safeParseJsonFile(tagsPath);
@@ -4622,13 +4595,13 @@ misc.post("/summary/generate", async (c) => {
   const body = await c.req.json();
   const { sessionIds, prompt: customPrompt } = body;
   const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path8.join(mnemeDir2, "sessions");
+  const sessionsDir = path9.join(mnemeDir2, "sessions");
   try {
     const sessions2 = [];
     for (const id of sessionIds || []) {
       const filePath = findJsonFileById(sessionsDir, id);
       if (filePath) {
-        const content = fs9.readFileSync(filePath, "utf-8");
+        const content = fs10.readFileSync(filePath, "utf-8");
         sessions2.push(JSON.parse(content));
       }
     }
@@ -4648,26 +4621,26 @@ ${sessions2.map((s) => `- ${s.title}: ${s.goal || "No goal specified"}`).join("\
 var misc_default = misc;
 
 // dashboard/server/routes/patterns.ts
-import fs10 from "node:fs";
-import path9 from "node:path";
+import fs11 from "node:fs";
+import path10 from "node:path";
 var patterns = new Hono2();
 patterns.get("/", async (c) => {
   const dir = patternsDir();
   try {
-    if (!fs10.existsSync(dir)) {
+    if (!fs11.existsSync(dir)) {
       return c.json({ patterns: [] });
     }
     const files = listJsonFiles(dir);
     const allPatterns = [];
     for (const filePath of files) {
       try {
-        const content = fs10.readFileSync(filePath, "utf-8");
+        const content = fs11.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
         const items = data.items || data.patterns || [];
         for (const pattern of items) {
           allPatterns.push({
             ...pattern,
-            sourceFile: path9.basename(filePath, ".json")
+            sourceFile: path10.basename(filePath, ".json")
           });
         }
       } catch {
@@ -4685,7 +4658,7 @@ patterns.get("/", async (c) => {
 patterns.get("/stats", async (c) => {
   const dir = patternsDir();
   try {
-    if (!fs10.existsSync(dir)) {
+    if (!fs11.existsSync(dir)) {
       return c.json({ total: 0, byType: {}, bySource: {} });
     }
     const files = listJsonFiles(dir);
@@ -4694,10 +4667,10 @@ patterns.get("/stats", async (c) => {
     const bySource = {};
     for (const filePath of files) {
       try {
-        const content = fs10.readFileSync(filePath, "utf-8");
+        const content = fs11.readFileSync(filePath, "utf-8");
         const data = JSON.parse(content);
         const items = data.items || data.patterns || [];
-        const sourceName = path9.basename(filePath, ".json");
+        const sourceName = path10.basename(filePath, ".json");
         for (const pattern of items) {
           total++;
           const type = pattern.type || "unknown";
@@ -4723,12 +4696,12 @@ patterns.delete("/:id", async (c) => {
     return c.json({ error: "Missing source file" }, 400);
   }
   const safeSource = sourceFile.replace(/[^a-zA-Z0-9_-]/g, "");
-  const filePath = path9.join(patternsDir(), `${safeSource}.json`);
-  if (!fs10.existsSync(filePath)) {
+  const filePath = path10.join(patternsDir(), `${safeSource}.json`);
+  if (!fs11.existsSync(filePath)) {
     return c.json({ error: "Pattern source file not found" }, 404);
   }
   try {
-    const content = fs10.readFileSync(filePath, "utf-8");
+    const content = fs11.readFileSync(filePath, "utf-8");
     const data = JSON.parse(content);
     let deleted = 0;
     if (Array.isArray(data.items)) {
@@ -4745,7 +4718,7 @@ patterns.delete("/:id", async (c) => {
     if (deleted === 0) {
       return c.json({ error: "Pattern not found" }, 404);
     }
-    fs10.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    fs11.writeFileSync(filePath, JSON.stringify(data, null, 2));
     writeAuditLog({
       entity: "pattern",
       action: "delete",
@@ -4761,8 +4734,8 @@ patterns.delete("/:id", async (c) => {
 var patterns_default = patterns;
 
 // dashboard/server/routes/rules.ts
-import fs11 from "node:fs";
-import path10 from "node:path";
+import fs12 from "node:fs";
+import path11 from "node:path";
 var rules = new Hono2();
 rules.get("/:id", async (c) => {
   const id = c.req.param("id");
@@ -4771,8 +4744,8 @@ rules.get("/:id", async (c) => {
   }
   const dir = rulesDir();
   try {
-    const filePath = path10.join(dir, `${id}.json`);
-    if (!fs11.existsSync(filePath)) {
+    const filePath = path11.join(dir, `${id}.json`);
+    if (!fs12.existsSync(filePath)) {
       return c.json({ error: "Rules not found" }, 404);
     }
     const rulesData = safeParseJsonFile(filePath);
@@ -4792,15 +4765,15 @@ rules.put("/:id", async (c) => {
   }
   const dir = rulesDir();
   try {
-    const filePath = path10.join(dir, `${id}.json`);
-    if (!fs11.existsSync(filePath)) {
+    const filePath = path11.join(dir, `${id}.json`);
+    if (!fs12.existsSync(filePath)) {
       return c.json({ error: "Rules not found" }, 404);
     }
     const body = await c.req.json();
     if (!body.items || !Array.isArray(body.items)) {
       return c.json({ error: "Invalid rules format" }, 400);
     }
-    fs11.writeFileSync(filePath, JSON.stringify(body, null, 2));
+    fs12.writeFileSync(filePath, JSON.stringify(body, null, 2));
     writeAuditLog({
       entity: "rule",
       action: "update",
@@ -4822,8 +4795,8 @@ rules.delete("/:id/:ruleId", async (c) => {
   if (!ruleId) {
     return c.json({ error: "Invalid rule id" }, 400);
   }
-  const filePath = path10.join(rulesDir(), `${id}.json`);
-  if (!fs11.existsSync(filePath)) {
+  const filePath = path11.join(rulesDir(), `${id}.json`);
+  if (!fs12.existsSync(filePath)) {
     return c.json({ error: "Rules not found" }, 404);
   }
   try {
@@ -4840,7 +4813,7 @@ rules.delete("/:id/:ruleId", async (c) => {
       items: nextItems,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    fs11.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
+    fs12.writeFileSync(filePath, JSON.stringify(nextDoc, null, 2));
     writeAuditLog({
       entity: "rule",
       action: "delete",
@@ -4856,9 +4829,329 @@ rules.delete("/:id/:ruleId", async (c) => {
 var rules_default = rules;
 
 // dashboard/server/routes/sessions.ts
-import fs12 from "node:fs";
-import path11 from "node:path";
+import fs15 from "node:fs";
+import path14 from "node:path";
+
+// dashboard/server/routes/sessions-delete.ts
+import fs13 from "node:fs";
+import path12 from "node:path";
+var sessionsDelete = new Hono2();
+sessionsDelete.delete("/:id", async (c) => {
+  const id = toShortId(sanitizeId(c.req.param("id")));
+  const dryRun = c.req.query("dry-run") === "true";
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path12.join(mnemeDir2, "sessions");
+  try {
+    const filePath = findJsonFileById(sessionsDir, id);
+    if (!filePath) {
+      return c.json({ error: "Session not found" }, 404);
+    }
+    const sessionData = safeParseJsonFile(filePath);
+    const db = openLocalDatabase(getProjectRoot());
+    let interactionCount = 0;
+    if (db) {
+      interactionCount = countInteractions(db, { sessionId: id });
+      if (!dryRun) {
+        deleteInteractions(db, id);
+        deleteBackups(db, id);
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      fs13.unlinkSync(filePath);
+      const mdPath = filePath.replace(/\.json$/, ".md");
+      if (fs13.existsSync(mdPath)) {
+        fs13.unlinkSync(mdPath);
+      }
+      const sessionLinksDir = path12.join(mnemeDir2, "session-links");
+      const linkPath = path12.join(sessionLinksDir, `${id}.json`);
+      if (fs13.existsSync(linkPath)) {
+        fs13.unlinkSync(linkPath);
+      }
+      if (sessionData?.createdAt) {
+        const date = new Date(sessionData.createdAt);
+        const year = date.getFullYear().toString();
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        rebuildSessionIndexForMonth(mnemeDir2, year, month);
+      }
+      writeAuditLog({
+        entity: "session",
+        action: "delete",
+        targetId: id
+      });
+    }
+    return c.json({
+      deleted: dryRun ? 0 : 1,
+      interactionsDeleted: dryRun ? 0 : interactionCount,
+      dryRun,
+      sessionId: id
+    });
+  } catch (error) {
+    console.error("Failed to delete session:", error);
+    return c.json({ error: "Failed to delete session" }, 500);
+  }
+});
+sessionsDelete.delete("/", async (c) => {
+  const dryRun = c.req.query("dry-run") === "true";
+  const projectFilter = c.req.query("project");
+  const repositoryFilter = c.req.query("repository");
+  const beforeFilter = c.req.query("before");
+  const mnemeDir2 = getMnemeDir();
+  const sessionsDir = path12.join(mnemeDir2, "sessions");
+  try {
+    const files = listDatedJsonFiles(sessionsDir);
+    const sessionsToDelete = [];
+    for (const filePath of files) {
+      try {
+        const content = fs13.readFileSync(filePath, "utf-8");
+        const session = JSON.parse(content);
+        let shouldDelete = true;
+        if (projectFilter) {
+          const sessionProject = session.context?.projectDir;
+          if (sessionProject !== projectFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (repositoryFilter && shouldDelete) {
+          const sessionRepo = session.context?.repository;
+          if (sessionRepo !== repositoryFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (beforeFilter && shouldDelete) {
+          const sessionDate = session.createdAt?.split("T")[0];
+          if (!sessionDate || sessionDate >= beforeFilter) {
+            shouldDelete = false;
+          }
+        }
+        if (shouldDelete) {
+          sessionsToDelete.push({ id: session.id, path: filePath });
+        }
+      } catch {
+      }
+    }
+    let totalInteractions = 0;
+    const db = openLocalDatabase(getProjectRoot());
+    if (db) {
+      for (const session of sessionsToDelete) {
+        totalInteractions += countInteractions(db, { sessionId: session.id });
+      }
+      if (!dryRun) {
+        for (const session of sessionsToDelete) {
+          deleteInteractions(db, session.id);
+          deleteBackups(db, session.id);
+        }
+      }
+      db.close();
+    }
+    if (!dryRun) {
+      for (const session of sessionsToDelete) {
+        fs13.unlinkSync(session.path);
+        const mdPath = session.path.replace(/\.json$/, ".md");
+        if (fs13.existsSync(mdPath)) {
+          fs13.unlinkSync(mdPath);
+        }
+        const sessionLinksDir = path12.join(mnemeDir2, "session-links");
+        const linkPath = path12.join(sessionLinksDir, `${session.id}.json`);
+        if (fs13.existsSync(linkPath)) {
+          fs13.unlinkSync(linkPath);
+        }
+        writeAuditLog({
+          entity: "session",
+          action: "delete",
+          targetId: session.id
+        });
+      }
+    }
+    return c.json({
+      deleted: dryRun ? 0 : sessionsToDelete.length,
+      interactionsDeleted: dryRun ? 0 : totalInteractions,
+      wouldDelete: sessionsToDelete.length,
+      dryRun,
+      filters: {
+        project: projectFilter || null,
+        repository: repositoryFilter || null,
+        before: beforeFilter || null
+      }
+    });
+  } catch (error) {
+    console.error("Failed to delete sessions:", error);
+    return c.json({ error: "Failed to delete sessions" }, 500);
+  }
+});
+var sessions_delete_default = sessionsDelete;
+
+// dashboard/server/routes/sessions-interactions.ts
+import fs14 from "node:fs";
+import path13 from "node:path";
+var sessionsInteractions = new Hono2();
+sessionsInteractions.get("/:id/interactions", async (c) => {
+  const rawId = sanitizeId(c.req.param("id"));
+  const shortId = toShortId(rawId);
+  const mnemeDir2 = getMnemeDir();
+  const sessionLinksDir = path13.join(mnemeDir2, "session-links");
+  const sessionsDir = path13.join(mnemeDir2, "sessions");
+  try {
+    const sessionFilePath = findJsonFileById(sessionsDir, shortId);
+    let projectDir = getProjectRoot();
+    let primaryClaudeSessionId = null;
+    if (rawId.length === 36 && rawId[8] === "-") {
+      primaryClaudeSessionId = rawId;
+    }
+    if (sessionFilePath) {
+      const sessionData = safeParseJsonFile(sessionFilePath);
+      if (sessionData?.context?.projectDir) {
+        projectDir = sessionData.context.projectDir;
+      }
+      if (sessionData?.sessionId && !primaryClaudeSessionId) {
+        primaryClaudeSessionId = sessionData.sessionId;
+      }
+    }
+    const db = openLocalDatabase(projectDir);
+    if (!db) {
+      return c.json({ interactions: [], count: 0 });
+    }
+    const { sessionIds, claudeSessionIds } = collectLinkedSessionIds({
+      shortId,
+      primaryClaudeSessionId,
+      sessionLinksDir,
+      sessionsDir
+    });
+    const interactions = claudeSessionIds.length > 0 ? getInteractionsByClaudeSessionIds(db, claudeSessionIds) : getInteractionsBySessionIds(db, sessionIds);
+    db.close();
+    const groupedInteractions = buildGroupedInteractions(interactions);
+    return c.json({
+      interactions: groupedInteractions,
+      count: groupedInteractions.length
+    });
+  } catch (error) {
+    console.error("Failed to get session interactions:", error);
+    return c.json({ error: "Failed to get session interactions" }, 500);
+  }
+});
+function collectLinkedSessionIds(params) {
+  const { shortId, primaryClaudeSessionId, sessionLinksDir, sessionsDir } = params;
+  let masterId = shortId;
+  const myLinkFile = path13.join(sessionLinksDir, `${shortId}.json`);
+  if (fs14.existsSync(myLinkFile)) {
+    try {
+      const myLinkData = JSON.parse(fs14.readFileSync(myLinkFile, "utf-8"));
+      if (myLinkData.masterSessionId) {
+        masterId = myLinkData.masterSessionId;
+      }
+    } catch {
+    }
+  }
+  const sessionIds = [masterId];
+  const claudeSessionIds = [];
+  if (primaryClaudeSessionId) {
+    claudeSessionIds.push(primaryClaudeSessionId);
+  }
+  if (masterId !== shortId) {
+    sessionIds.push(shortId);
+  }
+  if (fs14.existsSync(sessionLinksDir)) {
+    const linkFiles = fs14.readdirSync(sessionLinksDir);
+    for (const linkFile of linkFiles) {
+      if (!linkFile.endsWith(".json")) continue;
+      const linkPath = path13.join(sessionLinksDir, linkFile);
+      try {
+        const linkData = JSON.parse(fs14.readFileSync(linkPath, "utf-8"));
+        if (linkData.masterSessionId === masterId) {
+          const childId = linkFile.replace(".json", "");
+          if (!sessionIds.includes(childId)) {
+            sessionIds.push(childId);
+          }
+          const childSessionFile = findJsonFileById(sessionsDir, childId);
+          if (childSessionFile) {
+            const childData = safeParseJsonFile(
+              childSessionFile
+            );
+            if (childData?.sessionId) {
+              claudeSessionIds.push(childData.sessionId);
+            }
+          }
+        }
+      } catch {
+      }
+    }
+  }
+  const sessionFiles = listDatedJsonFiles(sessionsDir);
+  for (const sessionFile of sessionFiles) {
+    try {
+      const sessionData = JSON.parse(fs14.readFileSync(sessionFile, "utf-8"));
+      if (sessionData.resumedFrom === masterId && sessionData.id !== masterId) {
+        if (!sessionIds.includes(sessionData.id)) {
+          sessionIds.push(sessionData.id);
+        }
+        if (sessionData.sessionId) {
+          claudeSessionIds.push(sessionData.sessionId);
+        }
+      }
+    } catch {
+    }
+  }
+  return { sessionIds, claudeSessionIds };
+}
+function buildGroupedInteractions(interactions) {
+  const grouped = [];
+  let current = null;
+  for (const interaction of interactions) {
+    if (interaction.role === "user") {
+      if (current) {
+        grouped.push(current);
+      }
+      const meta = parseInteractionMetadata(interaction.tool_calls);
+      current = {
+        id: `int-${String(grouped.length + 1).padStart(3, "0")}`,
+        timestamp: interaction.timestamp,
+        user: interaction.content,
+        assistant: "",
+        thinking: null,
+        isCompactSummary: !!interaction.is_compact_summary,
+        ...meta,
+        ...interaction.agent_id && { agentId: interaction.agent_id },
+        ...interaction.agent_type && { agentType: interaction.agent_type }
+      };
+    } else if (interaction.role === "assistant" && current) {
+      current.assistant = interaction.content;
+      current.thinking = interaction.thinking || null;
+    }
+  }
+  if (current) {
+    grouped.push(current);
+  }
+  return grouped;
+}
+function parseInteractionMetadata(toolCalls) {
+  if (!toolCalls) return {};
+  try {
+    const metadata = JSON.parse(toolCalls);
+    const result = {};
+    if (metadata.hasPlanMode) {
+      result.hasPlanMode = true;
+      if (metadata.planTools?.length > 0) result.planTools = metadata.planTools;
+    }
+    if (metadata.inPlanMode) result.inPlanMode = true;
+    if (metadata.toolsUsed?.length > 0) result.toolsUsed = metadata.toolsUsed;
+    if (metadata.toolDetails?.length > 0)
+      result.toolDetails = metadata.toolDetails;
+    if (metadata.slashCommand) result.slashCommand = metadata.slashCommand;
+    if (metadata.toolResults?.length > 0)
+      result.toolResults = metadata.toolResults;
+    if (metadata.progressEvents?.length > 0)
+      result.progressEvents = metadata.progressEvents;
+    return result;
+  } catch {
+    return {};
+  }
+}
+var sessions_interactions_default = sessionsInteractions;
+
+// dashboard/server/routes/sessions.ts
 var sessions = new Hono2();
+sessions.route("/", sessions_delete_default);
+sessions.route("/", sessions_interactions_default);
 sessions.get("/", async (c) => {
   const useIndex = c.req.query("useIndex") !== "false";
   const usePagination = c.req.query("paginate") !== "false";
@@ -4870,7 +5163,7 @@ sessions.get("/", async (c) => {
       const index = params.allMonths ? readAllSessionIndexes(mnemeDir2) : readRecentSessionIndexes(mnemeDir2);
       items = index.items;
     } else {
-      const sessionsDir = path11.join(mnemeDir2, "sessions");
+      const sessionsDir = path14.join(mnemeDir2, "sessions");
       const files = listDatedJsonFiles(sessionsDir);
       if (files.length === 0) {
         return usePagination ? c.json({
@@ -4886,7 +5179,7 @@ sessions.get("/", async (c) => {
         }) : c.json([]);
       }
       items = files.map((filePath) => {
-        const content = fs12.readFileSync(filePath, "utf-8");
+        const content = fs15.readFileSync(filePath, "utf-8");
         return JSON.parse(content);
       });
       items.sort(
@@ -4976,7 +5269,7 @@ sessions.get("/graph", async (c) => {
 });
 sessions.get("/:id", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path11.join(getMnemeDir(), "sessions");
+  const sessionsDir = path14.join(getMnemeDir(), "sessions");
   try {
     const filePath = findJsonFileById(sessionsDir, id);
     if (!filePath) {
@@ -4994,330 +5287,21 @@ sessions.get("/:id", async (c) => {
 });
 sessions.get("/:id/markdown", async (c) => {
   const id = sanitizeId(c.req.param("id"));
-  const sessionsDir = path11.join(getMnemeDir(), "sessions");
+  const sessionsDir = path14.join(getMnemeDir(), "sessions");
   try {
     const jsonPath = findJsonFileById(sessionsDir, id);
     if (!jsonPath) {
       return c.json({ error: "Session not found" }, 404);
     }
     const mdPath = jsonPath.replace(/\.json$/, ".md");
-    if (!fs12.existsSync(mdPath)) {
+    if (!fs15.existsSync(mdPath)) {
       return c.json({ exists: false, content: null });
     }
-    const content = fs12.readFileSync(mdPath, "utf-8");
+    const content = fs15.readFileSync(mdPath, "utf-8");
     return c.json({ exists: true, content });
   } catch (error) {
     console.error("Failed to read session markdown:", error);
     return c.json({ error: "Failed to read session markdown" }, 500);
-  }
-});
-sessions.delete("/:id", async (c) => {
-  const id = toShortId(sanitizeId(c.req.param("id")));
-  const dryRun = c.req.query("dry-run") === "true";
-  const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path11.join(mnemeDir2, "sessions");
-  try {
-    const filePath = findJsonFileById(sessionsDir, id);
-    if (!filePath) {
-      return c.json({ error: "Session not found" }, 404);
-    }
-    const sessionData = safeParseJsonFile(filePath);
-    const db = openLocalDatabase(getProjectRoot());
-    let interactionCount = 0;
-    if (db) {
-      interactionCount = countInteractions(db, { sessionId: id });
-      if (!dryRun) {
-        deleteInteractions(db, id);
-        deleteBackups(db, id);
-      }
-      db.close();
-    }
-    if (!dryRun) {
-      fs12.unlinkSync(filePath);
-      const mdPath = filePath.replace(/\.json$/, ".md");
-      if (fs12.existsSync(mdPath)) {
-        fs12.unlinkSync(mdPath);
-      }
-      const sessionLinksDir = path11.join(mnemeDir2, "session-links");
-      const linkPath = path11.join(sessionLinksDir, `${id}.json`);
-      if (fs12.existsSync(linkPath)) {
-        fs12.unlinkSync(linkPath);
-      }
-      if (sessionData?.createdAt) {
-        const date = new Date(sessionData.createdAt);
-        const year = date.getFullYear().toString();
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        rebuildSessionIndexForMonth(mnemeDir2, year, month);
-      }
-      writeAuditLog({
-        entity: "session",
-        action: "delete",
-        targetId: id
-      });
-    }
-    return c.json({
-      deleted: dryRun ? 0 : 1,
-      interactionsDeleted: dryRun ? 0 : interactionCount,
-      dryRun,
-      sessionId: id
-    });
-  } catch (error) {
-    console.error("Failed to delete session:", error);
-    return c.json({ error: "Failed to delete session" }, 500);
-  }
-});
-sessions.delete("/", async (c) => {
-  const dryRun = c.req.query("dry-run") === "true";
-  const projectFilter = c.req.query("project");
-  const repositoryFilter = c.req.query("repository");
-  const beforeFilter = c.req.query("before");
-  const mnemeDir2 = getMnemeDir();
-  const sessionsDir = path11.join(mnemeDir2, "sessions");
-  try {
-    const files = listDatedJsonFiles(sessionsDir);
-    const sessionsToDelete = [];
-    for (const filePath of files) {
-      try {
-        const content = fs12.readFileSync(filePath, "utf-8");
-        const session = JSON.parse(content);
-        let shouldDelete = true;
-        if (projectFilter) {
-          const sessionProject = session.context?.projectDir;
-          if (sessionProject !== projectFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (repositoryFilter && shouldDelete) {
-          const sessionRepo = session.context?.repository;
-          if (sessionRepo !== repositoryFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (beforeFilter && shouldDelete) {
-          const sessionDate = session.createdAt?.split("T")[0];
-          if (!sessionDate || sessionDate >= beforeFilter) {
-            shouldDelete = false;
-          }
-        }
-        if (shouldDelete) {
-          sessionsToDelete.push({ id: session.id, path: filePath });
-        }
-      } catch {
-      }
-    }
-    let totalInteractions = 0;
-    const db = openLocalDatabase(getProjectRoot());
-    if (db) {
-      for (const session of sessionsToDelete) {
-        totalInteractions += countInteractions(db, { sessionId: session.id });
-      }
-      if (!dryRun) {
-        for (const session of sessionsToDelete) {
-          deleteInteractions(db, session.id);
-          deleteBackups(db, session.id);
-        }
-      }
-      db.close();
-    }
-    if (!dryRun) {
-      for (const session of sessionsToDelete) {
-        fs12.unlinkSync(session.path);
-        const mdPath = session.path.replace(/\.json$/, ".md");
-        if (fs12.existsSync(mdPath)) {
-          fs12.unlinkSync(mdPath);
-        }
-        const sessionLinksDir = path11.join(mnemeDir2, "session-links");
-        const linkPath = path11.join(sessionLinksDir, `${session.id}.json`);
-        if (fs12.existsSync(linkPath)) {
-          fs12.unlinkSync(linkPath);
-        }
-        writeAuditLog({
-          entity: "session",
-          action: "delete",
-          targetId: session.id
-        });
-      }
-    }
-    return c.json({
-      deleted: dryRun ? 0 : sessionsToDelete.length,
-      interactionsDeleted: dryRun ? 0 : totalInteractions,
-      wouldDelete: sessionsToDelete.length,
-      dryRun,
-      filters: {
-        project: projectFilter || null,
-        repository: repositoryFilter || null,
-        before: beforeFilter || null
-      }
-    });
-  } catch (error) {
-    console.error("Failed to delete sessions:", error);
-    return c.json({ error: "Failed to delete sessions" }, 500);
-  }
-});
-sessions.get("/:id/interactions", async (c) => {
-  const rawId = sanitizeId(c.req.param("id"));
-  const shortId = toShortId(rawId);
-  const mnemeDir2 = getMnemeDir();
-  const sessionLinksDir = path11.join(mnemeDir2, "session-links");
-  const sessionsDir = path11.join(mnemeDir2, "sessions");
-  try {
-    const sessionFilePath = findJsonFileById(sessionsDir, shortId);
-    let projectDir = getProjectRoot();
-    let primaryClaudeSessionId = null;
-    if (rawId.length === 36 && rawId[8] === "-") {
-      primaryClaudeSessionId = rawId;
-    }
-    if (sessionFilePath) {
-      const sessionData = safeParseJsonFile(sessionFilePath);
-      if (sessionData?.context?.projectDir) {
-        projectDir = sessionData.context.projectDir;
-      }
-      if (sessionData?.sessionId && !primaryClaudeSessionId) {
-        primaryClaudeSessionId = sessionData.sessionId;
-      }
-    }
-    const db = openLocalDatabase(projectDir);
-    if (!db) {
-      return c.json({ interactions: [], count: 0 });
-    }
-    let masterId = shortId;
-    const myLinkFile = path11.join(sessionLinksDir, `${shortId}.json`);
-    if (fs12.existsSync(myLinkFile)) {
-      try {
-        const myLinkData = JSON.parse(fs12.readFileSync(myLinkFile, "utf-8"));
-        if (myLinkData.masterSessionId) {
-          masterId = myLinkData.masterSessionId;
-        }
-      } catch {
-      }
-    }
-    const sessionIds = [masterId];
-    const claudeSessionIds = [];
-    if (primaryClaudeSessionId) {
-      claudeSessionIds.push(primaryClaudeSessionId);
-    }
-    if (masterId !== shortId) {
-      sessionIds.push(shortId);
-    }
-    if (fs12.existsSync(sessionLinksDir)) {
-      const linkFiles = fs12.readdirSync(sessionLinksDir);
-      for (const linkFile of linkFiles) {
-        if (!linkFile.endsWith(".json")) continue;
-        const linkPath = path11.join(sessionLinksDir, linkFile);
-        try {
-          const linkData = JSON.parse(fs12.readFileSync(linkPath, "utf-8"));
-          if (linkData.masterSessionId === masterId) {
-            const childId = linkFile.replace(".json", "");
-            if (!sessionIds.includes(childId)) {
-              sessionIds.push(childId);
-            }
-            const childSessionFile = findJsonFileById(sessionsDir, childId);
-            if (childSessionFile) {
-              const childData = safeParseJsonFile(
-                childSessionFile
-              );
-              if (childData?.sessionId) {
-                claudeSessionIds.push(childData.sessionId);
-              }
-            }
-          }
-        } catch {
-        }
-      }
-    }
-    const sessionFiles = listDatedJsonFiles(sessionsDir);
-    for (const sessionFile of sessionFiles) {
-      try {
-        const sessionData = JSON.parse(fs12.readFileSync(sessionFile, "utf-8"));
-        if (sessionData.resumedFrom === masterId && sessionData.id !== masterId) {
-          if (!sessionIds.includes(sessionData.id)) {
-            sessionIds.push(sessionData.id);
-          }
-          if (sessionData.sessionId) {
-            claudeSessionIds.push(sessionData.sessionId);
-          }
-        }
-      } catch {
-      }
-    }
-    const interactions = claudeSessionIds.length > 0 ? getInteractionsByClaudeSessionIds(db, claudeSessionIds) : getInteractionsBySessionIds(db, sessionIds);
-    db.close();
-    const groupedInteractions = [];
-    let currentInteraction = null;
-    for (const interaction of interactions) {
-      if (interaction.role === "user") {
-        if (currentInteraction) {
-          groupedInteractions.push(currentInteraction);
-        }
-        let hasPlanMode;
-        let planTools;
-        let toolsUsed;
-        let toolDetails;
-        let inPlanMode;
-        let slashCommand;
-        let toolResults;
-        let progressEvents;
-        if (interaction.tool_calls) {
-          try {
-            const metadata = JSON.parse(interaction.tool_calls);
-            if (metadata.hasPlanMode) {
-              hasPlanMode = true;
-              planTools = metadata.planTools || [];
-            }
-            if (metadata.inPlanMode) {
-              inPlanMode = true;
-            }
-            if (metadata.toolsUsed && Array.isArray(metadata.toolsUsed) && metadata.toolsUsed.length > 0) {
-              toolsUsed = metadata.toolsUsed;
-            }
-            if (metadata.toolDetails && Array.isArray(metadata.toolDetails) && metadata.toolDetails.length > 0) {
-              toolDetails = metadata.toolDetails;
-            }
-            if (metadata.slashCommand) {
-              slashCommand = metadata.slashCommand;
-            }
-            if (metadata.toolResults && Array.isArray(metadata.toolResults) && metadata.toolResults.length > 0) {
-              toolResults = metadata.toolResults;
-            }
-            if (metadata.progressEvents && Array.isArray(metadata.progressEvents) && metadata.progressEvents.length > 0) {
-              progressEvents = metadata.progressEvents;
-            }
-          } catch {
-          }
-        }
-        currentInteraction = {
-          id: `int-${String(groupedInteractions.length + 1).padStart(3, "0")}`,
-          timestamp: interaction.timestamp,
-          user: interaction.content,
-          assistant: "",
-          thinking: null,
-          isCompactSummary: !!interaction.is_compact_summary,
-          ...hasPlanMode !== void 0 && { hasPlanMode },
-          ...planTools !== void 0 && planTools.length > 0 && { planTools },
-          ...toolsUsed !== void 0 && toolsUsed.length > 0 && { toolsUsed },
-          ...toolDetails !== void 0 && toolDetails.length > 0 && { toolDetails },
-          ...interaction.agent_id && { agentId: interaction.agent_id },
-          ...interaction.agent_type && { agentType: interaction.agent_type },
-          ...inPlanMode && { inPlanMode },
-          ...slashCommand && { slashCommand },
-          ...toolResults !== void 0 && toolResults.length > 0 && { toolResults },
-          ...progressEvents !== void 0 && progressEvents.length > 0 && { progressEvents }
-        };
-      } else if (interaction.role === "assistant" && currentInteraction) {
-        currentInteraction.assistant = interaction.content;
-        currentInteraction.thinking = interaction.thinking || null;
-      }
-    }
-    if (currentInteraction) {
-      groupedInteractions.push(currentInteraction);
-    }
-    return c.json({
-      interactions: groupedInteractions,
-      count: groupedInteractions.length
-    });
-  } catch (error) {
-    console.error("Failed to get session interactions:", error);
-    return c.json({ error: "Failed to get session interactions" }, 500);
   }
 });
 var sessions_default = sessions;
@@ -5342,13 +5326,13 @@ app.route("/api/dev-rules", dev_rules_default);
 app.route("/api/export", export_default);
 app.route("/api", analytics_default);
 app.route("/api", misc_default);
-var distPath = path12.join(import.meta.dirname, "public");
-if (fs13.existsSync(distPath)) {
+var distPath = path15.join(import.meta.dirname, "public");
+if (fs16.existsSync(distPath)) {
   app.use("/*", serveStatic({ root: distPath }));
   app.get("*", async (c) => {
-    const indexPath = path12.join(distPath, "index.html");
-    if (fs13.existsSync(indexPath)) {
-      const content = fs13.readFileSync(indexPath, "utf-8");
+    const indexPath = path15.join(distPath, "index.html");
+    if (fs16.existsSync(indexPath)) {
+      const content = fs16.readFileSync(indexPath, "utf-8");
       return c.html(content);
     }
     return c.notFound();
@@ -5357,7 +5341,7 @@ if (fs13.existsSync(distPath)) {
 var requestedPort = parseInt(process.env.PORT || "7777", 10);
 var maxPortAttempts = 10;
 var mnemeDir = getMnemeDir();
-if (fs13.existsSync(mnemeDir)) {
+if (fs16.existsSync(mnemeDir)) {
   try {
     const sessionsIndex = readRecentSessionIndexes(mnemeDir, 1);
     const decisionsIndex = readRecentDecisionIndexes(mnemeDir, 1);

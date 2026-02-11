@@ -9,15 +9,22 @@ function getLocale() {
 }
 
 export function formatDate(dateStr: string): string {
-  return format(new Date(dateStr), "yyyy/MM/dd", { locale: getLocale() });
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "-";
+  return format(d, "yyyy/MM/dd", { locale: getLocale() });
 }
 
 export function formatDateTime(dateStr: string): string {
-  return format(new Date(dateStr), "yyyy/MM/dd HH:mm:ss", {
-    locale: getLocale(),
-  });
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "-";
+  return format(d, "yyyy/MM/dd HH:mm:ss", { locale: getLocale() });
 }
 
 export function formatShortDate(dateStr: string): string {
-  return format(new Date(dateStr), "MM/dd", { locale: getLocale() });
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "-";
+  return format(d, "MM/dd", { locale: getLocale() });
 }
