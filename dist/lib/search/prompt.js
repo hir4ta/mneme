@@ -448,7 +448,7 @@ function searchApprovedRules(options) {
 // lib/search/core.ts
 import * as fs5 from "node:fs";
 import * as path5 from "node:path";
-function searchInteractions(keywords, projectPath, database, limit = 5) {
+function searchInteractions(keywords, projectPath, database, limit = 5, detail = "compact") {
   if (!database) return [];
   try {
     const stmt = database.prepare(`
@@ -465,14 +465,23 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
       LIMIT ?
     `);
     const rows = stmt.all(keywords.join(" OR "), projectPath, limit);
-    return rows.map((row) => ({
-      type: "interaction",
-      id: row.session_id,
-      title: `Interaction from ${row.timestamp}`,
-      snippet: (row.content_highlight || row.content).substring(0, 150),
-      score: 5,
-      matchedFields: ["content"]
-    }));
+    return rows.map((row) => {
+      const base = {
+        type: "interaction",
+        id: row.session_id,
+        title: `Interaction from ${row.timestamp}`,
+        score: 5,
+        matchedFields: ["content"],
+        createdAt: row.timestamp
+      };
+      if (detail === "summary") {
+        return {
+          ...base,
+          snippet: (row.content_highlight || row.content).substring(0, 150)
+        };
+      }
+      return base;
+    });
   } catch {
     try {
       const clauses = keywords.map(() => "(content LIKE ? OR thinking LIKE ?)");
@@ -486,26 +495,32 @@ function searchInteractions(keywords, projectPath, database, limit = 5) {
       `;
       const args = [projectPath];
       for (const keyword of keywords) {
-        const pattern = `%${keyword}%`;
-        args.push(pattern, pattern);
+        const p = `%${keyword}%`;
+        args.push(p, p);
       }
       args.push(limit);
       const stmt = database.prepare(sql);
       const rows = stmt.all(...args);
-      return rows.map((row) => ({
-        type: "interaction",
-        id: row.session_id,
-        title: `Interaction from ${row.timestamp}`,
-        snippet: row.snippet,
-        score: 3,
-        matchedFields: ["content"]
-      }));
+      return rows.map((row) => {
+        const base = {
+          type: "interaction",
+          id: row.session_id,
+          title: `Interaction from ${row.timestamp}`,
+          score: 3,
+          matchedFields: ["content"],
+          createdAt: row.timestamp
+        };
+        if (detail === "summary") {
+          return { ...base, snippet: row.snippet };
+        }
+        return base;
+      });
     } catch {
       return [];
     }
   }
 }
-function searchSessions(mnemeDir, keywords, limit = 5) {
+function searchSessions(mnemeDir, keywords, limit = 5, detail = "compact") {
   const sessionsDir = path5.join(mnemeDir, "sessions");
   const results = [];
   const pattern = new RegExp(keywords.map(escapeRegex).join("|"), "i");
@@ -563,14 +578,24 @@ function searchSessions(mnemeDir, keywords, limit = 5) {
         }
       }
       if (score > 0) {
-        results.push({
+        const base = {
           type: "session",
           id: session.id,
           title: title || session.id,
-          snippet: session.summary?.description || session.summary?.goal || "",
           score,
-          matchedFields
-        });
+          matchedFields,
+          tags: session.tags,
+          createdAt: session.createdAt
+        };
+        if (detail === "summary") {
+          results.push({
+            ...base,
+            snippet: session.summary?.description || session.summary?.goal || "",
+            goal: session.summary?.goal
+          });
+        } else {
+          results.push(base);
+        }
       }
     } catch {
     }
@@ -585,7 +610,8 @@ function searchKnowledge(options) {
     database = null,
     types = ["session", "interaction"],
     limit = 10,
-    offset = 0
+    offset = 0,
+    detail = "compact"
   } = options;
   const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
   if (keywords.length === 0) return [];
@@ -598,7 +624,9 @@ function searchKnowledge(options) {
   const fetchLimit = Math.max(limit + safeOffset, limit, 10);
   const normalizedTypes = new Set(types);
   if (normalizedTypes.has("session")) {
-    results.push(...searchSessions(mnemeDir, expandedKeywords, fetchLimit));
+    results.push(
+      ...searchSessions(mnemeDir, expandedKeywords, fetchLimit, detail)
+    );
   }
   if (normalizedTypes.has("interaction")) {
     results.push(
@@ -606,7 +634,8 @@ function searchKnowledge(options) {
         expandedKeywords,
         projectPath,
         database,
-        fetchLimit
+        fetchLimit,
+        detail
       )
     );
   }

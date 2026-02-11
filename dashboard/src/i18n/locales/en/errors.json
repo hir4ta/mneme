@@ -11,7 +11,8 @@
     "statistics": "Failed to load statistics",
     "graph": "Failed to load graph",
     "session": "Failed to load session",
-    "decision": "Failed to load decision"
+    "decision": "Failed to load decision",
+    "team": "Failed to load team data"
   },
   "sessionNotFound": "Session not found",
   "decisionNotFound": "Decision not found",

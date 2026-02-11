@@ -1,0 +1,24 @@
+{
+  "title": "チーム活動",
+  "subtitle": "チームの貢献とナレッジ品質の概要",
+  "members": "メンバー",
+  "totalSessions": "セッション",
+  "totalDecisions": "決定",
+  "totalPatterns": "パターン",
+  "contributions": "貢献",
+  "activityTimeline": "アクティビティタイムライン（30日間）",
+  "memberTable": "メンバー",
+  "name": "名前",
+  "sessions": "セッション",
+  "decisions": "決定",
+  "patterns": "パターン",
+  "lastActive": "最終活動日",
+  "quality": {
+    "title": "ナレッジ品質",
+    "approvalRate": "承認率",
+    "totalRules": "ルール合計",
+    "approved": "承認済み",
+    "topRules": "最も効果的なルール",
+    "leastEffective": "効果の低いルール"
+  }
+}

@@ -48,7 +48,7 @@ misc.get("/project", (c) => {
     // Ignore git config errors
   }
 
-  const version = "0.23.2";
+  const version = "0.24.0";
 
   return c.json({
     name: projectName,

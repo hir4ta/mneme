@@ -110,7 +110,7 @@ export function GraphPage() {
   }
 
   return (
-    <div className="flex min-h-full flex-col gap-4 pb-6">
+    <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden">
       <div className="mb-1">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
@@ -144,7 +144,7 @@ export function GraphPage() {
         onClearFocus={() => setFocusNodeId(null)}
       />
 
-      <div className="grid min-h-0 gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[1fr_340px]">
         <Card className="min-h-0 overflow-hidden">
           <CardContent className="relative p-0">
             {graphResult.isLoading ? (
@@ -160,16 +160,18 @@ export function GraphPage() {
           </CardContent>
         </Card>
 
-        <GraphSidebar
-          graphData={graphResult.graphData}
-          clusterStats={graphResult.clusterStats}
-          graphDensity={graphResult.graphDensity}
-          largestClusterSize={graphResult.largestClusterSize}
-          tagCounts={graphResult.tagCounts}
-          centralNodes={graphResult.centralNodes}
-          onNodeSelect={setSelectedNode}
-          structuralGaps={graphResult.structuralGaps}
-        />
+        <div className="min-h-0 overflow-y-auto">
+          <GraphSidebar
+            graphData={graphResult.graphData}
+            clusterStats={graphResult.clusterStats}
+            graphDensity={graphResult.graphDensity}
+            largestClusterSize={graphResult.largestClusterSize}
+            tagCounts={graphResult.tagCounts}
+            centralNodes={graphResult.centralNodes}
+            onNodeSelect={setSelectedNode}
+            structuralGaps={graphResult.structuralGaps}
+          />
+        </div>
       </div>
 
       <GraphDetailDialog

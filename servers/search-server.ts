@@ -9,6 +9,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import {
   type QueryableDb,
+  type SearchDetail,
   type SearchType,
   searchKnowledge,
 } from "../lib/search/core.js";
@@ -82,7 +83,12 @@ function getDb(): DatabaseSyncType | null {
 
 function search(
   query: string,
-  options: { types?: SearchType[]; limit?: number; offset?: number } = {},
+  options: {
+    types?: SearchType[];
+    limit?: number;
+    offset?: number;
+    detail?: SearchDetail;
+  } = {},
 ) {
   return searchKnowledge({
     query,
@@ -92,6 +98,7 @@ function search(
     types: options.types,
     limit: options.limit,
     offset: options.offset,
+    detail: options.detail,
   });
 }
 
@@ -158,9 +165,13 @@ server.registerTool(
         .describe(
           "Pagination offset (default: 0). For 50-unit paging: 0, 50, 100, ...",
         ),
+      detail: z
+        .enum(["compact", "summary"])
+        .optional()
+        .describe("Result detail level (default: compact)"),
     },
   },
-  async ({ query, types, limit, offset }) => {
+  async ({ query, types, limit, offset, detail }) => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
       return fail("Query must not be empty.");
@@ -172,6 +183,7 @@ server.registerTool(
         types,
         limit: pageLimit + 1,
         offset: pageOffset,
+        detail: detail ?? "compact",
       });
       const hasMore = results.length > pageLimit;
       const pageResults = hasMore ? results.slice(0, pageLimit) : results;

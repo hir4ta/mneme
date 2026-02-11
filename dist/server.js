@@ -1,6 +1,6 @@
 // dashboard/server/index.ts
-import fs16 from "node:fs";
-import path15 from "node:path";
+import fs17 from "node:fs";
+import path16 from "node:path";
 
 // node_modules/@hono/node-server/dist/index.mjs
 import { createServer as createServerHTTP } from "http";
@@ -666,10 +666,10 @@ var createStreamBody = (stream) => {
   });
   return body;
 };
-var getStats = (path16) => {
+var getStats = (path17) => {
   let stats;
   try {
-    stats = statSync(path16);
+    stats = statSync(path17);
   } catch {
   }
   return stats;
@@ -698,21 +698,21 @@ var serveStatic = (options = { root: "" }) => {
         return next();
       }
     }
-    let path16 = join(
+    let path17 = join(
       root,
       !optionPath && options.rewriteRequestPath ? options.rewriteRequestPath(filename, c) : filename
     );
-    let stats = getStats(path16);
+    let stats = getStats(path17);
     if (stats && stats.isDirectory()) {
       const indexFile = options.index ?? "index.html";
-      path16 = join(path16, indexFile);
-      stats = getStats(path16);
+      path17 = join(path17, indexFile);
+      stats = getStats(path17);
     }
     if (!stats) {
-      await options.onNotFound?.(path16, c);
+      await options.onNotFound?.(path17, c);
       return next();
     }
-    const mimeType = getMimeType(path16);
+    const mimeType = getMimeType(path17);
     c.header("Content-Type", mimeType || "application/octet-stream");
     if (options.precompressed && (!mimeType || COMPRESSIBLE_CONTENT_TYPE_REGEX.test(mimeType))) {
       const acceptEncodingSet = new Set(
@@ -722,12 +722,12 @@ var serveStatic = (options = { root: "" }) => {
         if (!acceptEncodingSet.has(encoding)) {
           continue;
         }
-        const precompressedStats = getStats(path16 + ENCODINGS[encoding]);
+        const precompressedStats = getStats(path17 + ENCODINGS[encoding]);
         if (precompressedStats) {
           c.header("Content-Encoding", encoding);
           c.header("Vary", "Accept-Encoding", { append: true });
           stats = precompressedStats;
-          path16 = path16 + ENCODINGS[encoding];
+          path17 = path17 + ENCODINGS[encoding];
           break;
         }
       }
@@ -741,7 +741,7 @@ var serveStatic = (options = { root: "" }) => {
       result = c.body(null);
     } else if (!range) {
       c.header("Content-Length", size.toString());
-      result = c.body(createStreamBody(createReadStream(path16)), 200);
+      result = c.body(createStreamBody(createReadStream(path17)), 200);
     } else {
       c.header("Accept-Ranges", "bytes");
       c.header("Date", stats.birthtime.toUTCString());
@@ -752,12 +752,12 @@ var serveStatic = (options = { root: "" }) => {
         end = size - 1;
       }
       const chunksize = end - start + 1;
-      const stream = createReadStream(path16, { start, end });
+      const stream = createReadStream(path17, { start, end });
       c.header("Content-Length", chunksize.toString());
       c.header("Content-Range", `bytes ${start}-${end}/${stats.size}`);
       result = c.body(createStreamBody(stream), 206);
     }
-    await options.onFound?.(path16, c);
+    await options.onFound?.(path17, c);
     return result;
   };
 };
@@ -879,26 +879,26 @@ var handleParsingNestedValues = (form, key, value) => {
 };
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = (path16) => {
-  const paths = path16.split("/");
+var splitPath = (path17) => {
+  const paths = path17.split("/");
   if (paths[0] === "") {
     paths.shift();
   }
   return paths;
 };
 var splitRoutingPath = (routePath) => {
-  const { groups, path: path16 } = extractGroupsFromPath(routePath);
-  const paths = splitPath(path16);
+  const { groups, path: path17 } = extractGroupsFromPath(routePath);
+  const paths = splitPath(path17);
   return replaceGroupMarks(paths, groups);
 };
-var extractGroupsFromPath = (path16) => {
+var extractGroupsFromPath = (path17) => {
   const groups = [];
-  path16 = path16.replace(/\{[^}]+\}/g, (match2, index) => {
+  path17 = path17.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
     groups.push([mark, match2]);
     return mark;
   });
-  return { groups, path: path16 };
+  return { groups, path: path17 };
 };
 var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -955,8 +955,8 @@ var getPath = (request) => {
       const queryIndex = url.indexOf("?", i);
       const hashIndex = url.indexOf("#", i);
       const end = queryIndex === -1 ? hashIndex === -1 ? void 0 : hashIndex : hashIndex === -1 ? queryIndex : Math.min(queryIndex, hashIndex);
-      const path16 = url.slice(start, end);
-      return tryDecodeURI(path16.includes("%25") ? path16.replace(/%25/g, "%2525") : path16);
+      const path17 = url.slice(start, end);
+      return tryDecodeURI(path17.includes("%25") ? path17.replace(/%25/g, "%2525") : path17);
     } else if (charCode === 63 || charCode === 35) {
       break;
     }
@@ -973,11 +973,11 @@ var mergePath = (base, sub, ...rest) => {
   }
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
 };
-var checkOptionalParameter = (path16) => {
-  if (path16.charCodeAt(path16.length - 1) !== 63 || !path16.includes(":")) {
+var checkOptionalParameter = (path17) => {
+  if (path17.charCodeAt(path17.length - 1) !== 63 || !path17.includes(":")) {
     return null;
   }
-  const segments = path16.split("/");
+  const segments = path17.split("/");
   const results = [];
   let basePath = "";
   segments.forEach((segment) => {
@@ -1118,9 +1118,9 @@ var HonoRequest = class {
    */
   path;
   bodyCache = {};
-  constructor(request, path16 = "/", matchResult = [[]]) {
+  constructor(request, path17 = "/", matchResult = [[]]) {
     this.raw = request;
-    this.path = path16;
+    this.path = path17;
     this.#matchResult = matchResult;
     this.#validatedData = {};
   }
@@ -1856,8 +1856,8 @@ var Hono = class _Hono {
         return this;
       };
     });
-    this.on = (method, path16, ...handlers) => {
-      for (const p of [path16].flat()) {
+    this.on = (method, path17, ...handlers) => {
+      for (const p of [path17].flat()) {
         this.#path = p;
         for (const m of [method].flat()) {
           handlers.map((handler) => {
@@ -1914,8 +1914,8 @@ var Hono = class _Hono {
    * app.route("/api", app2) // GET /api/user
    * ```
    */
-  route(path16, app2) {
-    const subApp = this.basePath(path16);
+  route(path17, app2) {
+    const subApp = this.basePath(path17);
     app2.routes.map((r) => {
       let handler;
       if (app2.errorHandler === errorHandler) {
@@ -1941,9 +1941,9 @@ var Hono = class _Hono {
    * const api = new Hono().basePath('/api')
    * ```
    */
-  basePath(path16) {
+  basePath(path17) {
     const subApp = this.#clone();
-    subApp._basePath = mergePath(this._basePath, path16);
+    subApp._basePath = mergePath(this._basePath, path17);
     return subApp;
   }
   /**
@@ -2017,7 +2017,7 @@ var Hono = class _Hono {
    * })
    * ```
    */
-  mount(path16, applicationHandler, options) {
+  mount(path17, applicationHandler, options) {
     let replaceRequest;
     let optionHandler;
     if (options) {
@@ -2044,7 +2044,7 @@ var Hono = class _Hono {
       return [c.env, executionContext];
     };
     replaceRequest ||= (() => {
-      const mergedPath = mergePath(this._basePath, path16);
+      const mergedPath = mergePath(this._basePath, path17);
       const pathPrefixLength = mergedPath === "/" ? 0 : mergedPath.length;
       return (request) => {
         const url = new URL(request.url);
@@ -2059,14 +2059,14 @@ var Hono = class _Hono {
       }
       await next();
     };
-    this.#addRoute(METHOD_NAME_ALL, mergePath(path16, "*"), handler);
+    this.#addRoute(METHOD_NAME_ALL, mergePath(path17, "*"), handler);
     return this;
   }
-  #addRoute(method, path16, handler) {
+  #addRoute(method, path17, handler) {
     method = method.toUpperCase();
-    path16 = mergePath(this._basePath, path16);
-    const r = { basePath: this._basePath, path: path16, method, handler };
-    this.router.add(method, path16, [handler, r]);
+    path17 = mergePath(this._basePath, path17);
+    const r = { basePath: this._basePath, path: path17, method, handler };
+    this.router.add(method, path17, [handler, r]);
     this.routes.push(r);
   }
   #handleError(err, c) {
@@ -2079,10 +2079,10 @@ var Hono = class _Hono {
     if (method === "HEAD") {
       return (async () => new Response(null, await this.#dispatch(request, executionCtx, env, "GET")))();
     }
-    const path16 = this.getPath(request, { env });
-    const matchResult = this.router.match(method, path16);
+    const path17 = this.getPath(request, { env });
+    const matchResult = this.router.match(method, path17);
     const c = new Context(request, {
-      path: path16,
+      path: path17,
       matchResult,
       env,
       executionCtx,
@@ -2182,7 +2182,7 @@ var Hono = class _Hono {
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
-function match(method, path16) {
+function match(method, path17) {
   const matchers = this.buildAllMatchers();
   const match2 = ((method2, path22) => {
     const matcher = matchers[method2] || matchers[METHOD_NAME_ALL];
@@ -2198,7 +2198,7 @@ function match(method, path16) {
     return [matcher[1][index], match3];
   });
   this.match = match2;
-  return match2(method, path16);
+  return match2(method, path17);
 }
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
@@ -2313,12 +2313,12 @@ var Node = class _Node {
 var Trie = class {
   #context = { varIndex: 0 };
   #root = new Node();
-  insert(path16, index, pathErrorCheckOnly) {
+  insert(path17, index, pathErrorCheckOnly) {
     const paramAssoc = [];
     const groups = [];
     for (let i = 0; ; ) {
       let replaced = false;
-      path16 = path16.replace(/\{[^}]+\}/g, (m) => {
+      path17 = path17.replace(/\{[^}]+\}/g, (m) => {
         const mark = `@\\${i}`;
         groups[i] = [mark, m];
         i++;
@@ -2329,7 +2329,7 @@ var Trie = class {
         break;
       }
     }
-    const tokens = path16.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
+    const tokens = path17.match(/(?::[^\/]+)|(?:\/\*$)|./g) || [];
     for (let i = groups.length - 1; i >= 0; i--) {
       const [mark] = groups[i];
       for (let j = tokens.length - 1; j >= 0; j--) {
@@ -2368,9 +2368,9 @@ var Trie = class {
 // node_modules/hono/dist/router/reg-exp-router/router.js
 var nullMatcher = [/^$/, [], /* @__PURE__ */ Object.create(null)];
 var wildcardRegExpCache = /* @__PURE__ */ Object.create(null);
-function buildWildcardRegExp(path16) {
-  return wildcardRegExpCache[path16] ??= new RegExp(
-    path16 === "*" ? "" : `^${path16.replace(
+function buildWildcardRegExp(path17) {
+  return wildcardRegExpCache[path17] ??= new RegExp(
+    path17 === "*" ? "" : `^${path17.replace(
       /\/\*$|([.\\+*[^\]$()])/g,
       (_, metaChar) => metaChar ? `\\${metaChar}` : "(?:|/.*)"
     )}$`
@@ -2392,17 +2392,17 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   );
   const staticMap = /* @__PURE__ */ Object.create(null);
   for (let i = 0, j = -1, len = routesWithStaticPathFlag.length; i < len; i++) {
-    const [pathErrorCheckOnly, path16, handlers] = routesWithStaticPathFlag[i];
+    const [pathErrorCheckOnly, path17, handlers] = routesWithStaticPathFlag[i];
     if (pathErrorCheckOnly) {
-      staticMap[path16] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
+      staticMap[path17] = [handlers.map(([h]) => [h, /* @__PURE__ */ Object.create(null)]), emptyParam];
     } else {
       j++;
     }
     let paramAssoc;
     try {
-      paramAssoc = trie.insert(path16, j, pathErrorCheckOnly);
+      paramAssoc = trie.insert(path17, j, pathErrorCheckOnly);
     } catch (e) {
-      throw e === PATH_ERROR ? new UnsupportedPathError(path16) : e;
+      throw e === PATH_ERROR ? new UnsupportedPathError(path17) : e;
     }
     if (pathErrorCheckOnly) {
       continue;
@@ -2436,12 +2436,12 @@ function buildMatcherFromPreprocessedRoutes(routes) {
   }
   return [regexp, handlerMap, staticMap];
 }
-function findMiddleware(middleware, path16) {
+function findMiddleware(middleware, path17) {
   if (!middleware) {
     return void 0;
   }
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) {
-    if (buildWildcardRegExp(k).test(path16)) {
+    if (buildWildcardRegExp(k).test(path17)) {
       return [...middleware[k]];
     }
   }
@@ -2455,7 +2455,7 @@ var RegExpRouter = class {
     this.#middleware = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
     this.#routes = { [METHOD_NAME_ALL]: /* @__PURE__ */ Object.create(null) };
   }
-  add(method, path16, handler) {
+  add(method, path17, handler) {
     const middleware = this.#middleware;
     const routes = this.#routes;
     if (!middleware || !routes) {
@@ -2470,18 +2470,18 @@ var RegExpRouter = class {
         });
       });
     }
-    if (path16 === "/*") {
-      path16 = "*";
+    if (path17 === "/*") {
+      path17 = "*";
     }
-    const paramCount = (path16.match(/\/:/g) || []).length;
-    if (/\*$/.test(path16)) {
-      const re = buildWildcardRegExp(path16);
+    const paramCount = (path17.match(/\/:/g) || []).length;
+    if (/\*$/.test(path17)) {
+      const re = buildWildcardRegExp(path17);
       if (method === METHOD_NAME_ALL) {
         Object.keys(middleware).forEach((m) => {
-          middleware[m][path16] ||= findMiddleware(middleware[m], path16) || findMiddleware(middleware[METHOD_NAME_ALL], path16) || [];
+          middleware[m][path17] ||= findMiddleware(middleware[m], path17) || findMiddleware(middleware[METHOD_NAME_ALL], path17) || [];
         });
       } else {
-        middleware[method][path16] ||= findMiddleware(middleware[method], path16) || findMiddleware(middleware[METHOD_NAME_ALL], path16) || [];
+        middleware[method][path17] ||= findMiddleware(middleware[method], path17) || findMiddleware(middleware[METHOD_NAME_ALL], path17) || [];
       }
       Object.keys(middleware).forEach((m) => {
         if (method === METHOD_NAME_ALL || method === m) {
@@ -2499,7 +2499,7 @@ var RegExpRouter = class {
       });
       return;
     }
-    const paths = checkOptionalParameter(path16) || [path16];
+    const paths = checkOptionalParameter(path17) || [path17];
     for (let i = 0, len = paths.length; i < len; i++) {
       const path22 = paths[i];
       Object.keys(routes).forEach((m) => {
@@ -2526,13 +2526,13 @@ var RegExpRouter = class {
     const routes = [];
     let hasOwnRoute = method === METHOD_NAME_ALL;
     [this.#middleware, this.#routes].forEach((r) => {
-      const ownRoute = r[method] ? Object.keys(r[method]).map((path16) => [path16, r[method][path16]]) : [];
+      const ownRoute = r[method] ? Object.keys(r[method]).map((path17) => [path17, r[method][path17]]) : [];
       if (ownRoute.length !== 0) {
         hasOwnRoute ||= true;
         routes.push(...ownRoute);
       } else if (method !== METHOD_NAME_ALL) {
         routes.push(
-          ...Object.keys(r[METHOD_NAME_ALL]).map((path16) => [path16, r[METHOD_NAME_ALL][path16]])
+          ...Object.keys(r[METHOD_NAME_ALL]).map((path17) => [path17, r[METHOD_NAME_ALL][path17]])
         );
       }
     });
@@ -2552,13 +2552,13 @@ var SmartRouter = class {
   constructor(init) {
     this.#routers = init.routers;
   }
-  add(method, path16, handler) {
+  add(method, path17, handler) {
     if (!this.#routes) {
       throw new Error(MESSAGE_MATCHER_IS_ALREADY_BUILT);
     }
-    this.#routes.push([method, path16, handler]);
+    this.#routes.push([method, path17, handler]);
   }
-  match(method, path16) {
+  match(method, path17) {
     if (!this.#routes) {
       throw new Error("Fatal error");
     }
@@ -2573,7 +2573,7 @@ var SmartRouter = class {
         for (let i2 = 0, len2 = routes.length; i2 < len2; i2++) {
           router.add(...routes[i2]);
         }
-        res = router.match(method, path16);
+        res = router.match(method, path17);
       } catch (e) {
         if (e instanceof UnsupportedPathError) {
           continue;
@@ -2617,10 +2617,10 @@ var Node2 = class _Node2 {
     }
     this.#patterns = [];
   }
-  insert(method, path16, handler) {
+  insert(method, path17, handler) {
     this.#order = ++this.#order;
     let curNode = this;
-    const parts = splitRoutingPath(path16);
+    const parts = splitRoutingPath(path17);
     const possibleKeys = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const p = parts[i];
@@ -2671,12 +2671,12 @@ var Node2 = class _Node2 {
     }
     return handlerSets;
   }
-  search(method, path16) {
+  search(method, path17) {
     const handlerSets = [];
     this.#params = emptyParams;
     const curNode = this;
     let curNodes = [curNode];
-    const parts = splitPath(path16);
+    const parts = splitPath(path17);
     const curNodesQueue = [];
     for (let i = 0, len = parts.length; i < len; i++) {
       const part = parts[i];
@@ -2764,18 +2764,18 @@ var TrieRouter = class {
   constructor() {
     this.#node = new Node2();
   }
-  add(method, path16, handler) {
-    const results = checkOptionalParameter(path16);
+  add(method, path17, handler) {
+    const results = checkOptionalParameter(path17);
     if (results) {
       for (let i = 0, len = results.length; i < len; i++) {
         this.#node.insert(method, results[i], handler);
       }
       return;
     }
-    this.#node.insert(method, path16, handler);
+    this.#node.insert(method, path17, handler);
   }
-  match(method, path16) {
-    return this.#node.search(method, path16);
+  match(method, path17) {
+    return this.#node.search(method, path17);
   }
 };
 
@@ -3460,7 +3460,8 @@ function collectDevRules() {
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
         context: entry.context ? String(entry.context) : void 0,
         reasoning: entry.reasoning ? String(entry.reasoning) : void 0,
-        alternatives: alts
+        alternatives: alts,
+        relatedSessions: Array.isArray(entry.relatedSessions) ? entry.relatedSessions.map((s) => String(s)) : void 0
       });
     }
   }
@@ -3489,7 +3490,8 @@ function collectDevRules() {
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
         context: entry.context ? String(entry.context) : void 0,
         patternType: entry.type ? String(entry.type) : void 0,
-        pattern: entry.pattern ? String(entry.pattern) : void 0
+        pattern: entry.pattern ? String(entry.pattern) : void 0,
+        sourceId: entry.sourceId ? String(entry.sourceId) : void 0
       });
     }
   }
@@ -3501,6 +3503,12 @@ function collectDevRules() {
     for (const entry of doc.items) {
       const id = String(entry.id || "");
       if (!id) continue;
+      const sourceRef = entry.sourceRef && typeof entry.sourceRef === "object" && !Array.isArray(entry.sourceRef) ? {
+        type: String(
+          entry.sourceRef.type || ""
+        ),
+        id: String(entry.sourceRef.id || "")
+      } : void 0;
       items.push({
         id,
         type: "rule",
@@ -3513,7 +3521,10 @@ function collectDevRules() {
         createdAt: String(entry.createdAt || doc.createdAt || ""),
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : void 0,
         rationale: entry.rationale ? String(entry.rationale) : void 0,
-        category: entry.category ? String(entry.category) : void 0
+        category: entry.category ? String(entry.category) : void 0,
+        sourceRef,
+        appliedCount: typeof entry.appliedCount === "number" ? entry.appliedCount : void 0,
+        acceptedCount: typeof entry.acceptedCount === "number" ? entry.acceptedCount : void 0
       });
     }
   }
@@ -3689,10 +3700,13 @@ analyticsGraph.get("/knowledge-graph", async (c) => {
         createdAt: item.createdAt,
         unitSubtype: item.type || null,
         sourceId: item.sourceFile || null,
-        appliedCount: null,
-        acceptedCount: null,
+        appliedCount: item.appliedCount ?? null,
+        acceptedCount: item.acceptedCount ?? null,
         branch: null,
-        resumedFrom: null
+        resumedFrom: null,
+        relatedSessions: item.relatedSessions || null,
+        sourceRef: item.sourceRef || null,
+        patternSourceId: item.sourceId || null
       }))
     ];
     const tagToNodes = /* @__PURE__ */ new Map();
@@ -3744,7 +3758,56 @@ analyticsGraph.get("/knowledge-graph", async (c) => {
         }
       }
     }
-    const edges = [...tagEdges, ...resumedEdges];
+    const relationEdges = [];
+    for (const node of nodes) {
+      if (node.entityType === "rule" && node.relatedSessions) {
+        const related = node.relatedSessions;
+        for (const sessionId of related) {
+          const targetId = `session:${sessionId}`;
+          if (nodeIdSet.has(targetId)) {
+            relationEdges.push({
+              source: node.id,
+              target: targetId,
+              weight: 1,
+              sharedTags: [],
+              edgeType: "relatedSession",
+              directed: true
+            });
+          }
+        }
+      }
+      if (node.entityType === "rule" && node.sourceRef) {
+        const ref = node.sourceRef;
+        if (ref.type && ref.id) {
+          const targetId = `rule:${ref.type}:${ref.id}`;
+          if (nodeIdSet.has(targetId)) {
+            relationEdges.push({
+              source: node.id,
+              target: targetId,
+              weight: 1,
+              sharedTags: [],
+              edgeType: "sourceRef",
+              directed: true
+            });
+          }
+        }
+      }
+      if (node.entityType === "rule" && node.patternSourceId) {
+        const sessionId = node.patternSourceId;
+        const targetId = `session:${sessionId}`;
+        if (nodeIdSet.has(targetId)) {
+          relationEdges.push({
+            source: node.id,
+            target: targetId,
+            weight: 1,
+            sharedTags: [],
+            edgeType: "sessionRef",
+            directed: true
+          });
+        }
+      }
+    }
+    const edges = [...tagEdges, ...resumedEdges, ...relationEdges];
     return c.json({ nodes, edges });
   } catch (error) {
     console.error("Failed to build knowledge graph:", error);
@@ -4427,7 +4490,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.23.2";
+  const version = "0.24.0";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5300,6 +5363,178 @@ sessions.get("/:id/markdown", async (c) => {
 });
 var sessions_default = sessions;
 
+// dashboard/server/routes/team.ts
+import fs16 from "node:fs";
+import path15 from "node:path";
+var team = new Hono2();
+function collectTeamData(mnemeDir2) {
+  const sessionsIndex = readAllSessionIndexes(mnemeDir2);
+  const decisionsIndex = readAllDecisionIndexes(mnemeDir2);
+  const memberMap = /* @__PURE__ */ new Map();
+  function ensureMember(name) {
+    if (!memberMap.has(name)) {
+      memberMap.set(name, {
+        sessions: 0,
+        decisions: 0,
+        patterns: 0,
+        rules: 0,
+        lastActive: ""
+      });
+    }
+    return memberMap.get(name);
+  }
+  function updateLastActive(member, date) {
+    if (date && date > member.lastActive) {
+      member.lastActive = date;
+    }
+  }
+  for (const item of sessionsIndex.items) {
+    if (!item.user) continue;
+    const member = ensureMember(item.user);
+    member.sessions++;
+    updateLastActive(member, item.createdAt);
+  }
+  for (const item of decisionsIndex.items) {
+    if (!item.user) continue;
+    const member = ensureMember(item.user);
+    member.decisions++;
+    updateLastActive(member, item.createdAt);
+  }
+  const patDir = patternsDir();
+  let totalPatterns = 0;
+  if (fs16.existsSync(patDir)) {
+    const patternFiles = listJsonFiles(patDir);
+    for (const filePath of patternFiles) {
+      const doc = safeParseJsonFile(filePath);
+      const entries = doc?.items || doc?.patterns || [];
+      totalPatterns += entries.length;
+    }
+  }
+  if (totalPatterns > 0 && memberMap.size > 0) {
+    let primaryMember = memberMap.values().next().value;
+    for (const stats of memberMap.values()) {
+      if (stats.sessions > (primaryMember?.sessions ?? 0)) {
+        primaryMember = stats;
+      }
+    }
+    if (primaryMember) {
+      primaryMember.patterns = totalPatterns;
+    }
+  }
+  return { memberMap, sessionsIndex, decisionsIndex };
+}
+team.get("/overview", async (c) => {
+  try {
+    const mnemeDir2 = getMnemeDir();
+    const { memberMap } = collectTeamData(mnemeDir2);
+    const members = Array.from(memberMap.entries()).map(([name, stats]) => ({ name, ...stats })).sort((a, b) => b.sessions - a.sessions);
+    return c.json({ members });
+  } catch (error) {
+    console.error("Failed to get team overview:", error);
+    return c.json({ error: "Failed to get team overview" }, 500);
+  }
+});
+team.get("/activity", async (c) => {
+  try {
+    const mnemeDir2 = getMnemeDir();
+    const daysParam = Number.parseInt(c.req.query("days") || "30", 10);
+    const safeDays = Math.min(Math.max(1, daysParam), 365);
+    const { sessionsIndex, decisionsIndex } = collectTeamData(mnemeDir2);
+    const now = /* @__PURE__ */ new Date();
+    const startDate = new Date(
+      now.getTime() - (safeDays - 1) * 24 * 60 * 60 * 1e3
+    );
+    const activityByDate = {};
+    for (let i = 0; i < safeDays; i++) {
+      const d = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1e3);
+      const dateKey = d.toISOString().split("T")[0];
+      activityByDate[dateKey] = {};
+    }
+    for (const session of sessionsIndex.items) {
+      if (!session.user) continue;
+      const dateKey = session.createdAt.split("T")[0];
+      if (activityByDate[dateKey]) {
+        if (!activityByDate[dateKey][session.user]) {
+          activityByDate[dateKey][session.user] = {
+            sessions: 0,
+            decisions: 0
+          };
+        }
+        activityByDate[dateKey][session.user].sessions++;
+      }
+    }
+    for (const decision of decisionsIndex.items) {
+      if (!decision.user) continue;
+      const dateKey = decision.createdAt.split("T")[0];
+      if (activityByDate[dateKey]) {
+        if (!activityByDate[dateKey][decision.user]) {
+          activityByDate[dateKey][decision.user] = {
+            sessions: 0,
+            decisions: 0
+          };
+        }
+        activityByDate[dateKey][decision.user].decisions++;
+      }
+    }
+    const activity = Object.entries(activityByDate).map(([date, members]) => ({ date, members })).sort((a, b) => a.date.localeCompare(b.date));
+    return c.json({ activity, days: safeDays });
+  } catch (error) {
+    console.error("Failed to get team activity:", error);
+    return c.json({ error: "Failed to get team activity" }, 500);
+  }
+});
+team.get("/quality", async (c) => {
+  try {
+    const rDir = rulesDir();
+    let totalRules = 0;
+    let approvedRules = 0;
+    const topRules = [];
+    if (fs16.existsSync(rDir)) {
+      for (const ruleFile of ["dev-rules", "review-guidelines"]) {
+        const filePath = path15.join(rDir, `${ruleFile}.json`);
+        const doc = safeParseJsonFile(filePath);
+        if (!doc?.items) continue;
+        for (const item of doc.items) {
+          totalRules++;
+          if (item.status === "approved") approvedRules++;
+          const applied = typeof item.appliedCount === "number" ? item.appliedCount : 0;
+          const accepted = typeof item.acceptedCount === "number" ? item.acceptedCount : 0;
+          if (applied > 0) {
+            topRules.push({
+              id: String(item.id || ""),
+              text: String(item.text || item.title || item.rule || ""),
+              appliedCount: applied,
+              acceptedCount: accepted
+            });
+          }
+        }
+      }
+    }
+    topRules.sort((a, b) => {
+      const rateA = a.appliedCount > 0 ? a.acceptedCount / a.appliedCount : 0;
+      const rateB = b.appliedCount > 0 ? b.acceptedCount / b.appliedCount : 0;
+      return rateB - rateA;
+    });
+    const withApplied = topRules.filter((r) => r.appliedCount > 0);
+    const least = [...withApplied].sort((a, b) => {
+      const rateA = a.acceptedCount / a.appliedCount;
+      const rateB = b.acceptedCount / b.appliedCount;
+      return rateA - rateB;
+    }).slice(0, 5);
+    return c.json({
+      approvalRate: totalRules > 0 ? Math.round(approvedRules / totalRules * 100) : 0,
+      totalRules,
+      approvedRules,
+      topRules: topRules.slice(0, 5),
+      leastEffective: least
+    });
+  } catch (error) {
+    console.error("Failed to get team quality:", error);
+    return c.json({ error: "Failed to get team quality" }, 500);
+  }
+});
+var team_default = team;
+
 // dashboard/server/index.ts
 var app = new Hono2();
 app.use(
@@ -5318,15 +5553,16 @@ app.route("/api/rules", rules_default);
 app.route("/api/patterns", patterns_default);
 app.route("/api/dev-rules", dev_rules_default);
 app.route("/api/export", export_default);
+app.route("/api/team", team_default);
 app.route("/api", analytics_default);
 app.route("/api", misc_default);
-var distPath = path15.join(import.meta.dirname, "public");
-if (fs16.existsSync(distPath)) {
+var distPath = path16.join(import.meta.dirname, "public");
+if (fs17.existsSync(distPath)) {
   app.use("/*", serveStatic({ root: distPath }));
   app.get("*", async (c) => {
-    const indexPath = path15.join(distPath, "index.html");
-    if (fs16.existsSync(indexPath)) {
-      const content = fs16.readFileSync(indexPath, "utf-8");
+    const indexPath = path16.join(distPath, "index.html");
+    if (fs17.existsSync(indexPath)) {
+      const content = fs17.readFileSync(indexPath, "utf-8");
       return c.html(content);
     }
     return c.notFound();
@@ -5335,7 +5571,7 @@ if (fs16.existsSync(distPath)) {
 var requestedPort = parseInt(process.env.PORT || "7777", 10);
 var maxPortAttempts = 10;
 var mnemeDir = getMnemeDir();
-if (fs16.existsSync(mnemeDir)) {
+if (fs17.existsSync(mnemeDir)) {
   try {
     const sessionsIndex = readRecentSessionIndexes(mnemeDir, 1);
     const decisionsIndex = readRecentDecisionIndexes(mnemeDir, 1);

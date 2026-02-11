@@ -79,6 +79,13 @@
       "rule": "開発ルール"
     }
   },
+  "pipeline": {
+    "title": "ナレッジパイプライン",
+    "sessions": "セッション",
+    "decisions": "決定",
+    "patterns": "パターン",
+    "rules": "ルール"
+  },
   "gaps": {
     "title": "構造ギャップ",
     "empty": "ギャップなし",

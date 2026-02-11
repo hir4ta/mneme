@@ -38,7 +38,7 @@ Options:
 
 Read all data from the project's `.mneme/` directory. Filter by period using `createdAt` / `updatedAt` timestamps.
 
-**Sessions** — Read all `.mneme/sessions/YYYY/MM/*.json`:
+**Sessions** — Read all `.mneme/sessions/YYYY/MM/*.json` (also collect `context.user.name` for team attribution):
 ```
 Key fields:
   - title, sessionType, tags, createdAt
@@ -128,6 +128,46 @@ Get `projectName` and `repository` from any session's `context` field.
 4 KPIs: Sessions, Decisions, Patterns, Rule Changes.
 Use `data-type` attribute for color coding.
 
+#### Section 2.5: Team Contributions (conditional)
+
+**Condition**: Only render this section if there are 2 or more unique users found in session `context.user.name` fields. For solo projects (1 user), skip this section entirely.
+
+Collect per-user counts by iterating sessions (`context.user.name`), decisions (`user.name`), and pattern files (filename convention `{user}.json`).
+
+```html
+<section class="section">
+  <h2>
+    <span data-i18n="teamEn">Team Contributions</span>
+    <span data-i18n="teamJa">チーム貢献</span>
+  </h2>
+  <div class="team-grid">
+    <article class="team-card">
+      <div class="team-name">{userName}</div>
+      <div class="team-stats">
+        <span class="team-stat">
+          <span class="team-stat-value">{sessionCount}</span>
+          <span class="team-stat-label">Sessions</span>
+        </span>
+        <span class="team-stat">
+          <span class="team-stat-value">{decisionCount}</span>
+          <span class="team-stat-label">Decisions</span>
+        </span>
+        <span class="team-stat">
+          <span class="team-stat-value">{patternCount}</span>
+          <span class="team-stat-label">Patterns</span>
+        </span>
+      </div>
+      <div class="team-bar">
+        <div class="team-bar-fill" style="width:{sessionPercentage}%; background: var(--session);"></div>
+      </div>
+    </article>
+    <!-- Repeat for each team member -->
+  </div>
+</section>
+```
+
+Sort members by session count descending.
+
 #### Section 3: Development Activity Summary (AI-generated)
 
 ```html
@@ -147,6 +187,7 @@ Analyze ALL sessions and generate a 3-5 paragraph narrative summary:
 - Key outcomes and achievements
 - Notable technical challenges and how they were resolved
 - Trends (e.g., "refactoring was the main focus" or "multiple bug fixes across modules")
+- **Team contributions** (if multiple users): who worked on what, collaboration patterns (same branch/tags), notable individual contributions
 
 Write in a style that is informative for junior engineers — explain WHY things were done, not just WHAT.
 Make the summary bilingual using `data-i18n-item="en"` / `data-i18n-item="ja"` spans.

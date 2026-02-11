@@ -59,10 +59,13 @@ analyticsGraph.get("/knowledge-graph", async (c) => {
         createdAt: item.createdAt,
         unitSubtype: (item.type as string) || null,
         sourceId: item.sourceFile || null,
-        appliedCount: null,
-        acceptedCount: null,
+        appliedCount: item.appliedCount ?? null,
+        acceptedCount: item.acceptedCount ?? null,
         branch: null,
         resumedFrom: null,
+        relatedSessions: item.relatedSessions || null,
+        sourceRef: item.sourceRef || null,
+        patternSourceId: item.sourceId || null,
       })),
     ];
 
@@ -135,7 +138,78 @@ analyticsGraph.get("/knowledge-graph", async (c) => {
       }
     }
 
-    const edges = [...tagEdges, ...resumedEdges];
+    // Build cross-entity relationship edges
+    const relationEdges: typeof tagEdges = [];
+
+    for (const node of nodes) {
+      // Decision -> Session (via relatedSessions)
+      if (
+        node.entityType === "rule" &&
+        (node as Record<string, unknown>).relatedSessions
+      ) {
+        const related = (node as Record<string, unknown>)
+          .relatedSessions as string[];
+        for (const sessionId of related) {
+          const targetId = `session:${sessionId}`;
+          if (nodeIdSet.has(targetId)) {
+            relationEdges.push({
+              source: node.id,
+              target: targetId,
+              weight: 1,
+              sharedTags: [],
+              edgeType: "relatedSession" as (typeof tagEdges)[0]["edgeType"],
+              directed: true,
+            });
+          }
+        }
+      }
+
+      // Rule -> Decision/Pattern (via sourceRef)
+      if (
+        node.entityType === "rule" &&
+        (node as Record<string, unknown>).sourceRef
+      ) {
+        const ref = (node as Record<string, unknown>).sourceRef as {
+          type: string;
+          id: string;
+        };
+        if (ref.type && ref.id) {
+          const targetId = `rule:${ref.type}:${ref.id}`;
+          if (nodeIdSet.has(targetId)) {
+            relationEdges.push({
+              source: node.id,
+              target: targetId,
+              weight: 1,
+              sharedTags: [],
+              edgeType: "sourceRef" as (typeof tagEdges)[0]["edgeType"],
+              directed: true,
+            });
+          }
+        }
+      }
+
+      // Pattern -> Session (via sourceId/sessionRef)
+      if (
+        node.entityType === "rule" &&
+        (node as Record<string, unknown>).patternSourceId
+      ) {
+        const sessionId = (node as Record<string, unknown>)
+          .patternSourceId as string;
+        const targetId = `session:${sessionId}`;
+        if (nodeIdSet.has(targetId)) {
+          relationEdges.push({
+            source: node.id,
+            target: targetId,
+            weight: 1,
+            sharedTags: [],
+            edgeType: "sessionRef" as (typeof tagEdges)[0]["edgeType"],
+            directed: true,
+          });
+        }
+      }
+    }
+
+    const edges = [...tagEdges, ...resumedEdges, ...relationEdges];
 
     return c.json({ nodes, edges });
   } catch (error) {

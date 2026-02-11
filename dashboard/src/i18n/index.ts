@@ -11,6 +11,7 @@ import enLayout from "./locales/en/layout.json";
 import enRules from "./locales/en/rules.json";
 import enSessions from "./locales/en/sessions.json";
 import enStats from "./locales/en/stats.json";
+import enTeam from "./locales/en/team.json";
 
 // Japanese translations
 import jaCommon from "./locales/ja/common.json";
@@ -22,6 +23,7 @@ import jaLayout from "./locales/ja/layout.json";
 import jaRules from "./locales/ja/rules.json";
 import jaSessions from "./locales/ja/sessions.json";
 import jaStats from "./locales/ja/stats.json";
+import jaTeam from "./locales/ja/team.json";
 
 const resources = {
   en: {
@@ -31,6 +33,7 @@ const resources = {
     sessions: enSessions,
     rules: enRules,
     stats: enStats,
+    team: enTeam,
     graph: enGraph,
     errors: enErrors,
     guide: enGuide,
@@ -42,6 +45,7 @@ const resources = {
     sessions: jaSessions,
     rules: jaRules,
     stats: jaStats,
+    team: jaTeam,
     graph: jaGraph,
     errors: jaErrors,
     guide: jaGuide,
@@ -70,6 +74,7 @@ i18n.use(initReactI18next).init({
     "sessions",
     "rules",
     "stats",
+    "team",
     "graph",
     "errors",
     "guide",

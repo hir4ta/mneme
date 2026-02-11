@@ -224,15 +224,19 @@ export function GraphCanvas({
               const l = link as GraphRenderLink;
               if (l.edgeType === "resumedFrom") return "#10b981";
               if (l.edgeType === "derivedFrom") return "#f59e0b";
+              if (l.edgeType === "relatedSession") return "#628141";
+              if (l.edgeType === "sourceRef") return "#E67E22";
+              if (l.edgeType === "sessionRef") return "#2D8B7A";
               return isDark ? "#475569" : "#cbd5e1";
             }}
             linkDirectionalArrowLength={(link) =>
               (link as GraphRenderLink).directed ? 6 : 0
             }
             linkDirectionalArrowRelPos={1}
-            linkLineDash={(link) =>
-              (link as GraphRenderLink).edgeType === "derivedFrom" ? [4, 2] : []
-            }
+            linkLineDash={(link) => {
+              const et = (link as GraphRenderLink).edgeType;
+              return et === "derivedFrom" || et === "sourceRef" ? [4, 2] : [];
+            }}
             onNodeClick={onNodeClick}
             onNodeHover={handleNodeHover}
             width={dimensions.width}

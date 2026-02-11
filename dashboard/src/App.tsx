@@ -11,6 +11,7 @@ import { NotFoundPage } from "./pages/not-found";
 import { SessionsPage } from "./pages/sessions";
 import { SessionDetailPage } from "./pages/sessions/[id]";
 import { StatsPage } from "./pages/stats";
+import { TeamPage } from "./pages/team";
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/units" element={<Navigate to="/dev-rules" replace />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/graph" element={<GraphPage />} />
+        <Route path="/team" element={<TeamPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/guide/workflow" element={<GuideWorkflowPage />} />
         <Route path="/guide/commands" element={<GuideCommandsPage />} />

@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type {
   ClusterStats,
   GraphNode,
@@ -21,16 +27,117 @@ interface GraphSidebarProps {
   structuralGaps: StructuralGap[];
 }
 
+function SidebarSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CardHeader className="pb-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between">
+            <CardTitle className="text-sm">{title}</CardTitle>
+            <svg
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              role="img"
+              aria-label="Toggle"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent>{children}</CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
 export function GraphSidebar(props: GraphSidebarProps) {
   const { t } = useTranslation("graph");
 
+  // Compute pipeline counts once
+  const counts = { session: 0, decision: 0, pattern: 0, rule: 0 };
+  for (const node of props.graphData.nodes) {
+    const n = node as GraphRenderNode;
+    if (n.entityType === "session") counts.session++;
+    else if (n.unitSubtype === "decision") counts.decision++;
+    else if (n.unitSubtype === "pattern") counts.pattern++;
+    else if (n.unitSubtype === "rule") counts.rule++;
+  }
+
+  const stages = [
+    {
+      labelKey: "pipeline.sessions" as const,
+      count: counts.session,
+      color: typeColors.session,
+    },
+    {
+      labelKey: "pipeline.decisions" as const,
+      count: counts.decision,
+      color: typeColors.decision,
+    },
+    {
+      labelKey: "pipeline.patterns" as const,
+      count: counts.pattern,
+      color: typeColors.pattern,
+    },
+    {
+      labelKey: "pipeline.rules" as const,
+      count: counts.rule,
+      color: typeColors.rule,
+    },
+  ];
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
+      {/* Knowledge Pipeline — always visible (no accordion) */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("sessionTypes")}</CardTitle>
+          <CardTitle className="text-sm">{t("pipeline.title")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-1.5 text-xs">
+        <CardContent>
+          <div className="flex items-center justify-between gap-1 text-xs">
+            {stages.map((stage, i) => (
+              <div key={stage.labelKey} className="flex items-center gap-1">
+                <div className="flex flex-col items-center">
+                  <span
+                    className="text-base font-bold"
+                    style={{ color: stage.color }}
+                  >
+                    {stage.count}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {t(stage.labelKey)}
+                  </span>
+                </div>
+                {i < stages.length - 1 && (
+                  <span className="mx-0.5 text-muted-foreground">→</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <SidebarSection title={t("sessionTypes")}>
+        <div className="space-y-1.5 text-xs">
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-3 w-3 rounded-full"
@@ -63,14 +170,11 @@ export function GraphSidebar(props: GraphSidebarProps) {
             />
             <span>{t("detail.unitType.rule")}</span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </SidebarSection>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("graphStats.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-sm">
+      <SidebarSection title={t("graphStats.title")} defaultOpen={false}>
+        <div className="space-y-1 text-sm">
           <p>
             {t("graphStats.nodes")}: {props.graphData.nodes.length}
           </p>
@@ -95,14 +199,11 @@ export function GraphSidebar(props: GraphSidebarProps) {
           <p>
             {t("graphStats.density")}: {props.graphDensity.toFixed(3)}
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </SidebarSection>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("topTags.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+      <SidebarSection title={t("topTags.title")} defaultOpen={false}>
+        <div className="flex flex-wrap gap-2">
           {props.tagCounts.length === 0 ? (
             <span className="text-sm text-muted-foreground">
               {t("topTags.empty")}
@@ -114,14 +215,11 @@ export function GraphSidebar(props: GraphSidebarProps) {
               </Badge>
             ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SidebarSection>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("centrality.title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
+      <SidebarSection title={t("centrality.title")} defaultOpen={false}>
+        <div className="space-y-2 text-sm">
           {props.centralNodes.length === 0 ? (
             <span className="text-sm text-muted-foreground">
               {t("centrality.empty")}
@@ -143,21 +241,18 @@ export function GraphSidebar(props: GraphSidebarProps) {
               </div>
             ))
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </SidebarSection>
 
       {props.structuralGaps.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("gaps.title")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+        <SidebarSection title={t("gaps.title")} defaultOpen={false}>
+          <div className="space-y-3 text-sm">
             {props.structuralGaps.map((gap) => (
               <div
                 key={`gap-${gap.clusterA}-${gap.clusterB}`}
-                className="rounded border p-2 space-y-1"
+                className="space-y-1 rounded border p-2"
               >
-                <div className="flex items-center gap-1 flex-wrap">
+                <div className="flex flex-wrap items-center gap-1">
                   {gap.tagsA.map((tag) => (
                     <Badge
                       key={`a-${tag}`}
@@ -167,7 +262,7 @@ export function GraphSidebar(props: GraphSidebarProps) {
                       {tag}
                     </Badge>
                   ))}
-                  <span className="text-muted-foreground mx-1">↔</span>
+                  <span className="mx-1 text-muted-foreground">↔</span>
                   {gap.tagsB.map((tag) => (
                     <Badge
                       key={`b-${tag}`}
@@ -186,11 +281,11 @@ export function GraphSidebar(props: GraphSidebarProps) {
                 </p>
               </div>
             ))}
-            <p className="text-xs text-muted-foreground italic">
+            <p className="text-xs italic text-muted-foreground">
               {t("gaps.bridgeHint")}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </SidebarSection>
       )}
     </div>
   );

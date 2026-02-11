@@ -106,6 +106,12 @@ export interface DevRuleItem {
   category?: string;
   patternType?: string;
   pattern?: string;
+  // Relationship fields (for graph edges)
+  relatedSessions?: string[];
+  sourceId?: string;
+  sourceRef?: { type: string; id: string };
+  appliedCount?: number;
+  acceptedCount?: number;
 }
 
 export const listDatedJsonFiles = (dir: string): string[] => {

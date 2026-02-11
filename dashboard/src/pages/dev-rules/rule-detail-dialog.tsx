@@ -268,13 +268,15 @@ export function RuleDetailDialog({
 
         <div className="space-y-4">
           {/* Summary */}
-          <DetailSection
-            icon={<ScrollText className="h-4 w-4" />}
-            label={t("detail.summary")}
-            accentColor={accentColor}
-          >
-            <p className="text-sm whitespace-pre-wrap">{item.summary}</p>
-          </DetailSection>
+          {item.summary && (
+            <DetailSection
+              icon={<ScrollText className="h-4 w-4" />}
+              label={t("detail.summary")}
+              accentColor={accentColor}
+            >
+              <p className="text-sm whitespace-pre-wrap">{item.summary}</p>
+            </DetailSection>
+          )}
 
           {/* Type-specific details */}
           {item.type === "decision" && (

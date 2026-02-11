@@ -14,12 +14,20 @@ export interface GraphNode {
   acceptedCount?: number;
 }
 
+export type EdgeType =
+  | "sharedTags"
+  | "resumedFrom"
+  | "derivedFrom"
+  | "relatedSession"
+  | "sourceRef"
+  | "sessionRef";
+
 export interface GraphEdge {
   source: string;
   target: string;
   weight: number;
   sharedTags: string[];
-  edgeType: "sharedTags" | "resumedFrom" | "derivedFrom";
+  edgeType: EdgeType;
   directed: boolean;
 }
 
@@ -40,7 +48,7 @@ export interface GraphRenderLink {
   target: string;
   value: number;
   sharedTags: string[];
-  edgeType: "sharedTags" | "resumedFrom" | "derivedFrom";
+  edgeType: EdgeType;
   directed: boolean;
 }
 

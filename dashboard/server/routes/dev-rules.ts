@@ -59,6 +59,9 @@ export function collectDevRules(): DevRuleItem[] {
         context: entry.context ? String(entry.context) : undefined,
         reasoning: entry.reasoning ? String(entry.reasoning) : undefined,
         alternatives: alts,
+        relatedSessions: Array.isArray(entry.relatedSessions)
+          ? entry.relatedSessions.map((s) => String(s))
+          : undefined,
       });
     }
   }
@@ -95,6 +98,7 @@ export function collectDevRules(): DevRuleItem[] {
         context: entry.context ? String(entry.context) : undefined,
         patternType: entry.type ? String(entry.type) : undefined,
         pattern: entry.pattern ? String(entry.pattern) : undefined,
+        sourceId: entry.sourceId ? String(entry.sourceId) : undefined,
       });
     }
   }
@@ -111,6 +115,17 @@ export function collectDevRules(): DevRuleItem[] {
     for (const entry of doc.items) {
       const id = String(entry.id || "");
       if (!id) continue;
+      const sourceRef =
+        entry.sourceRef &&
+        typeof entry.sourceRef === "object" &&
+        !Array.isArray(entry.sourceRef)
+          ? {
+              type: String(
+                (entry.sourceRef as Record<string, unknown>).type || "",
+              ),
+              id: String((entry.sourceRef as Record<string, unknown>).id || ""),
+            }
+          : undefined;
       items.push({
         id,
         type: "rule",
@@ -126,6 +141,15 @@ export function collectDevRules(): DevRuleItem[] {
         updatedAt: entry.updatedAt ? String(entry.updatedAt) : undefined,
         rationale: entry.rationale ? String(entry.rationale) : undefined,
         category: entry.category ? String(entry.category) : undefined,
+        sourceRef,
+        appliedCount:
+          typeof entry.appliedCount === "number"
+            ? entry.appliedCount
+            : undefined,
+        acceptedCount:
+          typeof entry.acceptedCount === "number"
+            ? entry.acceptedCount
+            : undefined,
       });
     }
   }

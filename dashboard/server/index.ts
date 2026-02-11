@@ -20,6 +20,7 @@ import misc from "./routes/misc.js";
 import patterns from "./routes/patterns.js";
 import rules from "./routes/rules.js";
 import sessions from "./routes/sessions.js";
+import team from "./routes/team.js";
 
 // =============================================================================
 // Note: Dashboard supports read and selected maintenance operations
@@ -48,6 +49,7 @@ app.route("/api/rules", rules);
 app.route("/api/patterns", patterns);
 app.route("/api/dev-rules", devRules);
 app.route("/api/export", exportRoutes);
+app.route("/api/team", team);
 app.route("/api", analytics);
 app.route("/api", misc);
 

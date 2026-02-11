@@ -1,0 +1,24 @@
+{
+  "title": "Team Activity",
+  "subtitle": "Overview of team contributions and knowledge quality",
+  "members": "Members",
+  "totalSessions": "Sessions",
+  "totalDecisions": "Decisions",
+  "totalPatterns": "Patterns",
+  "contributions": "Contributions",
+  "activityTimeline": "Activity Timeline (30 days)",
+  "memberTable": "Members",
+  "name": "Name",
+  "sessions": "Sessions",
+  "decisions": "Decisions",
+  "patterns": "Patterns",
+  "lastActive": "Last Active",
+  "quality": {
+    "title": "Knowledge Quality",
+    "approvalRate": "Approval Rate",
+    "totalRules": "Total Rules",
+    "approved": "Approved",
+    "topRules": "Most Effective Rules",
+    "leastEffective": "Least Effective Rules"
+  }
+}

@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.23.2-blue)
+![Version](https://img.shields.io/badge/version-0.24.0-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
@@ -13,14 +13,16 @@ Provides automatic session saving, intelligent memory search, and web dashboard 
 
 - **Incremental save**: Save only new interactions on each turn completion (Node.js, fast)
 - **Auto memory search**: Related past sessions/decisions automatically injected on each prompt
+- **Progressive search**: 3-layer search (compact → summary → full) that reduces token usage by ~70%
 - **PreCompact support**: Catch up unsaved interactions before Auto-Compact (context 95% full)
 - **Full data extraction**: Save summary, decisions, patterns, and rules with `/mneme:save`
 - **Session Resume**: Resume past sessions with `/mneme:resume` (with chain tracking)
-- **Session Suggestion**: Recent 3 sessions shown at session start
+- **Knowledge Reflection**: Analyze accumulated knowledge to detect patterns, contradictions, stale items, and promotion candidates with `/mneme:reflect`
 - **Knowledge Harvesting**: Extract decision/pattern/rule sources from PR comments with `/mneme:harvest`
-- **Web Dashboard**: View sessions, source artifacts, and development rules
-- **Development Rules + Approval**: Generate rules from decisions/patterns/rules and approve/reject inline
-- **Knowledge Graph Layer**: Visualize sessions and approved development rules as one graph
+- **Web Dashboard**: Sessions, development rules, statistics, knowledge graph, and team activity
+- **Knowledge Graph**: Visualize cross-entity relationships — session chains, decision origins, pattern sources — not just shared tags
+- **Team Activity**: See who contributed what — session counts, decisions, patterns per member, and knowledge quality metrics
+- **AI Knowledge Report**: Rich HTML report with team contributions, activity analysis, and bilingual output (EN/JA)
 
 ## Problems Solved
 
@@ -114,7 +116,9 @@ This will auto-update on Claude Code startup.
 | `/mneme:save`            | Extract all data: summary, decisions, patterns, rules |
 | `/mneme:resume [id]`     | Resume session (show list if ID omitted)              |
 | `/mneme:search "query"`  | Search sessions and approved development rules        |
+| `/mneme:reflect`         | Analyze knowledge health: contradictions, stale items, promotion candidates |
 | `/mneme:harvest <PR URL>`| Extract knowledge from PR review comments             |
+| `/mneme:report`          | Generate AI-powered HTML knowledge report             |
 
 ### Recommended Workflow
 
@@ -151,7 +155,8 @@ npx @hir4ta/mneme --dashboard --port 8080
 - **Sessions**: List and view sessions
 - **Development Rules**: Review and approve rules generated from decisions/patterns/rules
 - **Statistics**: View activity charts and session statistics
-- **Graph**: Visualize session connections by shared tags
+- **Graph**: Visualize cross-entity relationships (session → decision → pattern → rule) with interactive filters
+- **Team**: Track team member contributions, daily activity timeline, and knowledge quality metrics
 
 #### Language Switching
 
@@ -206,6 +211,21 @@ For teams, you can create `.claude/rules/mneme.md` with path-scoped rules:
 
 > **Tip**: Keep CLAUDE.md concise. For each line, ask: "Would removing this cause Claude to make mistakes?" If not, cut it. ([Best Practices - Claude Code Docs](https://code.claude.com/docs/en/best-practices))
 
+### Knowledge Reflection
+
+Analyze your accumulated knowledge for health, contradictions, and growth opportunities. Run manually when you want to review the state of your knowledge base.
+
+```
+/mneme:reflect
+```
+
+Analysis categories:
+- **Recurring themes**: Tags appearing across sessions, decisions, and patterns — with knowledge density scoring
+- **Contradiction detection**: Active decisions that may conflict with each other (AI-powered semantic analysis)
+- **Promotion candidates**: Approved patterns not yet promoted to rules
+- **Staleness check**: Old decisions never updated, unused rules, forgotten drafts
+- **Knowledge health**: Overall stats, approval pipeline, priority distribution, tag coverage
+
 ### Knowledge Report
 
 Generate an AI-powered knowledge report. Claude Code analyzes session data and produces a rich HTML report with narrative summaries, session timelines, knowledge highlights, and usage insights.
@@ -217,6 +237,7 @@ Generate an AI-powered knowledge report. Claude Code analyzes session data and p
 Features:
 - Choose period: 1 week (default), 2 weeks, or 1 month
 - AI-generated development activity summary
+- Team contribution breakdown (per-member sessions, decisions, patterns)
 - Expandable session timeline with goals, outcomes, discussions, and errors
 - Knowledge highlights (decisions, patterns, rules) displayed directly
 - Tag heatmap aggregated from all sources

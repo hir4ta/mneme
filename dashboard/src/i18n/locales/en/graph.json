@@ -79,6 +79,13 @@
       "rule": "Rule"
     }
   },
+  "pipeline": {
+    "title": "Knowledge Pipeline",
+    "sessions": "Sessions",
+    "decisions": "Decisions",
+    "patterns": "Patterns",
+    "rules": "Rules"
+  },
   "gaps": {
     "title": "Structural Gaps",
     "empty": "No gaps detected",

@@ -43,6 +43,22 @@
         {
           "title": "Rule Management",
           "description": "Development rules and review guidelines are extracted and enforced"
+        },
+        {
+          "title": "Progressive Search",
+          "description": "3-layer search (compact → summary → full) reduces token usage by ~70%"
+        },
+        {
+          "title": "Knowledge Reflection",
+          "description": "Analyze knowledge health: detect contradictions, stale items, and promotion candidates"
+        },
+        {
+          "title": "Knowledge Graph",
+          "description": "Visualize cross-entity relationships — session chains, decision origins, pattern sources"
+        },
+        {
+          "title": "Team Activity",
+          "description": "Track member contributions, daily activity timelines, and knowledge quality metrics"
         }
       ]
     },
@@ -202,6 +218,32 @@
                 "description": "GitHub PR URL (required)"
               }
             ]
+          },
+          {
+            "name": "/mneme:reflect",
+            "description": "Analyze knowledge health (manual trigger)",
+            "usage": "/mneme:reflect",
+            "details": "Meta-analysis of accumulated knowledge. Detects recurring themes, contradictions between decisions, promotion candidates, and stale items. Run manually when you want to review your knowledge base health.",
+            "options": [],
+            "phases": [
+              "Period selection (all / 90 days / 30 days)",
+              "Data collection from .mneme/ JSON files",
+              "5-category analysis (themes, contradictions, promotions, staleness, health)",
+              "Markdown report output to console"
+            ]
+          },
+          {
+            "name": "/mneme:report",
+            "description": "Generate AI-powered HTML knowledge report",
+            "usage": "/mneme:report",
+            "details": "Analyzes session data and produces a rich HTML report with team contributions, activity summaries, session timelines, and knowledge highlights. Output saved to .mneme/exports/.",
+            "options": [],
+            "phases": [
+              "Period selection (1 week / 2 weeks / 1 month)",
+              "Data collection and aggregation",
+              "AI-generated narrative summary",
+              "HTML report generation with bilingual output (EN/JA)"
+            ]
           }
         ]
       }
@@ -284,6 +326,46 @@
           {
             "action": "mneme auto-injects relevant context",
             "result": "Consistent implementation following team patterns"
+          }
+        ]
+      },
+      {
+        "title": "Knowledge Health Check",
+        "scenario": "Knowledge has accumulated over weeks and needs review",
+        "steps": [
+          {
+            "action": "Run /mneme:reflect",
+            "result": "5-category analysis report is generated"
+          },
+          {
+            "action": "Review contradictions and stale items",
+            "result": "Outdated decisions and conflicting guidance are identified"
+          },
+          {
+            "action": "Promote patterns to rules",
+            "result": "Mature patterns become enforceable rules"
+          },
+          {
+            "action": "Clean up forgotten drafts",
+            "result": "Knowledge base stays healthy and relevant"
+          }
+        ]
+      },
+      {
+        "title": "Generating a Team Report",
+        "scenario": "You want to share development activity and knowledge insights with your team",
+        "steps": [
+          {
+            "action": "Run /mneme:report",
+            "result": "AI analyzes session data for the selected period"
+          },
+          {
+            "action": "Review generated HTML report",
+            "result": "Rich report with team contributions, session timelines, and knowledge highlights"
+          },
+          {
+            "action": "Share .mneme/exports/ report file",
+            "result": "Team can view bilingual (EN/JA) activity summary in browser"
           }
         ]
       }
