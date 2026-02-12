@@ -658,6 +658,50 @@ var IGNORED_PREFIXES = [
   ".claude/"
 ];
 var IGNORED_FILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"];
+function ensureCompactSessionLink(projectPath, currentClaudeSessionId) {
+  const mnemeDir = path4.join(projectPath, ".mneme");
+  const pendingFile = path4.join(mnemeDir, ".pending-compact.json");
+  if (!fs5.existsSync(pendingFile)) return;
+  const sessionLinksDir = path4.join(mnemeDir, "session-links");
+  const linkFile = path4.join(sessionLinksDir, `${currentClaudeSessionId}.json`);
+  if (fs5.existsSync(linkFile)) return;
+  try {
+    const pending = JSON.parse(fs5.readFileSync(pendingFile, "utf8"));
+    const oldClaudeSessionId = pending.claudeSessionId || "";
+    const timestamp = pending.timestamp || "";
+    if (timestamp) {
+      const age = Date.now() - new Date(timestamp).getTime();
+      if (age > 5 * 60 * 1e3) return;
+    }
+    if (!oldClaudeSessionId || oldClaudeSessionId === currentClaudeSessionId) {
+      return;
+    }
+    const masterSessionId = resolveMnemeSessionId(
+      projectPath,
+      oldClaudeSessionId
+    );
+    if (!fs5.existsSync(sessionLinksDir)) {
+      fs5.mkdirSync(sessionLinksDir, { recursive: true });
+    }
+    fs5.writeFileSync(
+      linkFile,
+      JSON.stringify(
+        {
+          masterSessionId,
+          claudeSessionId: currentClaudeSessionId,
+          linkedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        null,
+        2
+      )
+    );
+    console.error(
+      `[mneme] Save: compact continuation linked: ${currentClaudeSessionId} \u2192 ${masterSessionId}`
+    );
+  } catch (e) {
+    console.error(`[mneme] Error in ensureCompactSessionLink: ${e}`);
+  }
+}
 function detectCompactContinuation(interactions, projectPath) {
   const compactInteraction = interactions.find((i) => i.isCompactSummary);
   if (!compactInteraction?.user) return null;
@@ -764,6 +808,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       message: `Transcript not found: ${transcriptPath}`
     };
   }
+  ensureCompactSessionLink(projectPath, claudeSessionId);
   const dbPath = path4.join(projectPath, ".mneme", "local.db");
   const db = initDatabase(dbPath);
   let mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);

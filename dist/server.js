@@ -4493,7 +4493,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.25.1";
+  const version = "0.25.2";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5173,9 +5173,25 @@ function buildGroupedInteractions(interactions) {
         ...interaction.agent_id && { agentId: interaction.agent_id },
         ...interaction.agent_type && { agentType: interaction.agent_type }
       };
-    } else if (interaction.role === "assistant" && current) {
-      current.assistant = interaction.content;
-      current.thinking = interaction.thinking || null;
+    } else if (interaction.role === "assistant") {
+      if (current) {
+        current.assistant = interaction.content;
+        current.thinking = interaction.thinking || null;
+      } else {
+        const meta = parseInteractionMetadata(interaction.tool_calls);
+        current = {
+          id: `int-${String(grouped.length + 1).padStart(3, "0")}`,
+          timestamp: interaction.timestamp,
+          user: "",
+          assistant: interaction.content,
+          thinking: interaction.thinking || null,
+          isCompactSummary: !!interaction.is_compact_summary,
+          isContinuation: true,
+          ...meta,
+          ...interaction.agent_id && { agentId: interaction.agent_id },
+          ...interaction.agent_type && { agentType: interaction.agent_type }
+        };
+      }
     }
   }
   if (current) {
@@ -5196,6 +5212,7 @@ function parseInteractionMetadata(toolCalls) {
     if (metadata.toolsUsed?.length > 0) result.toolsUsed = metadata.toolsUsed;
     if (metadata.toolDetails?.length > 0)
       result.toolDetails = metadata.toolDetails;
+    if (metadata.isContinuation) result.isContinuation = true;
     if (metadata.slashCommand) result.slashCommand = metadata.slashCommand;
     if (metadata.toolResults?.length > 0)
       result.toolResults = metadata.toolResults;

@@ -46,6 +46,7 @@ type GroupedInteraction = {
   assistant: string;
   thinking: string | null;
   isCompactSummary: boolean;
+  isContinuation?: boolean;
   hasPlanMode?: boolean;
   planTools?: Array<{ name: string; count: number }>;
   toolsUsed?: string[];
@@ -234,9 +235,26 @@ function buildGroupedInteractions(
         ...(interaction.agent_id && { agentId: interaction.agent_id }),
         ...(interaction.agent_type && { agentType: interaction.agent_type }),
       };
-    } else if (interaction.role === "assistant" && current) {
-      current.assistant = interaction.content;
-      current.thinking = interaction.thinking || null;
+    } else if (interaction.role === "assistant") {
+      if (current) {
+        current.assistant = interaction.content;
+        current.thinking = interaction.thinking || null;
+      } else {
+        // Orphaned assistant row (isContinuation: user row was skipped)
+        const meta = parseInteractionMetadata(interaction.tool_calls);
+        current = {
+          id: `int-${String(grouped.length + 1).padStart(3, "0")}`,
+          timestamp: interaction.timestamp,
+          user: "",
+          assistant: interaction.content,
+          thinking: interaction.thinking || null,
+          isCompactSummary: !!interaction.is_compact_summary,
+          isContinuation: true,
+          ...meta,
+          ...(interaction.agent_id && { agentId: interaction.agent_id }),
+          ...(interaction.agent_type && { agentType: interaction.agent_type }),
+        };
+      }
     }
   }
 
@@ -264,6 +282,7 @@ function parseInteractionMetadata(
     if (metadata.toolsUsed?.length > 0) result.toolsUsed = metadata.toolsUsed;
     if (metadata.toolDetails?.length > 0)
       result.toolDetails = metadata.toolDetails;
+    if (metadata.isContinuation) result.isContinuation = true;
     if (metadata.slashCommand) result.slashCommand = metadata.slashCommand;
     if (metadata.toolResults?.length > 0)
       result.toolResults = metadata.toolResults;

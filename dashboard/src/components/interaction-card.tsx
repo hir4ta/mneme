@@ -1,9 +1,9 @@
-import { Bot, Search, Wrench } from "lucide-react";
+import { Bot, Play, Search, Wrench } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import type { InteractionFromSQLite } from "@/lib/api";
-import { agentToken, planToken } from "@/lib/brand-colors";
+import { agentToken, compactToken, planToken } from "@/lib/brand-colors";
 import { formatDateTime } from "@/lib/format-date";
 import {
   ProgressEventsSection,
@@ -76,6 +76,7 @@ export function InteractionCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const agentStyle = useBrandStyle(agentToken);
   const planStyle = useBrandStyle(planToken);
+  const compactStyle = useBrandStyle(compactToken);
 
   const timestamp = formatDateTime(interaction.timestamp);
   const hasThinking =
@@ -91,6 +92,7 @@ export function InteractionCard({
     filteredProgressEvents && filteredProgressEvents.length > 0;
   const isSubagent = !!interaction.agentId;
   const isInPlanMode = interaction.inPlanMode || interaction.hasPlanMode;
+  const isContinuation = interaction.isContinuation;
 
   const userContent = stripSystemReminders(interaction.user);
   const parsedCommand = parseCommandMessage(userContent);
@@ -117,28 +119,46 @@ export function InteractionCard({
         )}
       </div>
 
-      {/* User message - right aligned */}
-      <div className="flex flex-col items-end">
-        <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 mr-1">
-          {t("interaction.user")}
-        </span>
-        {parsedCommand.isCommand ? (
-          <div className="max-w-[85%] bg-stone-800/80 backdrop-blur rounded-lg px-3 py-1.5 shadow-sm border border-stone-700/50">
-            <CommandBadge
-              commandName={parsedCommand.commandName || ""}
-              commandArgs={parsedCommand.commandArgs || ""}
-            />
+      {/* User message - right aligned (skip for continuation) */}
+      {isContinuation ? (
+        <div className="flex justify-center">
+          <div
+            className="text-xs px-3 py-1.5 rounded-full flex items-center gap-2"
+            style={{
+              border: `1px solid ${compactStyle.border}`,
+              backgroundColor: compactStyle.badge,
+              color: compactStyle.text,
+            }}
+          >
+            <Play className="w-3 h-3" />
+            <span className="font-medium">
+              {t("interaction.continuation", "Plan Implementation")}
+            </span>
           </div>
-        ) : (
-          <div className="max-w-[85%] bg-[#39414B] text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
-            <MarkdownRenderer
-              content={userContent}
-              variant="dark"
-              className="text-sm text-white prose-headings:text-white prose-strong:text-white"
-            />
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-end">
+          <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 mr-1">
+            {t("interaction.user")}
+          </span>
+          {parsedCommand.isCommand ? (
+            <div className="max-w-[85%] bg-stone-800/80 backdrop-blur rounded-lg px-3 py-1.5 shadow-sm border border-stone-700/50">
+              <CommandBadge
+                commandName={parsedCommand.commandName || ""}
+                commandArgs={parsedCommand.commandArgs || ""}
+              />
+            </div>
+          ) : (
+            <div className="max-w-[85%] bg-[#39414B] text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-sm">
+              <MarkdownRenderer
+                content={userContent}
+                variant="dark"
+                className="text-sm text-white prose-headings:text-white prose-strong:text-white"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Plan mode indicator */}
       {isInPlanMode && (

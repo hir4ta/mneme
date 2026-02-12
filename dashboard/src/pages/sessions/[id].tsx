@@ -155,6 +155,14 @@ export function SessionDetailPage() {
                   {interactionCount > 0 ? (
                     <div className="space-y-6">
                       {interactions.map((interaction) => {
+                        if (interaction.isContinuation) {
+                          return (
+                            <InteractionCard
+                              key={interaction.id}
+                              interaction={interaction}
+                            />
+                          );
+                        }
                         if (interaction.isCompactSummary) {
                           return (
                             <CompactSummaryCard

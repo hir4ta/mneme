@@ -165,6 +165,7 @@ export interface InteractionFromSQLite {
   assistant: string;
   thinking: string | null;
   isCompactSummary: boolean;
+  isContinuation?: boolean;
   hasPlanMode?: boolean;
   planTools?: { name: string; count: number }[];
   toolsUsed?: string[];
