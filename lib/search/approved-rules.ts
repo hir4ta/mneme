@@ -7,6 +7,7 @@ import {
   loadTags,
   walkJsonFiles,
 } from "./helpers.js";
+import { removeStopwords } from "./stopwords.js";
 
 export type ApprovedSourceType = "decision" | "pattern" | "rule";
 
@@ -197,11 +198,13 @@ export function searchApprovedRules(options: {
 }): ApprovedRuleResult[] {
   const { query, mnemeDir, limit = 5 } = options;
 
-  const keywords = query
-    .toLowerCase()
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 2);
+  const keywords = removeStopwords(
+    query
+      .toLowerCase()
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length > 2),
+  );
 
   if (keywords.length === 0) return [];
 

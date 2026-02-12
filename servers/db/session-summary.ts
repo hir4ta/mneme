@@ -39,11 +39,13 @@ interface SessionSummaryParams {
     title?: string;
     description?: string;
   }>;
+  filesModified?: Array<{ path: string; action: string }>;
+  technologies?: string[];
 }
 
 async function updateSessionSummary(
   params: SessionSummaryParams,
-): Promise<{ success: boolean; sessionFile: string; shortId: string }> {
+): Promise<{ success: boolean; sessionFile: string; sessionId: string }> {
   const {
     claudeSessionId,
     title,
@@ -55,27 +57,35 @@ async function updateSessionSummary(
     errors,
     handoff,
     references,
+    filesModified,
+    technologies,
   } = params;
 
   const projectPath = getProjectPath();
   const sessionsDir = path.join(projectPath, ".mneme", "sessions");
-  const shortId = claudeSessionId.slice(0, 8);
 
   let sessionFile: string | null = null;
-  const searchDir = (dir: string): string | null => {
+  const searchDirFor = (dir: string, fileName: string): string | null => {
     if (!fs.existsSync(dir)) return null;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const result = searchDir(fullPath);
+        const result = searchDirFor(fullPath, fileName);
         if (result) return result;
-      } else if (entry.name === `${shortId}.json`) {
+      } else if (entry.name === fileName) {
         return fullPath;
       }
     }
     return null;
   };
-  sessionFile = searchDir(sessionsDir);
+  // Try full UUID first, then fallback to 8-char for old sessions
+  sessionFile = searchDirFor(sessionsDir, `${claudeSessionId}.json`);
+  if (!sessionFile && claudeSessionId.length > 8) {
+    sessionFile = searchDirFor(
+      sessionsDir,
+      `${claudeSessionId.slice(0, 8)}.json`,
+    );
+  }
 
   if (sessionFile) {
     const existingData = readJsonFile<{ sessionId?: string }>(sessionFile);
@@ -92,9 +102,9 @@ async function updateSessionSummary(
       String(now.getMonth() + 1).padStart(2, "0"),
     );
     if (!fs.existsSync(yearMonth)) fs.mkdirSync(yearMonth, { recursive: true });
-    sessionFile = path.join(yearMonth, `${shortId}.json`);
+    sessionFile = path.join(yearMonth, `${claudeSessionId}.json`);
     const initial = {
-      id: shortId,
+      id: claudeSessionId,
       sessionId: claudeSessionId,
       createdAt: now.toISOString(),
       title: "",
@@ -126,6 +136,9 @@ async function updateSessionSummary(
   if (errors && errors.length > 0) data.errors = errors;
   if (handoff) data.handoff = handoff;
   if (references && references.length > 0) data.references = references;
+  if (filesModified && filesModified.length > 0)
+    data.filesModified = filesModified;
+  if (technologies && technologies.length > 0) data.technologies = technologies;
 
   const transcriptPath = getTranscriptPath(claudeSessionId);
   if (transcriptPath) {
@@ -173,7 +186,7 @@ async function updateSessionSummary(
   return {
     success: true,
     sessionFile: sessionFile.replace(projectPath, "."),
-    shortId,
+    sessionId: claudeSessionId,
   };
 }
 
@@ -283,6 +296,21 @@ export function registerSessionSummaryTool(server: McpServer) {
           )
           .optional()
           .describe("Documents and resources referenced during session"),
+        filesModified: z
+          .array(
+            z.object({
+              path: z.string().describe("File path relative to project root"),
+              action: z
+                .string()
+                .describe("Action: create, edit, delete, rename"),
+            }),
+          )
+          .optional()
+          .describe("Files modified during this session"),
+        technologies: z
+          .array(z.string())
+          .optional()
+          .describe("Technologies and frameworks used"),
       },
     },
     async (params) => {

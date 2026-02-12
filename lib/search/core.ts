@@ -8,6 +8,7 @@ import {
   loadTags,
   walkJsonFiles,
 } from "./helpers.js";
+import { removeStopwords } from "./stopwords.js";
 
 export type SearchType = "session" | "interaction";
 export type SearchDetail = "compact" | "summary";
@@ -49,6 +50,8 @@ interface SessionFile {
     cause?: string;
     solution?: string;
   }>;
+  filesModified?: Array<{ path: string; action: string }>;
+  technologies?: string[];
 }
 
 type StatementLike = {
@@ -204,6 +207,14 @@ function searchSessions(
         score += 2;
         matchedFields.push("errors");
       }
+      if (session.technologies?.some((t) => pattern.test(t))) {
+        score += 1.5;
+        matchedFields.push("technologies");
+      }
+      if (session.filesModified?.some((f) => pattern.test(f.path))) {
+        score += 1;
+        matchedFields.push("filesModified");
+      }
 
       if (score === 0 && keywords.length <= 2) {
         const titleWords = (title || "").toLowerCase().split(/\s+/);
@@ -270,11 +281,13 @@ export function searchKnowledge(options: {
     detail = "compact",
   } = options;
 
-  const keywords = query
-    .toLowerCase()
-    .split(/\s+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 2);
+  const keywords = removeStopwords(
+    query
+      .toLowerCase()
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length > 2),
+  );
 
   if (keywords.length === 0) return [];
 

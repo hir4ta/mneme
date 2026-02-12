@@ -21,8 +21,10 @@ import type {
 export {
   CodeExamplesSection,
   ErrorsSection,
+  FilesModifiedSection,
   HandoffSection,
   ReferencesSection,
+  TechnologiesSection,
 } from "./session-context-detail-sections";
 
 // Section icons using lucide-react
@@ -34,6 +36,8 @@ export const sectionIcons: Record<string, ReactNode> = {
   references: <Link className="h-4 w-4" />,
   handoff: <ArrowRightFromLine className="h-4 w-4" />,
   errors: <AlertTriangle className="h-4 w-4" />,
+  technologies: <Code className="h-4 w-4" />,
+  filesModified: <FileText className="h-4 w-4" />,
 };
 
 // Section colors (inline style values)
@@ -45,6 +49,8 @@ export const sectionColors: Record<string, string> = {
   references: "#E5D9B6",
   handoff: "#E67E22",
   errors: "#E67E22",
+  technologies: "#2D8B7A",
+  filesModified: "#628141",
 };
 
 export function SectionCard({

@@ -39,7 +39,7 @@ export async function saveInteractions(
   }
 
   const projectPath = getProjectPath();
-  const sessionId = mnemeSessionId || claudeSessionId.slice(0, 8);
+  const sessionId = mnemeSessionId || claudeSessionId;
 
   let owner = "unknown";
   try {
@@ -251,7 +251,7 @@ export function markSessionCommitted(claudeSessionId: string): boolean {
       stmt.run(claudeSessionId);
     } else {
       const projectPath = getProjectPath();
-      const sessionId = claudeSessionId.slice(0, 8);
+      const sessionId = claudeSessionId;
       const insertStmt = database.prepare(`
         INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, is_committed)
         VALUES (?, ?, ?, 1)

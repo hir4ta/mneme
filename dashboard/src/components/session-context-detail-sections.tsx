@@ -223,3 +223,43 @@ export function ReferencesSection({
     </div>
   );
 }
+
+export function TechnologiesSection({
+  technologies,
+}: {
+  technologies: string[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {technologies.map((tech) => (
+        <Badge key={tech} variant="secondary" className="text-xs">
+          {tech}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+export function FilesModifiedSection({
+  filesModified,
+}: {
+  filesModified: Array<{ path: string; action: string }>;
+}) {
+  return (
+    <div className="space-y-1 text-sm">
+      {filesModified.map((file) => (
+        <div
+          key={`${file.path}-${file.action}`}
+          className="flex items-center gap-2"
+        >
+          <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono truncate">
+            {file.path}
+          </code>
+          <Badge variant="outline" className="text-xs shrink-0">
+            {file.action}
+          </Badge>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -57,11 +57,12 @@ export function registerExtendedTools(server: McpServer) {
     },
     async ({ sessionId, includeChain }) => {
       const sessions = readSessionsById();
-      const shortId = sessionId.slice(0, 8);
-      const root = sessions.get(shortId);
-      if (!root) return fail(`Session not found: ${shortId}`);
+      // Dual-key lookup: try as-is first (supports both full UUID and 8-char)
+      const root = sessions.get(sessionId);
+      if (!root) return fail(`Session not found: ${sessionId}`);
 
-      const chain: string[] = [shortId];
+      const rootId = typeof root.id === "string" ? root.id : sessionId;
+      const chain: string[] = [rootId];
       if (includeChain !== false) {
         let current = root;
         let guard = 0;
@@ -104,7 +105,7 @@ export function registerExtendedTools(server: McpServer) {
       return ok(
         JSON.stringify(
           {
-            rootSessionId: shortId,
+            rootSessionId: rootId,
             dbAvailable,
             chainLength: timeline.length,
             timeline,

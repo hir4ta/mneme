@@ -60,6 +60,9 @@ Always render missing required fields as blocking errors before write.
 
 3. **Session summary extraction (required MCP)**
 - Extract from the conversation: `title`, `goal`, `outcome`, `description`, `tags`, `sessionType`.
+- Extract **file and technology context** (critical for search and session recommendations):
+  - `filesModified`: files changed during session (path + action: create/edit/delete/rename)
+  - `technologies`: technologies, frameworks, and libraries used (e.g., "React", "Hono", "SQLite")
 - Additionally extract **structured context** (data likely lost during auto-compact):
   - `plan`: session goals, task list (completed tasks use `[x] ` prefix), remaining tasks
   - `discussions`: design discussions (topic, decision, reasoning, alternatives)
@@ -71,7 +74,7 @@ Always render missing required fields as blocking errors before write.
 - **Then call `mneme_mark_session_committed`** to finalize the commit.
 
 <required>
-- Call `mneme_update_session_summary` with: `claudeSessionId`, `title`, `summary` (`goal`, `outcome`), `tags`, `sessionType`
+- Call `mneme_update_session_summary` with: `claudeSessionId`, `title`, `summary` (`goal`, `outcome`), `tags`, `sessionType`, `filesModified`, `technologies`
 - Call `mneme_mark_session_committed` AFTER `mneme_update_session_summary` succeeds
 - Do NOT skip this step even for short/research sessions
 </required>
@@ -80,6 +83,17 @@ Always render missing required fields as blocking errors before write.
 
 Auto-compact triggers at ~80% context window usage, replacing older messages with summaries.
 The following data is easily lost in summaries, so save it explicitly as structured data.
+
+**filesModified** — always extract when implementation occurred:
+- Extract from tool usage (Read, Edit, Write, Bash) in the conversation
+- Use relative paths from project root
+- Actions: "create" (new file), "edit" (modified), "delete" (removed), "rename" (moved)
+- Exclude: node_modules, dist, .git, lock files
+
+**technologies** — always extract:
+- List frameworks, languages, libraries actively used (not just imported)
+- Examples: "TypeScript", "React", "Hono", "SQLite", "Zod", "Tailwind CSS"
+- Keep concise: 3-10 items typical
 
 **plan** — when applicable:
 - `goals`: goals set at session start
@@ -236,20 +250,18 @@ Recommended controlled tags:
 
 ## Validation gate (must pass)
 
-After writing sources and before rule generation, run:
+After writing sources and before rule generation, call MCP tool:
 
-```bash
-npm run validate:sources
-```
+`mneme_validate_sources`
 
-If validation fails, fix artifacts first, then continue.
+If validation fails (`valid: false`), fix artifacts first, then continue.
 
 ## Output to user
 
 Report at minimum:
 - interactions saved count
 - created/updated counts for decisions/patterns/rules
-- validation result (`validate:sources`)
+- validation result (`mneme_validate_sources`)
 - rule linter result (`mneme_rule_linter`)
 - search benchmark result (`mneme_search_eval`)
 - saved decisions/patterns/rules summary

@@ -1,6 +1,13 @@
 {
   "title": "開発ルール",
   "subtitle": "意思決定・パターン・ルールの一覧",
+  "pageDescription": {
+    "intro": "開発中に生まれた知見を3種類で管理します。",
+    "decision": "Decision（意思決定）— 「なぜその技術を選んだか」等の判断と理由。",
+    "pattern": "Pattern（パターン）— 「こうすると上手くいく/失敗する」等の経験則。",
+    "rule": "Rule（ルール）— 「常にこうすべき」等のチーム全体の開発規約。",
+    "approval": "Draft → Approved で承認すると、Claude Codeがコーディング中に自動で参照します。"
+  },
   "searchPlaceholder": "ルールを検索...",
   "loading": "ルールを読み込み中...",
   "noRules": "開発ルールがありません。decisions / patterns / rules にデータを保存してください。",

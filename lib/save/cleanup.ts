@@ -119,12 +119,22 @@ export function cleanupStaleUncommittedSessions(
         }
       }
 
-      const linkPath = path.join(
+      // Try full UUID first, then fallback to 8-char for old sessions
+      const fullLinkPath = path.join(
+        projectPath,
+        ".mneme",
+        "session-links",
+        `${row.claude_session_id}.json`,
+      );
+      const shortLinkPath = path.join(
         projectPath,
         ".mneme",
         "session-links",
         `${row.claude_session_id.slice(0, 8)}.json`,
       );
+      const linkPath = fs.existsSync(fullLinkPath)
+        ? fullLinkPath
+        : shortLinkPath;
       if (fs.existsSync(linkPath)) {
         try {
           fs.unlinkSync(linkPath);

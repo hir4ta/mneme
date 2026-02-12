@@ -3,6 +3,7 @@ import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { usePageDescription } from "@/components/page-description";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pagination } from "@/components/ui/pagination";
@@ -24,6 +25,7 @@ const ITEMS_PER_PAGE = 20;
 
 export function DevRulesPage() {
   const { t } = useTranslation("devRules");
+  const desc = usePageDescription("dev-rules");
   const queryClient = useQueryClient();
   const [filters, setFilters] = useQueryStates({
     type: parseAsString.withDefault("all"),
@@ -141,8 +143,20 @@ export function DevRulesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <desc.Trigger />
+        </div>
+        <desc.Panel>
+          <p>{t("pageDescription.intro")}</p>
+          <ul className="mt-1.5 list-disc list-inside space-y-0.5">
+            <li>{t("pageDescription.decision")}</li>
+            <li>{t("pageDescription.pattern")}</li>
+            <li>{t("pageDescription.rule")}</li>
+          </ul>
+          <p className="mt-1.5">{t("pageDescription.approval")}</p>
+        </desc.Panel>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

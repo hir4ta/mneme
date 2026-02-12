@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.24.0-blue)
+![Version](https://img.shields.io/badge/version-0.24.1-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
@@ -127,9 +127,8 @@ implement → save → approve rules
 ```
 
 1. **implement**: Write code
-2. **save**: Extract source knowledge and generate development rule candidates
-3. **validate**: Run `npm run validate:sources` to enforce required fields/priority/tags
-4. **approve rules**: Review and approve/reject generated development rules inline
+2. **save**: Extract source knowledge and generate development rule candidates (validation runs automatically via MCP)
+3. **approve rules**: Review and approve/reject generated development rules inline
 
 Detailed runtime flow (hooks, uncommitted policy, auto-compact path):
 - `docs/mneme-runtime-flow.md`

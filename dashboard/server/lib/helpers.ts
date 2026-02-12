@@ -138,7 +138,11 @@ export const toShortId = (id: string): string => {
 };
 
 export const findJsonFileById = (dir: string, id: string): string | null => {
-  const target = `${toShortId(id)}.json`;
+  // Try full ID first, then fallback to 8-char short ID for old sessions
+  const targets = [
+    `${id}.json`,
+    ...(id !== toShortId(id) ? [`${toShortId(id)}.json`] : []),
+  ];
   const queue = [dir];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -150,7 +154,7 @@ export const findJsonFileById = (dir: string, id: string): string | null => {
       const fullPath = path.join(current, entry.name);
       if (entry.isDirectory()) {
         queue.push(fullPath);
-      } else if (entry.isFile() && entry.name === target) {
+      } else if (entry.isFile() && targets.includes(entry.name)) {
         const rel = path.relative(dir, fullPath);
         const parts = rel.split(path.sep);
         if (

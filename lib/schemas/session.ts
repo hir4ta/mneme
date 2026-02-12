@@ -251,6 +251,11 @@ export const SessionSchema = z.object({
   errors: z.array(SessionErrorSchema).optional(),
   handoff: SessionHandoffSchema.optional(),
   references: z.array(SessionReferenceSchema).optional(),
+  // Structured context (set by /mneme:save Phase 1 enhancement)
+  filesModified: z
+    .array(z.object({ path: z.string(), action: z.string() }))
+    .optional(),
+  technologies: z.array(z.string()).optional(),
   // Legacy fields (kept for backwards compatibility)
   goal: z.string().optional(),
   sessionType: SessionTypeSchema.nullable().optional(),

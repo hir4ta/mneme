@@ -1,6 +1,13 @@
 {
   "title": "Development Rules",
   "subtitle": "Decisions, patterns, and rules overview",
+  "pageDescription": {
+    "intro": "Manage knowledge captured during development in three categories.",
+    "decision": "Decision — Records what was chosen and why.",
+    "pattern": "Pattern — Captures what works or fails.",
+    "rule": "Rule — Defines standards the team should always follow.",
+    "approval": "Once approved (Draft → Approved), Claude Code automatically references them during coding."
+  },
   "searchPlaceholder": "Search rules...",
   "loading": "Loading rules...",
   "noRules": "No development rules yet. Save data to decisions / patterns / rules.",

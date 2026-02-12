@@ -97,13 +97,19 @@ async function sessionFinalize(
     return { status: "skipped" };
   }
 
-  const sessionShortId = sessionId.substring(0, 8);
-
-  // Find session file (direct or via session-link)
-  let sessionFile = findSessionFile(sessionsDir, sessionShortId);
+  // Find session file (direct or via session-link) — try full UUID, then 8-char fallback
+  let sessionFile =
+    findSessionFile(sessionsDir, sessionId) ||
+    (sessionId.length > 8
+      ? findSessionFile(sessionsDir, sessionId.slice(0, 8))
+      : null);
 
   if (!sessionFile) {
-    const linkFile = path.join(sessionLinksDir, `${sessionShortId}.json`);
+    const linkFile = fs.existsSync(
+      path.join(sessionLinksDir, `${sessionId}.json`),
+    )
+      ? path.join(sessionLinksDir, `${sessionId}.json`)
+      : path.join(sessionLinksDir, `${sessionId.slice(0, 8)}.json`);
     if (fs.existsSync(linkFile)) {
       const link = safeReadJson<SessionLink>(linkFile, {
         masterSessionId: "",
@@ -161,7 +167,11 @@ async function sessionFinalize(
             `[mneme] Session ended without /mneme:save - cleaned up ${cleanupResult.count} interactions`,
           );
           fs.unlinkSync(sessionFile);
-          const linkFile = path.join(sessionLinksDir, `${sessionShortId}.json`);
+          const linkFile = fs.existsSync(
+            path.join(sessionLinksDir, `${sessionId}.json`),
+          )
+            ? path.join(sessionLinksDir, `${sessionId}.json`)
+            : path.join(sessionLinksDir, `${sessionId.slice(0, 8)}.json`);
           if (fs.existsSync(linkFile)) {
             fs.unlinkSync(linkFile);
           }
@@ -218,7 +228,11 @@ async function sessionFinalize(
   }
 
   // Update master session workPeriods.endedAt (if linked)
-  const sessionLinkFile = path.join(sessionLinksDir, `${sessionShortId}.json`);
+  const sessionLinkFile = fs.existsSync(
+    path.join(sessionLinksDir, `${sessionId}.json`),
+  )
+    ? path.join(sessionLinksDir, `${sessionId}.json`)
+    : path.join(sessionLinksDir, `${sessionId.slice(0, 8)}.json`);
   if (fs.existsSync(sessionLinkFile)) {
     const link = safeReadJson<SessionLink>(sessionLinkFile, {
       masterSessionId: "",

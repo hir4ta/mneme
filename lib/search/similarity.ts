@@ -2,6 +2,8 @@
  * Similarity detection utilities for finding duplicates and conflicts
  */
 
+import { isStopword } from "./stopwords.js";
+
 /**
  * Result of similarity check
  */
@@ -29,7 +31,7 @@ export function extractTokens(text: string): string[] {
       // Filter empty tokens and very short tokens
       .filter((token) => token.length > 2)
       // Remove common stop words
-      .filter((token) => !STOP_WORDS.has(token))
+      .filter((token) => !isStopword(token))
   );
 }
 
@@ -164,102 +166,6 @@ export function findSimilarItems(
 
   return results.sort((a, b) => b.similarity - a.similarity);
 }
-
-// Common English stop words to filter out
-const STOP_WORDS = new Set([
-  "the",
-  "a",
-  "an",
-  "and",
-  "or",
-  "but",
-  "is",
-  "are",
-  "was",
-  "were",
-  "be",
-  "been",
-  "being",
-  "have",
-  "has",
-  "had",
-  "do",
-  "does",
-  "did",
-  "will",
-  "would",
-  "could",
-  "should",
-  "may",
-  "might",
-  "must",
-  "shall",
-  "can",
-  "to",
-  "of",
-  "in",
-  "for",
-  "on",
-  "with",
-  "at",
-  "by",
-  "from",
-  "as",
-  "into",
-  "through",
-  "during",
-  "before",
-  "after",
-  "above",
-  "below",
-  "between",
-  "under",
-  "again",
-  "further",
-  "then",
-  "once",
-  "here",
-  "there",
-  "when",
-  "where",
-  "why",
-  "how",
-  "all",
-  "each",
-  "few",
-  "more",
-  "most",
-  "other",
-  "some",
-  "such",
-  "no",
-  "nor",
-  "not",
-  "only",
-  "own",
-  "same",
-  "so",
-  "than",
-  "too",
-  "very",
-  "just",
-  "this",
-  "that",
-  "these",
-  "those",
-  "it",
-  "its",
-  "you",
-  "your",
-  "we",
-  "our",
-  "they",
-  "their",
-  "what",
-  "which",
-  "who",
-  "whom",
-]);
 
 // Antonym pairs for conflict detection
 const ANTONYM_PAIRS: Array<[RegExp, RegExp]> = [

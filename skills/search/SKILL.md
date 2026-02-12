@@ -95,9 +95,28 @@ mneme_search({ query: "JWT auth", limit: 50, offset: 50 })
 - `tags`
 - `sourceType`
 
+## Query construction tips
+
+Effective queries use specific technical terms rather than natural language:
+
+| Instead of | Use |
+|-----------|-----|
+| "how did we handle auth" | "JWT authentication middleware" |
+| "that error we fixed" | "CORS preflight 403" |
+| "the refactoring we did" | "refactor session-parser" |
+| "what was decided about DB" | "SQLite WAL migration" |
+
+Best practices:
+- Use **specific technical terms**: library names, error messages, API names
+- Use **file paths**: component or module names that were modified
+- Use **error text**: paste the exact error message or key portion
+- **Combine terms**: "FTS5 tokenizer unicode61" is better than "search"
+- When the first query returns no results, try **synonyms or related terms**
+
 ## Notes
 
 - If no approved units exist, search will effectively return sessions/interactions only.
+- Stopwords (common English/Japanese words) are automatically removed from queries.
 
 ## Failure conditions
 

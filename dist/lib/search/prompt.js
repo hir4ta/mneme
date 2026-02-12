@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // lib/search/prompt.ts
-import * as fs6 from "node:fs";
-import * as path6 from "node:path";
+import * as fs7 from "node:fs";
+import * as path7 from "node:path";
 
 // lib/search/approved-rules.ts
 import * as fs4 from "node:fs";
@@ -282,6 +282,158 @@ function walkJsonFiles(dir, callback) {
   }
 }
 
+// lib/search/stopwords.ts
+var ENGLISH_STOPWORDS = /* @__PURE__ */ new Set([
+  // Articles & determiners
+  "the",
+  "this",
+  "that",
+  "these",
+  "those",
+  "some",
+  "any",
+  "all",
+  "each",
+  "every",
+  "both",
+  "other",
+  // Pronouns
+  "you",
+  "your",
+  "its",
+  "his",
+  "her",
+  "our",
+  "their",
+  "them",
+  "they",
+  "who",
+  "whom",
+  "which",
+  // Prepositions & conjunctions
+  "for",
+  "with",
+  "from",
+  "into",
+  "about",
+  "between",
+  "through",
+  "during",
+  "before",
+  "after",
+  "above",
+  "below",
+  "under",
+  "and",
+  "but",
+  "nor",
+  "not",
+  "than",
+  "then",
+  "also",
+  "once",
+  "again",
+  "further",
+  "such",
+  "same",
+  "few",
+  "more",
+  "most",
+  "too",
+  "own",
+  // Common verbs (non-technical)
+  "are",
+  "was",
+  "were",
+  "been",
+  "being",
+  "have",
+  "has",
+  "had",
+  "does",
+  "did",
+  "will",
+  "would",
+  "could",
+  "should",
+  "shall",
+  "might",
+  "must",
+  "can",
+  // Prompt noise
+  "please",
+  "help",
+  "want",
+  "need",
+  "like",
+  "just",
+  "only",
+  "very",
+  "really",
+  "here",
+  "there",
+  "what",
+  "when",
+  "where",
+  "how",
+  "why",
+  "let",
+  "make",
+  "way",
+  "tell"
+]);
+var JAPANESE_STOPWORDS = /* @__PURE__ */ new Set([
+  // Common prompt phrases (split on whitespace, so these appear as tokens)
+  "\u304F\u3060\u3055\u3044",
+  "\u306B\u3064\u3044\u3066",
+  "\u3064\u3044\u3066",
+  "\u3057\u307E\u3059",
+  "\u3057\u3066\u3044\u308B",
+  "\u3057\u3066\u308B",
+  "\u3067\u304D\u308B",
+  "\u3067\u304D\u307E\u3059",
+  "\u3067\u3059\u304B",
+  "\u3042\u308A\u307E\u3059\u304B",
+  "\u3042\u308A\u307E\u305B\u3093",
+  "\u3042\u308A\u307E\u3057\u305F",
+  "\u3067\u3059\u304C",
+  "\u3067\u3059\u3051\u3069",
+  "\u3067\u3059\u306E\u3067",
+  "\u3067\u3059\u304B\u3089",
+  "\u3067\u3059\u306D",
+  "\u3067\u3059\u3088",
+  "\u3057\u307E\u3057\u3087\u3046",
+  "\u3057\u3088\u3046",
+  "\u3057\u305F\u3044",
+  "\u3057\u305F\u3044\u3067\u3059",
+  "\u307B\u3057\u3044",
+  "\u307B\u3057\u3044\u3067\u3059",
+  "\u3042\u308A\u304C\u3068\u3046",
+  "\u304A\u306D\u304C\u3044",
+  "\u304A\u9858\u3044",
+  "\u6559\u3048\u3066",
+  "\u898B\u305B\u3066",
+  "\u3084\u3063\u3066",
+  "\u3069\u3046\u3084\u3063\u3066",
+  "\u306A\u305C",
+  "\u3069\u3046",
+  "\u3069\u306E",
+  "\u305D\u306E",
+  "\u3053\u306E",
+  "\u3042\u306E",
+  "\u305D\u308C",
+  "\u3053\u308C",
+  "\u3042\u308C"
+]);
+var ALL_STOPWORDS = /* @__PURE__ */ new Set([...ENGLISH_STOPWORDS, ...JAPANESE_STOPWORDS]);
+function isStopword(token) {
+  return ALL_STOPWORDS.has(token.toLowerCase());
+}
+function removeStopwords(tokens) {
+  const filtered = tokens.filter((t) => !isStopword(t));
+  return filtered.length > 0 ? filtered : tokens;
+}
+
 // lib/search/approved-rules.ts
 function isApproved(status) {
   if (typeof status !== "string") return false;
@@ -428,7 +580,9 @@ function searchPatternFiles(mnemeDir, pattern) {
 }
 function searchApprovedRules(options) {
   const { query, mnemeDir, limit = 5 } = options;
-  const keywords = query.toLowerCase().split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 2);
+  const keywords = removeStopwords(
+    query.toLowerCase().split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 2)
+  );
   if (keywords.length === 0) return [];
   const expanded = expandKeywordsWithAliases(keywords, loadTags(mnemeDir));
   const pattern = new RegExp(expanded.map(escapeRegex).join("|"), "i");
@@ -563,6 +717,14 @@ function searchSessions(mnemeDir, keywords, limit = 5, detail = "compact") {
         score += 2;
         matchedFields.push("errors");
       }
+      if (session.technologies?.some((t) => pattern.test(t))) {
+        score += 1.5;
+        matchedFields.push("technologies");
+      }
+      if (session.filesModified?.some((f) => pattern.test(f.path))) {
+        score += 1;
+        matchedFields.push("filesModified");
+      }
       if (score === 0 && keywords.length <= 2) {
         const titleWords = (title || "").toLowerCase().split(/\s+/);
         const tagWords = session.tags || [];
@@ -613,7 +775,9 @@ function searchKnowledge(options) {
     offset = 0,
     detail = "compact"
   } = options;
-  const keywords = query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2);
+  const keywords = removeStopwords(
+    query.toLowerCase().split(/\s+/).map((token) => token.trim()).filter((token) => token.length > 2)
+  );
   if (keywords.length === 0) return [];
   const expandedKeywords = expandKeywordsWithAliases(
     keywords,
@@ -648,6 +812,55 @@ function searchKnowledge(options) {
   }).slice(safeOffset, safeOffset + limit);
 }
 
+// lib/search/file-search.ts
+import * as fs6 from "node:fs";
+import * as path6 from "node:path";
+function getSessionTitle(mnemeDir, sessionId) {
+  const sessionsDir = path6.join(mnemeDir, "sessions");
+  let title = sessionId;
+  walkJsonFiles(sessionsDir, (filePath) => {
+    if (!path6.basename(filePath, ".json").startsWith(sessionId)) return;
+    try {
+      const data = JSON.parse(fs6.readFileSync(filePath, "utf-8"));
+      if (data.title) title = data.title;
+    } catch {
+    }
+  });
+  return title;
+}
+function searchByFiles(database, projectPath, filePaths, mnemeDir, limit = 3) {
+  if (filePaths.length === 0) return [];
+  try {
+    const placeholders = filePaths.map(() => "?").join(",");
+    const rows = database.prepare(
+      `SELECT session_id, file_path, COUNT(*) as cnt
+       FROM file_index
+       WHERE project_path = ? AND file_path IN (${placeholders})
+       GROUP BY session_id, file_path`
+    ).all(projectPath, ...filePaths);
+    const sessionMap = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const entry = sessionMap.get(row.session_id) || {
+        files: /* @__PURE__ */ new Set(),
+        count: 0
+      };
+      entry.files.add(row.file_path);
+      entry.count += row.cnt;
+      sessionMap.set(row.session_id, entry);
+    }
+    return [...sessionMap.entries()].sort(
+      (a, b) => b[1].files.size - a[1].files.size || b[1].count - a[1].count
+    ).slice(0, limit).map(([sessionId, data]) => ({
+      sessionId,
+      title: getSessionTitle(mnemeDir, sessionId),
+      matchedFiles: [...data.files],
+      fileCount: data.count
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // lib/search/prompt.ts
 var originalEmit = process.emit;
 process.emit = (event, ...args) => {
@@ -666,17 +879,18 @@ function main() {
   const query = getArg(args, "query");
   const projectPath = getArg(args, "project");
   const limit = Number.parseInt(getArg(args, "limit") || "5", 10);
+  const files = getArg(args, "files");
   if (!query || !projectPath) {
     console.log(
       JSON.stringify({ success: false, error: "Missing required args" })
     );
     process.exit(1);
   }
-  const mnemeDir = path6.join(projectPath, ".mneme");
-  const dbPath = path6.join(mnemeDir, "local.db");
+  const mnemeDir = path7.join(projectPath, ".mneme");
+  const dbPath = path7.join(mnemeDir, "local.db");
   let database = null;
   try {
-    if (fs6.existsSync(dbPath)) {
+    if (fs7.existsSync(dbPath)) {
       database = new DatabaseSync(dbPath);
       database.exec("PRAGMA journal_mode = WAL");
     }
@@ -688,7 +902,10 @@ function main() {
       limit: Number.isFinite(limit) ? Math.max(1, Math.min(limit, 10)) : 5
     });
     const rules = searchApprovedRules({ query, mnemeDir, limit: 5 });
-    console.log(JSON.stringify({ success: true, results, rules }));
+    const fileRecommendations = files && database ? searchByFiles(database, projectPath, files.split(","), mnemeDir) : [];
+    console.log(
+      JSON.stringify({ success: true, results, rules, fileRecommendations })
+    );
   } catch (error) {
     console.log(
       JSON.stringify({ success: false, error: error.message })

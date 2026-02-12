@@ -1,6 +1,6 @@
 {
   "name": "@hir4ta/mneme",
-  "version": "0.24.0",
+  "version": "0.24.1",
   "description": "Long-term memory plugin for Claude Code - automated session saving, recording technical decisions, and web dashboard",
   "keywords": [
     "claude",

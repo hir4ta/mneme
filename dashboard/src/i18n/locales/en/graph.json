@@ -1,6 +1,14 @@
 {
   "title": "Knowledge Graph",
   "subtitle": "A visual map of how past sessions and units are connected through tags",
+  "pageDescription": {
+    "intro": "A tag-based visualization of connections between sessions and development rules.",
+    "nodeSession": "Session",
+    "nodeRule": "Decision / Pattern / Rule",
+    "edge": "Connections via shared tags (thicker = stronger)",
+    "line": "Lines indicate shared tags — thicker lines mean stronger connections. Colors distinguish node types.",
+    "interaction": "Click a node to see details, and use search or filters to focus on specific areas."
+  },
   "noSessions": "No sessions to display",
   "howToRead": {
     "title": "How to Read",

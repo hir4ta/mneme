@@ -1,6 +1,10 @@
 {
   "title": "セッション",
   "subtitle": "Claude Codeとの会話履歴を閲覧・管理します。",
+  "pageDescription": {
+    "intro": "Claude Codeとの作業セッションの一覧です。各セッションには目的・成果・使った技術・設計判断が記録されています。",
+    "usage": "過去に似た作業をしたか探すときや、以前の判断理由を振り返るときに使います。タグやセッション種別でフィルタできます。"
+  },
   "sessionCount": "{{count}}件のセッション",
   "searchPlaceholder": "セッションを検索...",
   "untitled": "無題のセッション",
@@ -67,7 +71,9 @@
       "code_examples": "コード例",
       "references": "参考資料",
       "handoff": "引き継ぎ",
-      "errors": "エラーと解決策"
+      "errors": "エラーと解決策",
+      "technologies": "技術スタック",
+      "filesModified": "変更ファイル"
     },
     "fields": {
       "goal": "目標",

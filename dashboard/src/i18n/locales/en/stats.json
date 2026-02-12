@@ -1,6 +1,7 @@
 {
   "title": "Statistics",
   "subtitle": "View activity charts and usage statistics.",
+  "pageDescription": "An overview of your project's development activity. Visualizes session trends over time, frequently used tags, and the number of accumulated rules. Useful for understanding which areas you've been focusing on and the pace of knowledge accumulation.",
   "totalSessions": "Sessions",
   "totalDecisions": "Decisions",
   "totalPatterns": "Patterns",

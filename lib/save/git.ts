@@ -56,13 +56,16 @@ export function resolveMnemeSessionId(
   projectPath: string,
   claudeSessionId: string,
 ): string {
-  const shortId = claudeSessionId.slice(0, 8);
-  const sessionLinkPath = path.join(
-    projectPath,
-    ".mneme",
-    "session-links",
-    `${shortId}.json`,
+  const sessionLinksDir = path.join(projectPath, ".mneme", "session-links");
+
+  // Try full UUID first, then fallback to 8-char for old sessions
+  const fullPath = path.join(sessionLinksDir, `${claudeSessionId}.json`);
+  const shortPath = path.join(
+    sessionLinksDir,
+    `${claudeSessionId.slice(0, 8)}.json`,
   );
+
+  const sessionLinkPath = fs.existsSync(fullPath) ? fullPath : shortPath;
 
   if (fs.existsSync(sessionLinkPath)) {
     try {
@@ -75,7 +78,7 @@ export function resolveMnemeSessionId(
     }
   }
 
-  return shortId;
+  return claudeSessionId;
 }
 
 export function findSessionFileById(
@@ -83,20 +86,26 @@ export function findSessionFileById(
   mnemeSessionId: string,
 ): string | null {
   const sessionsDir = path.join(projectPath, ".mneme", "sessions");
-  const searchDir = (dir: string): string | null => {
+  const searchDirFor = (dir: string, fileName: string): string | null => {
     if (!fs.existsSync(dir)) return null;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const result = searchDir(fullPath);
+        const result = searchDirFor(fullPath, fileName);
         if (result) return result;
-      } else if (entry.name === `${mnemeSessionId}.json`) {
+      } else if (entry.name === fileName) {
         return fullPath;
       }
     }
     return null;
   };
-  return searchDir(sessionsDir);
+  // Try full ID first, then fallback to 8-char for old sessions
+  const result = searchDirFor(sessionsDir, `${mnemeSessionId}.json`);
+  if (result) return result;
+  if (mnemeSessionId.length > 8) {
+    return searchDirFor(sessionsDir, `${mnemeSessionId.slice(0, 8)}.json`);
+  }
+  return null;
 }
 
 export function hasSessionSummary(sessionFile: string | null): boolean {

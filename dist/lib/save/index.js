@@ -56,13 +56,13 @@ async function getGitInfo(projectPath) {
   return { owner, repository, repositoryUrl, repositoryRoot };
 }
 function resolveMnemeSessionId(projectPath, claudeSessionId) {
-  const shortId = claudeSessionId.slice(0, 8);
-  const sessionLinkPath = path.join(
-    projectPath,
-    ".mneme",
-    "session-links",
-    `${shortId}.json`
+  const sessionLinksDir = path.join(projectPath, ".mneme", "session-links");
+  const fullPath = path.join(sessionLinksDir, `${claudeSessionId}.json`);
+  const shortPath = path.join(
+    sessionLinksDir,
+    `${claudeSessionId.slice(0, 8)}.json`
   );
+  const sessionLinkPath = fs.existsSync(fullPath) ? fullPath : shortPath;
   if (fs.existsSync(sessionLinkPath)) {
     try {
       const link = JSON.parse(fs.readFileSync(sessionLinkPath, "utf8"));
@@ -72,24 +72,29 @@ function resolveMnemeSessionId(projectPath, claudeSessionId) {
     } catch {
     }
   }
-  return shortId;
+  return claudeSessionId;
 }
 function findSessionFileById(projectPath, mnemeSessionId) {
   const sessionsDir = path.join(projectPath, ".mneme", "sessions");
-  const searchDir = (dir) => {
+  const searchDirFor = (dir, fileName) => {
     if (!fs.existsSync(dir)) return null;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const result = searchDir(fullPath);
-        if (result) return result;
-      } else if (entry.name === `${mnemeSessionId}.json`) {
+        const result2 = searchDirFor(fullPath, fileName);
+        if (result2) return result2;
+      } else if (entry.name === fileName) {
         return fullPath;
       }
     }
     return null;
   };
-  return searchDir(sessionsDir);
+  const result = searchDirFor(sessionsDir, `${mnemeSessionId}.json`);
+  if (result) return result;
+  if (mnemeSessionId.length > 8) {
+    return searchDirFor(sessionsDir, `${mnemeSessionId.slice(0, 8)}.json`);
+  }
+  return null;
 }
 function hasSessionSummary(sessionFile) {
   if (!sessionFile) return false;
@@ -181,12 +186,19 @@ function cleanupStaleUncommittedSessions(projectPath, graceDays) {
         } catch {
         }
       }
-      const linkPath = path2.join(
+      const fullLinkPath = path2.join(
+        projectPath,
+        ".mneme",
+        "session-links",
+        `${row.claude_session_id}.json`
+      );
+      const shortLinkPath = path2.join(
         projectPath,
         ".mneme",
         "session-links",
         `${row.claude_session_id.slice(0, 8)}.json`
       );
+      const linkPath = fs2.existsSync(fullLinkPath) ? fullLinkPath : shortLinkPath;
       if (fs2.existsSync(linkPath)) {
         try {
           fs2.unlinkSync(linkPath);
@@ -321,6 +333,24 @@ function migrateDatabase(db) {
       CREATE INDEX IF NOT EXISTS idx_save_state_project ON session_save_state(project_path);
     `);
     console.error("[mneme] Migrated: created session_save_state table");
+  }
+  try {
+    db.exec("SELECT 1 FROM file_index LIMIT 1");
+  } catch {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS file_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        tool_name TEXT,
+        timestamp TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_file_index_session ON file_index(session_id);
+      CREATE INDEX IF NOT EXISTS idx_file_index_project_file ON file_index(project_path, file_path);
+    `);
+    console.error("[mneme] Migrated: created file_index table");
   }
 }
 function initDatabase(dbPath) {
@@ -568,6 +598,52 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
 
 // lib/save/index.ts
 var { DatabaseSync: DatabaseSync3 } = await import("node:sqlite");
+function normalizeFilePath(absPath, projectPath) {
+  if (!absPath.startsWith(projectPath)) return null;
+  return absPath.slice(projectPath.length).replace(/^\//, "");
+}
+var IGNORED_PREFIXES = [
+  "node_modules/",
+  "dist/",
+  ".git/",
+  ".mneme/",
+  ".claude/"
+];
+var IGNORED_FILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"];
+function isIgnoredPath(relativePath) {
+  return IGNORED_PREFIXES.some((p) => relativePath.startsWith(p)) || IGNORED_FILES.includes(relativePath);
+}
+function indexFilePaths(fileIndexStmt, interaction, mnemeSessionId, projectPath) {
+  const seen = /* @__PURE__ */ new Set();
+  const add = (absPath, toolName) => {
+    const normalized = normalizeFilePath(absPath, projectPath);
+    if (!normalized || isIgnoredPath(normalized) || seen.has(normalized))
+      return;
+    seen.add(normalized);
+    try {
+      fileIndexStmt.run(
+        mnemeSessionId,
+        projectPath,
+        normalized,
+        toolName,
+        interaction.timestamp
+      );
+    } catch {
+    }
+  };
+  for (const td of interaction.toolDetails) {
+    if (typeof td.detail === "string" && td.detail.startsWith("/")) {
+      add(td.detail, td.name);
+    }
+  }
+  if (interaction.toolResults) {
+    for (const tr of interaction.toolResults) {
+      if (tr.filePath?.startsWith("/")) {
+        add(tr.filePath, tr.toolName || "");
+      }
+    }
+  }
+}
 async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
   if (!claudeSessionId || !transcriptPath || !projectPath) {
     return {
@@ -612,6 +688,10 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
       session_id, claude_session_id, project_path, repository, repository_url, repository_root,
       owner, role, content, thinking, tool_calls, timestamp, is_compact_summary
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const fileIndexStmt = db.prepare(`
+    INSERT INTO file_index (session_id, project_path, file_path, tool_name, timestamp)
+    VALUES (?, ?, ?, ?, ?)
   `);
   let insertedCount = 0;
   let lastTimestamp = saveState.lastSavedTimestamp || "";
@@ -676,6 +756,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
         );
         insertedCount++;
       }
+      indexFilePaths(fileIndexStmt, interaction, mnemeSessionId, projectPath);
       lastTimestamp = interaction.timestamp;
     } catch (error) {
       console.error(`[mneme] Error inserting interaction: ${error}`);

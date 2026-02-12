@@ -4,6 +4,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { searchApprovedRules } from "./approved-rules.js";
 import { searchKnowledge } from "./core.js";
+import { searchByFiles } from "./file-search.js";
 
 // Suppress Node.js SQLite experimental warning.
 const originalEmit = process.emit;
@@ -38,6 +39,7 @@ function main() {
   const query = getArg(args, "query");
   const projectPath = getArg(args, "project");
   const limit = Number.parseInt(getArg(args, "limit") || "5", 10);
+  const files = getArg(args, "files");
 
   if (!query || !projectPath) {
     console.log(
@@ -66,7 +68,14 @@ function main() {
 
     const rules = searchApprovedRules({ query, mnemeDir, limit: 5 });
 
-    console.log(JSON.stringify({ success: true, results, rules }));
+    const fileRecommendations =
+      files && database
+        ? searchByFiles(database, projectPath, files.split(","), mnemeDir)
+        : [];
+
+    console.log(
+      JSON.stringify({ success: true, results, rules, fileRecommendations }),
+    );
   } catch (error) {
     console.log(
       JSON.stringify({ success: false, error: (error as Error).message }),

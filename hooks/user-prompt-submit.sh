@@ -53,8 +53,18 @@ if [ -z "$search_script" ]; then
   exit 0
 fi
 
+# Detect changed files for file-based session recommendation
+changed_files=""
+if command -v git >/dev/null 2>&1 && git -C "$cwd" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  changed_files=$(cd "$cwd" && {
+    git diff --name-only HEAD 2>/dev/null
+    git diff --name-only --cached 2>/dev/null
+  } | sort -u | head -20 | paste -sd "," - 2>/dev/null || echo "")
+fi
+
 search_output=$(invoke_node "$search_script" \
-  --query "$prompt" --project "$cwd" --limit 5 2>/dev/null || echo "")
+  --query "$prompt" --project "$cwd" --limit 5 \
+  ${changed_files:+--files "$changed_files"} 2>/dev/null || echo "")
 
 if [ -z "$search_output" ]; then
   exit 0
@@ -75,11 +85,32 @@ context_lines=$(echo "$search_output" | jq -r '
   | join("\n")
 ')
 
-if [ -n "$context_lines" ] && [ "$context_lines" != "null" ]; then
+# Format file-based session recommendations
+file_rec_lines=$(echo "$search_output" | jq -r '
+  .fileRecommendations // []
+  | .[:3]
+  | map("[session:\(.sessionId)] \(.title) | files: \(.matchedFiles | join(", "))")
+  | join("\n")
+')
+
+if [ -n "$context_lines" ] && [ "$context_lines" != "null" ] || \
+   [ -n "$file_rec_lines" ] && [ "$file_rec_lines" != "null" ]; then
+  context_parts=""
+  if [ -n "$context_lines" ] && [ "$context_lines" != "null" ]; then
+    context_parts="Related context found (sessions/units):
+${context_lines}"
+  fi
+  if [ -n "$file_rec_lines" ] && [ "$file_rec_lines" != "null" ]; then
+    if [ -n "$context_parts" ]; then
+      context_parts="${context_parts}
+"
+    fi
+    context_parts="${context_parts}Related sessions (editing same files):
+${file_rec_lines}"
+  fi
   context_message="<mneme-context>
-Related context found (sessions/units):
-${context_lines}
-Use /mneme:search for details.
+${context_parts}
+To explore deeper: use /mneme:search with specific technical terms, error messages, or file paths.
 </mneme-context>"
 fi
 

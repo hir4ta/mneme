@@ -130,6 +130,25 @@ function migrateDatabase(db: DatabaseSyncType): void {
     `);
     console.error("[mneme] Migrated: created session_save_state table");
   }
+
+  try {
+    db.exec("SELECT 1 FROM file_index LIMIT 1");
+  } catch {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS file_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        tool_name TEXT,
+        timestamp TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_file_index_session ON file_index(session_id);
+      CREATE INDEX IF NOT EXISTS idx_file_index_project_file ON file_index(project_path, file_path);
+    `);
+    console.error("[mneme] Migrated: created file_index table");
+  }
 }
 
 export function initDatabase(dbPath: string): DatabaseSyncType {

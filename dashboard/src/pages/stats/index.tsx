@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { usePageDescription } from "@/components/page-description";
 import { ActivityChartSection } from "./activity-chart";
 import { COLORS, SkeletonCard, StatCard } from "./stat-components";
 import { SessionTypeChartSection, TagsChartSection } from "./type-chart";
@@ -40,6 +41,7 @@ async function fetchTagStats(): Promise<TagStats> {
 
 export function StatsPage() {
   const { t } = useTranslation("stats");
+  const desc = usePageDescription("stats");
 
   const {
     data: overview,
@@ -91,8 +93,12 @@ export function StatsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <desc.Trigger />
+        </div>
+        <desc.Panel>{t("pageDescription")}</desc.Panel>
       </div>
 
       {/* Overview Cards */}

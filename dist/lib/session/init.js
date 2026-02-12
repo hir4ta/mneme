@@ -222,14 +222,15 @@ function sessionInit(sessionId, cwd) {
     return { additionalContext: "" };
   }
   const now = nowISO();
-  const sessionShortId = sessionId ? sessionId.substring(0, 8) : "";
-  const fileId = sessionShortId;
+  const fileId = sessionId || "";
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);
   const projectName = path3.basename(cwd);
   let masterSessionId = "";
   let masterSessionPath = "";
-  const sessionLinkFile = path3.join(sessionLinksDir, `${fileId}.json`);
+  const fullLinkFile = path3.join(sessionLinksDir, `${fileId}.json`);
+  const shortLinkFile = fileId.length > 8 ? path3.join(sessionLinksDir, `${fileId.slice(0, 8)}.json`) : fullLinkFile;
+  const sessionLinkFile = fs3.existsSync(fullLinkFile) ? fullLinkFile : shortLinkFile;
   if (fs3.existsSync(sessionLinkFile)) {
     const link = safeReadJson(sessionLinkFile, {
       masterSessionId: "",
@@ -239,7 +240,9 @@ function sessionInit(sessionId, cwd) {
     if (link.masterSessionId) {
       masterSessionId = link.masterSessionId;
       const allFiles = findJsonFiles(sessionsDir);
-      masterSessionPath = allFiles.find((f) => path3.basename(f) === `${masterSessionId}.json`) || "";
+      masterSessionPath = allFiles.find((f) => path3.basename(f) === `${masterSessionId}.json`) || (masterSessionId.length > 8 ? allFiles.find(
+        (f) => path3.basename(f) === `${masterSessionId.slice(0, 8)}.json`
+      ) || "" : "");
       if (masterSessionPath) {
         console.error(`[mneme] Session linked to master: ${masterSessionId}`);
       }
@@ -249,9 +252,9 @@ function sessionInit(sessionId, cwd) {
   let isResumed = false;
   if (fs3.existsSync(sessionsDir)) {
     const allFiles = findJsonFiles(sessionsDir);
-    const existing = allFiles.find(
-      (f) => path3.basename(f) === `${fileId}.json`
-    );
+    const existing = allFiles.find((f) => path3.basename(f) === `${fileId}.json`) || (fileId.length > 8 ? allFiles.find(
+      (f) => path3.basename(f) === `${fileId.slice(0, 8)}.json`
+    ) : void 0);
     if (existing) {
       sessionPath = existing;
       isResumed = true;
@@ -285,7 +288,7 @@ function sessionInit(sessionId, cwd) {
     context.user = user;
     const sessionJson = {
       id: fileId,
-      sessionId: sessionId || sessionShortId,
+      sessionId: sessionId || fileId,
       createdAt: now,
       title: "",
       tags: [],
@@ -303,7 +306,7 @@ function sessionInit(sessionId, cwd) {
     console.error(`[mneme] Session initialized: ${sessionPath}`);
   }
   if (masterSessionId && masterSessionPath && fs3.existsSync(masterSessionPath)) {
-    const claudeSessionId = sessionId || sessionShortId;
+    const claudeSessionId = sessionId || fileId;
     const master = safeReadJson(
       masterSessionPath,
       {}

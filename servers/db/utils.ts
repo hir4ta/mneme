@@ -57,6 +57,12 @@ export function readSessionsById(): Map<string, Record<string, unknown>> {
     const id = typeof parsed?.id === "string" ? parsed.id : "";
     if (!id) continue;
     map.set(id, parsed);
+    // Also index by full sessionId for dual-key lookup (old sessions have 8-char id)
+    const sessionId =
+      typeof parsed?.sessionId === "string" ? parsed.sessionId : "";
+    if (sessionId && sessionId !== id) {
+      map.set(sessionId, parsed);
+    }
   }
   return map;
 }

@@ -7,11 +7,13 @@ import {
   CodeExamplesSection,
   DiscussionsSection,
   ErrorsSection,
+  FilesModifiedSection,
   HandoffSection,
   PlanSection,
   ReferencesSection,
   SectionCard,
   SummarySection,
+  TechnologiesSection,
 } from "./session-context-sections";
 
 interface SessionContextCardProps {
@@ -38,6 +40,8 @@ export function SessionContextCard({
         session.handoff.notes?.length ||
         session.handoff.nextSteps?.length),
     session.references && session.references.length > 0,
+    session.technologies && session.technologies.length > 0,
+    session.filesModified && session.filesModified.length > 0,
   ].filter(Boolean).length;
 
   if (sections === 0) {
@@ -132,6 +136,24 @@ export function SessionContextCard({
           label={t("context.sectionLabels.references")}
         >
           <ReferencesSection references={session.references} />
+        </SectionCard>
+      )}
+
+      {session.technologies && session.technologies.length > 0 && (
+        <SectionCard
+          sectionKey="technologies"
+          label={t("context.sectionLabels.technologies")}
+        >
+          <TechnologiesSection technologies={session.technologies} />
+        </SectionCard>
+      )}
+
+      {session.filesModified && session.filesModified.length > 0 && (
+        <SectionCard
+          sectionKey="filesModified"
+          label={t("context.sectionLabels.filesModified")}
+        >
+          <FilesModifiedSection filesModified={session.filesModified} />
         </SectionCard>
       )}
     </div>

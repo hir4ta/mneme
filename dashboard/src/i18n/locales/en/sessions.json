@@ -1,6 +1,10 @@
 {
   "title": "Sessions",
   "subtitle": "Browse and manage your Claude Code conversation history.",
+  "pageDescription": {
+    "intro": "A list of your work sessions with Claude Code. Each session records the goal, outcome, technologies used, and design decisions made.",
+    "usage": "Use this page to find past work or revisit previous decisions. You can filter by tags or session type."
+  },
   "sessionCount": "{{count}} session",
   "sessionCount_other": "{{count}} sessions",
   "searchPlaceholder": "Search sessions...",
@@ -69,7 +73,9 @@
       "code_examples": "Code Examples",
       "references": "References",
       "handoff": "Handoff",
-      "errors": "Errors & Solutions"
+      "errors": "Errors & Solutions",
+      "technologies": "Technologies",
+      "filesModified": "Files Modified"
     },
     "fields": {
       "goal": "Goal",

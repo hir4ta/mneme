@@ -1,6 +1,7 @@
 import { XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageDescription } from "@/components/page-description";
 import { SessionCard } from "@/components/session-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ const CATEGORY_ORDER = [
 export function SessionsPage() {
   const { t } = useTranslation("sessions");
   const { t: tc } = useTranslation("common");
+  const desc = usePageDescription("sessions");
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
@@ -116,14 +118,21 @@ export function SessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+            <desc.Trigger />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t("sessionCount", { count: pagination?.total || 0 })}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {t("sessionCount", { count: pagination?.total || 0 })}
-        </p>
+        <desc.Panel>
+          <p>{t("pageDescription.intro")}</p>
+          <p className="mt-1.5">{t("pageDescription.usage")}</p>
+        </desc.Panel>
       </div>
 
       {(pagination?.total || 0) === 0 &&

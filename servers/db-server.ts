@@ -33,6 +33,7 @@ import {
   QUERY_MAX_LENGTH,
 } from "./db/types.js";
 import { getDb } from "./db/utils.js";
+import { registerValidateSourcesTool } from "./db/validate-sources.js";
 
 const server = new McpServer({
   name: "mneme-db",
@@ -185,6 +186,7 @@ server.registerTool(
 // Register extended tools
 registerSessionSummaryTool(server);
 registerExtendedTools(server);
+registerValidateSourcesTool(server);
 
 async function main() {
   const transport = new StdioServerTransport();

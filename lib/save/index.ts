@@ -19,9 +19,72 @@ export {
 } from "./cleanup.js";
 
 import { parseTranscriptIncremental } from "./parser.js";
-import type { SaveResult } from "./types.js";
+import type { ParsedInteraction, SaveResult } from "./types.js";
 
 export type { SaveResult } from "./types.js";
+
+function normalizeFilePath(
+  absPath: string,
+  projectPath: string,
+): string | null {
+  if (!absPath.startsWith(projectPath)) return null;
+  return absPath.slice(projectPath.length).replace(/^\//, "");
+}
+
+const IGNORED_PREFIXES = [
+  "node_modules/",
+  "dist/",
+  ".git/",
+  ".mneme/",
+  ".claude/",
+];
+const IGNORED_FILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"];
+
+function isIgnoredPath(relativePath: string): boolean {
+  return (
+    IGNORED_PREFIXES.some((p) => relativePath.startsWith(p)) ||
+    IGNORED_FILES.includes(relativePath)
+  );
+}
+
+function indexFilePaths(
+  fileIndexStmt: { run: (...args: unknown[]) => void },
+  interaction: ParsedInteraction,
+  mnemeSessionId: string,
+  projectPath: string,
+): void {
+  const seen = new Set<string>();
+  const add = (absPath: string, toolName: string) => {
+    const normalized = normalizeFilePath(absPath, projectPath);
+    if (!normalized || isIgnoredPath(normalized) || seen.has(normalized))
+      return;
+    seen.add(normalized);
+    try {
+      fileIndexStmt.run(
+        mnemeSessionId,
+        projectPath,
+        normalized,
+        toolName,
+        interaction.timestamp,
+      );
+    } catch {
+      // Ignore duplicate or constraint errors
+    }
+  };
+
+  for (const td of interaction.toolDetails) {
+    if (typeof td.detail === "string" && td.detail.startsWith("/")) {
+      add(td.detail, td.name);
+    }
+  }
+  if (interaction.toolResults) {
+    for (const tr of interaction.toolResults) {
+      if (tr.filePath?.startsWith("/")) {
+        add(tr.filePath, tr.toolName || "");
+      }
+    }
+  }
+}
 
 export async function incrementalSave(
   claudeSessionId: string,
@@ -77,6 +140,11 @@ export async function incrementalSave(
       session_id, claude_session_id, project_path, repository, repository_url, repository_root,
       owner, role, content, thinking, tool_calls, timestamp, is_compact_summary
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const fileIndexStmt = db.prepare(`
+    INSERT INTO file_index (session_id, project_path, file_path, tool_name, timestamp)
+    VALUES (?, ?, ?, ?, ?)
   `);
 
   let insertedCount = 0;
@@ -146,6 +214,9 @@ export async function incrementalSave(
         );
         insertedCount++;
       }
+
+      // Index file paths for session recommendation
+      indexFilePaths(fileIndexStmt, interaction, mnemeSessionId, projectPath);
 
       lastTimestamp = interaction.timestamp;
     } catch (error) {

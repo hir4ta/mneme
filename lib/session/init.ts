@@ -79,8 +79,7 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
   }
 
   const now = nowISO();
-  const sessionShortId = sessionId ? sessionId.substring(0, 8) : "";
-  const fileId = sessionShortId;
+  const fileId = sessionId || "";
 
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);
@@ -88,7 +87,15 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
 
   let masterSessionId = "";
   let masterSessionPath = "";
-  const sessionLinkFile = path.join(sessionLinksDir, `${fileId}.json`);
+  // Try full UUID first, then fallback to 8-char for old session-links
+  const fullLinkFile = path.join(sessionLinksDir, `${fileId}.json`);
+  const shortLinkFile =
+    fileId.length > 8
+      ? path.join(sessionLinksDir, `${fileId.slice(0, 8)}.json`)
+      : fullLinkFile;
+  const sessionLinkFile = fs.existsSync(fullLinkFile)
+    ? fullLinkFile
+    : shortLinkFile;
 
   if (fs.existsSync(sessionLinkFile)) {
     const link = safeReadJson<SessionLink>(sessionLinkFile, {
@@ -101,7 +108,11 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
       const allFiles = findJsonFiles(sessionsDir);
       masterSessionPath =
         allFiles.find((f) => path.basename(f) === `${masterSessionId}.json`) ||
-        "";
+        (masterSessionId.length > 8
+          ? allFiles.find(
+              (f) => path.basename(f) === `${masterSessionId.slice(0, 8)}.json`,
+            ) || ""
+          : "");
       if (masterSessionPath) {
         console.error(`[mneme] Session linked to master: ${masterSessionId}`);
       }
@@ -113,9 +124,14 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
 
   if (fs.existsSync(sessionsDir)) {
     const allFiles = findJsonFiles(sessionsDir);
-    const existing = allFiles.find(
-      (f) => path.basename(f) === `${fileId}.json`,
-    );
+    // Try full UUID first, then fallback to 8-char for old sessions
+    const existing =
+      allFiles.find((f) => path.basename(f) === `${fileId}.json`) ||
+      (fileId.length > 8
+        ? allFiles.find(
+            (f) => path.basename(f) === `${fileId.slice(0, 8)}.json`,
+          )
+        : undefined);
     if (existing) {
       sessionPath = existing;
       isResumed = true;
@@ -153,7 +169,7 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
 
     const sessionJson: SessionJson = {
       id: fileId,
-      sessionId: sessionId || sessionShortId,
+      sessionId: sessionId || fileId,
       createdAt: now,
       title: "",
       tags: [],
@@ -176,7 +192,7 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
     masterSessionPath &&
     fs.existsSync(masterSessionPath)
   ) {
-    const claudeSessionId = sessionId || sessionShortId;
+    const claudeSessionId = sessionId || fileId;
     const master = safeReadJson<SessionJson>(
       masterSessionPath,
       {} as SessionJson,

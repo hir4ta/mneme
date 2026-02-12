@@ -3387,7 +3387,10 @@ var toShortId = (id) => {
   return id;
 };
 var findJsonFileById = (dir, id) => {
-  const target = `${toShortId(id)}.json`;
+  const targets = [
+    `${id}.json`,
+    ...id !== toShortId(id) ? [`${toShortId(id)}.json`] : []
+  ];
   const queue = [dir];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -3399,7 +3402,7 @@ var findJsonFileById = (dir, id) => {
       const fullPath = path3.join(current, entry.name);
       if (entry.isDirectory()) {
         queue.push(fullPath);
-      } else if (entry.isFile() && entry.name === target) {
+      } else if (entry.isFile() && targets.includes(entry.name)) {
         const rel = path3.relative(dir, fullPath);
         const parts = rel.split(path3.sep);
         if (parts.length >= 3 && /^\d{4}$/.test(parts[0]) && /^\d{2}$/.test(parts[1])) {
@@ -4490,7 +4493,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.24.0";
+  const version = "0.24.1";
   return c.json({
     name: projectName,
     path: projectRoot,

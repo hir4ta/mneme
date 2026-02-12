@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePageDescription } from "@/components/page-description";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GraphCanvas } from "./graph-canvas";
@@ -17,6 +18,7 @@ import { useGraphData } from "./use-graph-data";
 
 export function GraphPage() {
   const { t } = useTranslation("graph");
+  const desc = usePageDescription("graph");
 
   // Filter states
   const [query, setQuery] = useState("");
@@ -112,8 +114,64 @@ export function GraphPage() {
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden">
       <div className="mb-1">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <desc.Trigger />
+        </div>
+        <desc.Panel>
+          <p>{t("pageDescription.intro")}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <span className="inline-flex items-center gap-1.5">
+              <svg
+                className="h-3.5 w-3.5 shrink-0"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+              >
+                <circle cx="8" cy="8" r="7" fill="#40513B" />
+              </svg>
+              {t("pageDescription.nodeSession")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <svg
+                className="h-3.5 w-3.5 shrink-0"
+                viewBox="0 0 16 16"
+                aria-hidden="true"
+              >
+                <rect
+                  x="1"
+                  y="1"
+                  width="14"
+                  height="14"
+                  rx="2"
+                  fill="#628141"
+                />
+              </svg>
+              {t("pageDescription.nodeRule")}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <svg
+                className="h-3.5 w-3.5 shrink-0"
+                viewBox="0 0 24 4"
+                aria-hidden="true"
+              >
+                <line
+                  x1="0"
+                  y1="2"
+                  x2="24"
+                  y2="2"
+                  stroke="#6b7280"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {t("pageDescription.edge")}
+            </span>
+          </div>
+          <p className="mt-2">
+            {t("pageDescription.line")} {t("pageDescription.interaction")}
+          </p>
+        </desc.Panel>
       </div>
 
       <GraphControls

@@ -95,6 +95,20 @@ CREATE TABLE IF NOT EXISTS interaction_embeddings (
     FOREIGN KEY (interaction_id) REFERENCES interactions(id) ON DELETE CASCADE
 );
 
+-- file_index: ファイル操作インデックス（セッション推薦用）
+CREATE TABLE IF NOT EXISTS file_index (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    project_path TEXT NOT NULL,
+    file_path TEXT NOT NULL,                -- プロジェクトルートからの相対パス
+    tool_name TEXT,                         -- Read, Edit, Write, etc.
+    timestamp TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_index_session ON file_index(session_id);
+CREATE INDEX IF NOT EXISTS idx_file_index_project_file ON file_index(project_path, file_path);
+
 -- schema_version: スキーマバージョン管理
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,
@@ -103,3 +117,6 @@ CREATE TABLE IF NOT EXISTS schema_version (
 
 -- スキーマバージョン 4（インクリメンタル保存対応）
 INSERT OR IGNORE INTO schema_version (version) VALUES (4);
+
+-- スキーマバージョン 5（ファイルインデックス追加）
+INSERT OR IGNORE INTO schema_version (version) VALUES (5);

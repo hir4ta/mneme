@@ -1,6 +1,6 @@
 # mneme
 
-![Version](https://img.shields.io/badge/version-0.24.0-blue)
+![Version](https://img.shields.io/badge/version-0.24.1-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D22.5.0-brightgreen)
 [![NPM Version](https://img.shields.io/npm/v/%40hir4ta%2Fmneme)](https://www.npmjs.com/package/@hir4ta/mneme)
 [![MIT License](https://img.shields.io/npm/l/%40hir4ta%2Fmneme)](https://github.com/hir4ta/mneme/blob/main/LICENSE)
@@ -127,9 +127,8 @@ implement → save → approve rules
 ```
 
 1. **implement**: コードを実装
-2. **save**: 元データを抽出して開発ルール候補を生成
-3. **validate**: `npm run validate:sources` で必須項目/priority/tags を検証
-4. **approve rules**: 生成された開発ルールをインラインで確認・承認/却下
+2. **save**: 元データを抽出して開発ルール候補を生成（バリデーションはMCP経由で自動実行）
+3. **approve rules**: 生成された開発ルールをインラインで確認・承認/却下
 
 ランタイム詳細（Hook分岐、未保存終了、Auto-Compact）は以下:
 - `docs/mneme-runtime-flow.md`

@@ -83,8 +83,8 @@ Use explicit section markers and XML-style tags for hard constraints:
 4. Deduplicate/conflict-check against existing sources.
 5. Save source artifacts with `prSource` metadata.
 6. Run source validation gate:
-   - `npm run validate:sources`
-   - If failed: fix artifacts and rerun.
+   - Call MCP tool `mneme_validate_sources`
+   - If failed (`valid: false`): fix artifacts and rerun.
 7. Regenerate units from sources.
 8. Show pending units for approval.
 
@@ -94,6 +94,6 @@ Use explicit section markers and XML-style tags for hard constraints:
 - extracted source item counts by type
 - duplicate/conflict summary
 - priority distribution (`p0/p1/p2` for added/updated rules)
-- validation result (`validate:sources`)
+- validation result (`mneme_validate_sources`)
 - regenerated units count
 - pending units count

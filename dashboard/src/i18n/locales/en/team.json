@@ -1,6 +1,7 @@
 {
   "title": "Team Activity",
   "subtitle": "Overview of team contributions and knowledge quality",
+  "pageDescription": "Shows contribution metrics and knowledge quality indicators per team member. Also useful for solo developers to review their own activity. Track session counts, rules created, approval rates, and more.",
   "members": "Members",
   "totalSessions": "Sessions",
   "totalDecisions": "Decisions",

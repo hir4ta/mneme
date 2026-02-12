@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { usePageDescription } from "@/components/page-description";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -221,6 +222,7 @@ function ActivityTimeline({ activity }: { activity: ActivityDay[] }) {
 
 export function TeamPage() {
   const { t } = useTranslation("team");
+  const desc = usePageDescription("team");
 
   const {
     data: overview,
@@ -257,8 +259,12 @@ export function TeamPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
+          <desc.Trigger />
+        </div>
+        <desc.Panel>{t("pageDescription")}</desc.Panel>
       </div>
 
       {/* Stat Cards */}
