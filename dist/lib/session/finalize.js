@@ -522,9 +522,16 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
       progressEvents.get(key)?.push(event);
     }
   }
+  const planContentEntries = entries.filter(
+    (e) => e.type === "user" && e.message?.role === "user" && !!e.planContent && typeof e.message?.content === "string"
+  ).map((e) => ({
+    timestamp: e.timestamp,
+    content: e.message?.content
+  }));
   const userMessages = entries.filter((e) => {
     if (e.type !== "user" || e.message?.role !== "user") return false;
     if (e.isMeta === true) return false;
+    if (e.planContent) return false;
     const content = e.message?.content;
     if (typeof content !== "string") return false;
     if (content.startsWith("<local-command-stdout>")) return false;
@@ -535,7 +542,7 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     return {
       timestamp: e.timestamp,
       content,
-      isCompactSummary: e.isCompactSummary || !!e.planContent || false,
+      isCompactSummary: e.isCompactSummary || false,
       slashCommand: extractSlashCommand(content)
     };
   });
@@ -585,7 +592,8 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
   const orphanedResponses = assistantMessages.filter(
     (a) => a.timestamp < firstUserTs
   );
-  if (orphanedResponses.length > 0) {
+  const planEntry = planContentEntries.find((p) => p.timestamp <= firstUserTs);
+  if (orphanedResponses.length > 0 || planEntry) {
     const allToolDetails = orphanedResponses.flatMap((r) => r.toolDetails);
     const orphanedTimeKeys = new Set(
       orphanedResponses.map((r) => r.timestamp.slice(0, 16))
@@ -597,15 +605,18 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
       (k) => progressEvents.get(k) || []
     );
     interactions.push({
-      timestamp: orphanedResponses[0].timestamp,
-      user: "",
+      timestamp: orphanedResponses.length > 0 ? orphanedResponses[0].timestamp : planEntry?.timestamp ?? "",
+      // Include plan content for compact detection (UUID extraction)
+      user: planEntry?.content || "",
       thinking: orphanedResponses.filter((r) => r.thinking).map((r) => r.thinking).join("\n"),
       assistant: orphanedResponses.filter((r) => r.text).map((r) => r.text).join("\n"),
-      isCompactSummary: false,
+      isCompactSummary: !!planEntry,
       isContinuation: true,
       toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
       toolDetails: allToolDetails,
-      inPlanMode: isInPlanMode(orphanedResponses[0].timestamp) || void 0,
+      inPlanMode: isInPlanMode(
+        orphanedResponses[0]?.timestamp ?? planEntry?.timestamp ?? ""
+      ) || void 0,
       toolResults: allToolResults.length > 0 ? allToolResults : void 0,
       progressEvents: allProgressEvents.length > 0 ? allProgressEvents : void 0
     });
