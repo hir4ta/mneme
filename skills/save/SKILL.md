@@ -5,7 +5,7 @@ description: |
   Use when: (1) finishing meaningful implementation work, (2) capturing reusable guidance,
   (3) before ending a long session.
 disable-model-invocation: false
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__mneme-db__mneme_save_interactions, mcp__mneme-db__mneme_update_session_summary, mcp__mneme-db__mneme_mark_session_committed, mcp__mneme-db__mneme_rule_linter, mcp__mneme-db__mneme_search_eval
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, mcp__mneme-db__mneme_save_interactions, mcp__mneme-db__mneme_update_session_summary, mcp__mneme-db__mneme_mark_session_committed, mcp__mneme-db__mneme_validate_sources, mcp__mneme-db__mneme_list_sessions, mcp__mneme-db__mneme_rule_linter, mcp__mneme-db__mneme_search_eval
 ---
 
 # /mneme:save
@@ -43,20 +43,40 @@ Always render missing required fields as blocking errors before write.
 
 ## Session ID resolution
 
+**STOP. Before doing ANYTHING else, find the Claude Session ID.**
+
+Scan upward in this conversation for the SessionStart context block. It contains a line matching this exact format:
+
+```
+**Claude Session ID:** <UUID>
+```
+
+Copy the full UUID value (36 characters, e.g. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+
 <required>
-- Get the full Claude Session ID from the SessionStart context injected at the top of this conversation (look for `**Claude Session ID:**`)
-- Do NOT run any Bash commands to discover the session ID
-- NEVER run exploratory commands like `printenv`, `find`, `echo $MNEME_SESSION_ID`, or `ls -t ~/.claude/projects/*/`
+- The Claude Session ID is ALREADY in this conversation — injected by the session-start hook at the very beginning
+- Search for the literal text `**Claude Session ID:**` in the messages above
+- Copy the full 36-character UUID that follows it
+- Do NOT run Bash, Glob, Grep, or any other tool to discover the session ID
+- Do NOT call `mneme_list_sessions` to find it (that is only for the fallback below)
+- Do NOT run `printenv`, `find`, `echo`, `ls`, `stat`, or any exploratory commands
 </required>
+
+**Fallback (only if `**Claude Session ID:**` is genuinely not found in the conversation):**
+1. Call `mneme_list_sessions` with the current project path and `limit: 1` to get the most recent session
+2. Use that session's `sessionId` as the Claude Session ID
+3. If that also fails, ask the user for the session ID
 
 ## Execution phases
 
-1. **Master session merge**
-- Merge linked/resumed child sessions into the master session.
+1. **Master session merge (only if resumed)**
+- Check if this is a resumed session: look for `(Resumed)` in the `**Session:**` line of the SessionStart context
+- **If NOT resumed**: skip this phase (fresh session, no merge needed)
+- **If resumed**: the `mneme_save_interactions` tool automatically resolves session-links internally, so just pass the current `claudeSessionId` — it saves to the correct master session
+- No manual action needed in most cases; this phase exists as a checkpoint
 
 2. **Interactions commit**
 - Save transcript interactions to `.mneme/local.db` via `mneme_save_interactions`.
-- Do NOT call `mneme_mark_session_committed` yet (wait until after Phase 3).
 
 3. **Session summary extraction (required MCP)**
 - Extract from the conversation: `title`, `goal`, `outcome`, `description`, `tags`, `sessionType`.
@@ -70,12 +90,12 @@ Always render missing required fields as blocking errors before write.
   - `handoff`: continuation info (stoppedReason, notes, nextSteps)
   - `references`: referenced document URLs and file paths (type, url, path, title, description)
 - **MUST call `mneme_update_session_summary`** MCP tool with all extracted data.
-  This writes the summary to `.mneme/sessions/` JSON file, ensuring the session is preserved on SessionEnd.
-- **Then call `mneme_mark_session_committed`** to finalize the commit.
+  This writes the summary to `.mneme/sessions/` JSON file and **automatically marks the session as committed** (no separate `mneme_mark_session_committed` call needed).
 
 <required>
 - Call `mneme_update_session_summary` with: `claudeSessionId`, `title`, `summary` (`goal`, `outcome`), `tags`, `sessionType`, `filesModified`, `technologies`
-- Call `mneme_mark_session_committed` AFTER `mneme_update_session_summary` succeeds
+- Do NOT call `mneme_mark_session_committed` separately — it is called internally by `mneme_update_session_summary`
+- Only call `mneme_mark_session_committed` explicitly if `mneme_update_session_summary` failed and you need error recovery
 - Do NOT skip this step even for short/research sessions
 </required>
 
@@ -117,6 +137,18 @@ The following data is easily lost in summaries, so save it explicitly as structu
 - Official documentation URLs confirmed via WebFetch/WebSearch
 - Important file paths referenced
 
+### Pre-read: Load valid tags before extraction (Phases 4-6)
+
+Before writing any decisions, patterns, or rules, read `.mneme/tags.json` to get the list of valid tag IDs.
+
+<required>
+- Read `.mneme/tags.json` and extract all `id` values from the `tags` array
+- Only use tag IDs that exist in this file — do NOT invent new tag IDs
+- If no existing tag fits perfectly, use the closest match from the list
+- Common tag IDs: `frontend`, `backend`, `api`, `db`, `infra`, `feature`, `bugfix`, `refactor`, `test`, `docs`, `config`, `perf`, `security`, `architecture`, `auth`, `cache`, `search`, `batch`, `integration`, `mcp`, `llm`, `error-handling`, `type`, `ui`
+- The full list has 66+ tags across categories: domain, phase, infra, cloud, architecture, feature, ui, data, ai, quality, workflow
+</required>
+
 4. **Decision extraction (source)**
 - Persist concrete choices and rationale to `decisions/YYYY/MM/*.json`.
 - Apply the classification matrix: only extract items that are **one-time choices with context-specific reasoning**.
@@ -132,6 +164,7 @@ Decision content quality:
   - BAD: `["Use HS256"]`
   - GOOD: `["Use HS256 -> rejected: key rotation difficult in production"]`
   If alternatives is a string array, append " -> rejected: reason" to each entry.
+- `tags`: MUST use only IDs from `.mneme/tags.json` (loaded in pre-read step above)
 </required>
 
 5. **Pattern extraction (source)**
@@ -150,6 +183,11 @@ Pattern content quality:
   - BAD: "when impact is limited"
   - GOOD: "when call sites are 5 or fewer and the interface is stable"
 - **Expected outcomes**: concrete effects when this pattern is applied
+- `type`: MUST be one of: `"good"`, `"bad"`, `"error-solution"`
+  - `"good"`: best practice to follow
+  - `"bad"`: anti-pattern to avoid
+  - `"error-solution"`: additionally requires `errorPattern` and `solution` fields
+- `tags`: MUST use only IDs from `.mneme/tags.json` (loaded in pre-read step above)
 </required>
 
 6. **Rule extraction (source)**
@@ -170,6 +208,7 @@ Rule content quality:
 - `category`: rule classification (type-safety, testing, security, performance, etc.)
 - Active rule must include: `id`, `key`, `text`, `category`, `tags`, `priority`, `rationale`
 - `priority` must be one of: `p0`, `p1`, `p2`
+- `tags`: MUST use only IDs from `.mneme/tags.json` (loaded in pre-read step above)
 </required>
 
 7. **Development rule candidates report**
@@ -178,9 +217,10 @@ Rule content quality:
 - Only items approved by the engineer in the dashboard become active development rules.
 - Do not perform inline approval.
 
-8. **Auto quality checks (required MCP)**
-- Run `mneme_rule_linter` (`ruleType: "all"`).
-- Run `mneme_search_eval` (`mode: "run"`).
+8. **Auto quality checks (required MCP, run in parallel)**
+- Run these two tools **in parallel** (they are independent, no dependency between them):
+  - `mneme_rule_linter` (`ruleType: "all"`)
+  - `mneme_search_eval` (`mode: "run"`)
 
 ## Source definitions and exclusivity (must follow)
 
