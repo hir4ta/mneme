@@ -100,11 +100,14 @@ function initMneme() {
   );
   fs.writeFileSync(path.join(rulesDir, "dev-rules.json"), rulesTemplate);
 
-  // Create .gitignore for local.db
+  // Create .gitignore for local.db and temporary files
   const gitignoreContent = `# Local SQLite database (private interactions)
 local.db
 local.db-wal
 local.db-shm
+
+# Temporary files
+.pending-compact.json
 `;
   fs.writeFileSync(gitignorePath, gitignoreContent);
 

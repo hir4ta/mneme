@@ -244,3 +244,16 @@ export function updateSaveState(
   `);
   stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
 }
+
+export function updateSaveStateMnemeSessionId(
+  db: DatabaseSyncType,
+  claudeSessionId: string,
+  mnemeSessionId: string,
+): void {
+  const stmt = db.prepare(`
+    UPDATE session_save_state
+    SET mneme_session_id = ?, updated_at = datetime('now')
+    WHERE claude_session_id = ?
+  `);
+  stmt.run(mnemeSessionId, claudeSessionId);
+}

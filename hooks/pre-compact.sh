@@ -70,4 +70,11 @@ else
     echo "[mneme:pre-compact] Save result: ${result}" >&2
 fi
 
+# Write pending-compact breadcrumb for session linking on next SessionStart
+# The new session (post-compact) will read this to link back to the current mneme session
+pending_compact_file="${cwd}/.mneme/.pending-compact.json"
+printf '{"claudeSessionId":"%s","timestamp":"%s"}\n' \
+    "$session_id" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$pending_compact_file"
+echo "[mneme:pre-compact] Wrote pending-compact breadcrumb for session linking" >&2
+
 exit 0

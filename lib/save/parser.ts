@@ -141,7 +141,7 @@ export async function parseTranscriptIncremental(
       return {
         timestamp: e.timestamp,
         content,
-        isCompactSummary: e.isCompactSummary || false,
+        isCompactSummary: e.isCompactSummary || !!e.planContent || false,
         slashCommand: extractSlashCommand(content),
       };
     });
@@ -219,6 +219,52 @@ export async function parseTranscriptIncremental(
     .filter((m) => m !== null);
 
   const interactions: ParsedInteraction[] = [];
+
+  // Determine orphaned assistant messages (before first user message in this batch)
+  const firstUserTs =
+    userMessages.length > 0
+      ? userMessages[0].timestamp
+      : "9999-12-31T23:59:59Z";
+
+  const orphanedResponses = assistantMessages.filter(
+    (a) => a.timestamp < firstUserTs,
+  );
+
+  if (orphanedResponses.length > 0) {
+    const allToolDetails = orphanedResponses.flatMap((r) => r.toolDetails);
+    const orphanedTimeKeys = new Set(
+      orphanedResponses.map((r) => r.timestamp.slice(0, 16)),
+    );
+    const allToolResults = [...orphanedTimeKeys].flatMap(
+      (k) => toolResultsByTimestamp.get(k) || [],
+    );
+    const allProgressEvents = [...orphanedTimeKeys].flatMap(
+      (k) => progressEvents.get(k) || [],
+    );
+
+    interactions.push({
+      timestamp: orphanedResponses[0].timestamp,
+      user: "",
+      thinking: orphanedResponses
+        .filter((r) => r.thinking)
+        .map((r) => r.thinking)
+        .join("\n"),
+      assistant: orphanedResponses
+        .filter((r) => r.text)
+        .map((r) => r.text)
+        .join("\n"),
+      isCompactSummary: false,
+      isContinuation: true,
+      toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
+      toolDetails: allToolDetails,
+      inPlanMode: isInPlanMode(orphanedResponses[0].timestamp) || undefined,
+      toolResults: allToolResults.length > 0 ? allToolResults : undefined,
+      progressEvents:
+        allProgressEvents.length > 0 ? allProgressEvents : undefined,
+    });
+  }
+
+  // Pair user messages with their assistant responses
   for (let i = 0; i < userMessages.length; i++) {
     const user = userMessages[i];
     const nextUserTs =

@@ -209,6 +209,69 @@ function initTags(mnemeDir, pluginRoot) {
 }
 
 // lib/session/init.ts
+function resolveSessionLink(sessionLinksDir, claudeSessionId) {
+  const fullPath = path3.join(sessionLinksDir, `${claudeSessionId}.json`);
+  const shortPath = claudeSessionId.length > 8 ? path3.join(sessionLinksDir, `${claudeSessionId.slice(0, 8)}.json`) : fullPath;
+  const linkPath = fs3.existsSync(fullPath) ? fullPath : shortPath;
+  if (fs3.existsSync(linkPath)) {
+    try {
+      const link = JSON.parse(fs3.readFileSync(linkPath, "utf8"));
+      if (link.masterSessionId) {
+        return link.masterSessionId;
+      }
+    } catch {
+    }
+  }
+  return claudeSessionId;
+}
+function handlePendingCompact(mnemeDir, sessionLinksDir, currentClaudeSessionId) {
+  const pendingFile = path3.join(mnemeDir, ".pending-compact.json");
+  if (!fs3.existsSync(pendingFile)) return;
+  try {
+    const pending = JSON.parse(fs3.readFileSync(pendingFile, "utf8"));
+    const oldClaudeSessionId = pending.claudeSessionId || "";
+    const timestamp = pending.timestamp || "";
+    if (timestamp) {
+      const age = Date.now() - new Date(timestamp).getTime();
+      if (age > 5 * 60 * 1e3) {
+        fs3.unlinkSync(pendingFile);
+        console.error("[mneme] Stale pending-compact removed");
+        return;
+      }
+    }
+    if (!oldClaudeSessionId || oldClaudeSessionId === currentClaudeSessionId) {
+      fs3.unlinkSync(pendingFile);
+      return;
+    }
+    const masterSessionId = resolveSessionLink(
+      sessionLinksDir,
+      oldClaudeSessionId
+    );
+    ensureDir(sessionLinksDir);
+    const linkFile = path3.join(
+      sessionLinksDir,
+      `${currentClaudeSessionId}.json`
+    );
+    if (!fs3.existsSync(linkFile)) {
+      const linkData = {
+        masterSessionId,
+        claudeSessionId: currentClaudeSessionId,
+        linkedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      fs3.writeFileSync(linkFile, JSON.stringify(linkData, null, 2));
+      console.error(
+        `[mneme] Compact continuation linked: ${currentClaudeSessionId} \u2192 ${masterSessionId}`
+      );
+    }
+    fs3.unlinkSync(pendingFile);
+  } catch (e) {
+    console.error(`[mneme] Error handling pending-compact: ${e}`);
+    try {
+      fs3.unlinkSync(path3.join(mnemeDir, ".pending-compact.json"));
+    } catch {
+    }
+  }
+}
 function sessionInit(sessionId, cwd) {
   const pluginRoot = path3.resolve(__dirname, "..", "..");
   const mnemeDir = path3.join(cwd, ".mneme");
@@ -223,6 +286,7 @@ function sessionInit(sessionId, cwd) {
   }
   const now = nowISO();
   const fileId = sessionId || "";
+  handlePendingCompact(mnemeDir, sessionLinksDir, fileId);
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);
   const projectName = path3.basename(cwd);

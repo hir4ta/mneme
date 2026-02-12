@@ -417,6 +417,14 @@ function updateSaveState(db, claudeSessionId, lastSavedTimestamp, lastSavedLine)
   `);
   stmt.run(lastSavedTimestamp, lastSavedLine, claudeSessionId);
 }
+function updateSaveStateMnemeSessionId(db, claudeSessionId, mnemeSessionId) {
+  const stmt = db.prepare(`
+    UPDATE session_save_state
+    SET mneme_session_id = ?, updated_at = datetime('now')
+    WHERE claude_session_id = ?
+  `);
+  stmt.run(mnemeSessionId, claudeSessionId);
+}
 
 // lib/save/parser.ts
 import * as fs4 from "node:fs";
@@ -523,7 +531,7 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     return {
       timestamp: e.timestamp,
       content,
-      isCompactSummary: e.isCompactSummary || false,
+      isCompactSummary: e.isCompactSummary || !!e.planContent || false,
       slashCommand: extractSlashCommand(content)
     };
   });
@@ -569,6 +577,35 @@ async function parseTranscriptIncremental(transcriptPath, lastSavedLine) {
     return { timestamp: e.timestamp, thinking, text, toolDetails };
   }).filter((m) => m !== null);
   const interactions = [];
+  const firstUserTs = userMessages.length > 0 ? userMessages[0].timestamp : "9999-12-31T23:59:59Z";
+  const orphanedResponses = assistantMessages.filter(
+    (a) => a.timestamp < firstUserTs
+  );
+  if (orphanedResponses.length > 0) {
+    const allToolDetails = orphanedResponses.flatMap((r) => r.toolDetails);
+    const orphanedTimeKeys = new Set(
+      orphanedResponses.map((r) => r.timestamp.slice(0, 16))
+    );
+    const allToolResults = [...orphanedTimeKeys].flatMap(
+      (k) => toolResultsByTimestamp.get(k) || []
+    );
+    const allProgressEvents = [...orphanedTimeKeys].flatMap(
+      (k) => progressEvents.get(k) || []
+    );
+    interactions.push({
+      timestamp: orphanedResponses[0].timestamp,
+      user: "",
+      thinking: orphanedResponses.filter((r) => r.thinking).map((r) => r.thinking).join("\n"),
+      assistant: orphanedResponses.filter((r) => r.text).map((r) => r.text).join("\n"),
+      isCompactSummary: false,
+      isContinuation: true,
+      toolsUsed: [...new Set(allToolDetails.map((t) => t.name))],
+      toolDetails: allToolDetails,
+      inPlanMode: isInPlanMode(orphanedResponses[0].timestamp) || void 0,
+      toolResults: allToolResults.length > 0 ? allToolResults : void 0,
+      progressEvents: allProgressEvents.length > 0 ? allProgressEvents : void 0
+    });
+  }
   for (let i = 0; i < userMessages.length; i++) {
     const user = userMessages[i];
     const nextUserTs = i + 1 < userMessages.length ? userMessages[i + 1].timestamp : "9999-12-31T23:59:59Z";
@@ -610,6 +647,61 @@ var IGNORED_PREFIXES = [
   ".claude/"
 ];
 var IGNORED_FILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"];
+function detectCompactContinuation(interactions, projectPath) {
+  const compactInteraction = interactions.find((i) => i.isCompactSummary);
+  if (!compactInteraction?.user) return null;
+  const match = compactInteraction.user.match(
+    /read the full transcript at:.*?\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl/
+  );
+  if (!match) return null;
+  const oldClaudeSessionId = match[1];
+  return resolveMnemeSessionId(projectPath, oldClaudeSessionId);
+}
+function linkToMasterSession(projectPath, claudeSessionId, masterMnemeSessionId) {
+  const sessionLinksDir = path4.join(projectPath, ".mneme", "session-links");
+  if (!fs5.existsSync(sessionLinksDir)) {
+    fs5.mkdirSync(sessionLinksDir, { recursive: true });
+  }
+  const linkFile = path4.join(sessionLinksDir, `${claudeSessionId}.json`);
+  if (!fs5.existsSync(linkFile)) {
+    fs5.writeFileSync(
+      linkFile,
+      JSON.stringify(
+        {
+          masterSessionId: masterMnemeSessionId,
+          claudeSessionId,
+          linkedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        null,
+        2
+      )
+    );
+    console.error(
+      `[mneme] Compact continuation linked: ${claudeSessionId} \u2192 ${masterMnemeSessionId}`
+    );
+  }
+  const masterFile = findSessionFileById(projectPath, masterMnemeSessionId);
+  if (masterFile && fs5.existsSync(masterFile)) {
+    try {
+      const master = JSON.parse(fs5.readFileSync(masterFile, "utf8"));
+      const workPeriods = master.workPeriods || [];
+      const alreadyLinked = workPeriods.some(
+        (wp) => wp.claudeSessionId === claudeSessionId
+      );
+      if (!alreadyLinked) {
+        workPeriods.push({
+          claudeSessionId,
+          startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          endedAt: null
+        });
+        master.workPeriods = workPeriods;
+        master.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        fs5.writeFileSync(masterFile, JSON.stringify(master, null, 2));
+      }
+    } catch {
+    }
+  }
+}
 function isIgnoredPath(relativePath) {
   return IGNORED_PREFIXES.some((p) => relativePath.startsWith(p)) || IGNORED_FILES.includes(relativePath);
 }
@@ -663,7 +755,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
   }
   const dbPath = path4.join(projectPath, ".mneme", "local.db");
   const db = initDatabase(dbPath);
-  const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
+  let mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
   const saveState = getSaveState(
     db,
     claudeSessionId,
@@ -674,7 +766,25 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
     transcriptPath,
     saveState.lastSavedLine
   );
+  if (saveState.lastSavedLine === 0 && interactions.length > 0) {
+    const masterSessionId = detectCompactContinuation(
+      interactions,
+      projectPath
+    );
+    if (masterSessionId && masterSessionId !== mnemeSessionId) {
+      linkToMasterSession(projectPath, claudeSessionId, masterSessionId);
+      mnemeSessionId = masterSessionId;
+      updateSaveStateMnemeSessionId(db, claudeSessionId, masterSessionId);
+    }
+  }
   if (interactions.length === 0) {
+    updateSaveState(
+      db,
+      claudeSessionId,
+      saveState.lastSavedTimestamp || "",
+      totalLines
+    );
+    db.close();
     return {
       success: true,
       savedCount: 0,
@@ -701,6 +811,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
         toolsUsed: interaction.toolsUsed,
         toolDetails: interaction.toolDetails,
         ...interaction.inPlanMode && { inPlanMode: true },
+        ...interaction.isContinuation && { isContinuation: true },
         ...interaction.slashCommand && {
           slashCommand: interaction.slashCommand
         },
@@ -711,27 +822,30 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
           progressEvents: interaction.progressEvents
         }
       });
-      insertStmt.run(
-        mnemeSessionId,
-        claudeSessionId,
-        projectPath,
-        repository,
-        repositoryUrl,
-        repositoryRoot,
-        owner,
-        "user",
-        interaction.user,
-        null,
-        metadata,
-        interaction.timestamp,
-        interaction.isCompactSummary ? 1 : 0
-      );
-      insertedCount++;
-      if (interaction.assistant) {
+      if (!interaction.isContinuation) {
+        insertStmt.run(
+          mnemeSessionId,
+          claudeSessionId,
+          projectPath,
+          repository,
+          repositoryUrl,
+          repositoryRoot,
+          owner,
+          "user",
+          interaction.user,
+          null,
+          metadata,
+          interaction.timestamp,
+          interaction.isCompactSummary ? 1 : 0
+        );
+        insertedCount++;
+      }
+      if (interaction.assistant || interaction.thinking) {
         const assistantMetadata = JSON.stringify({
           toolsUsed: interaction.toolsUsed,
           toolDetails: interaction.toolDetails,
           ...interaction.inPlanMode && { inPlanMode: true },
+          ...interaction.isContinuation && { isContinuation: true },
           ...interaction.toolResults?.length && {
             toolResults: interaction.toolResults
           },
@@ -748,7 +862,7 @@ async function incrementalSave(claudeSessionId, transcriptPath, projectPath) {
           repositoryRoot,
           owner,
           "assistant",
-          interaction.assistant,
+          interaction.assistant || "",
           interaction.thinking || null,
           assistantMetadata,
           interaction.timestamp,

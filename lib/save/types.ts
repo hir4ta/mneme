@@ -21,6 +21,7 @@ export interface TranscriptEntry {
         }>;
   };
   isCompactSummary?: boolean;
+  planContent?: string;
   data?: {
     type?: string;
     hookEvent?: string;
@@ -57,6 +58,7 @@ export interface ParsedInteraction {
   thinking: string;
   assistant: string;
   isCompactSummary: boolean;
+  isContinuation?: boolean;
   toolsUsed: string[];
   toolDetails: Array<{ name: string; detail: unknown }>;
   inPlanMode?: boolean;

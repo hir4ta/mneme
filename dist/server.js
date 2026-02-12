@@ -4493,7 +4493,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.24.3";
+  const version = "0.25.0";
   return c.json({
     name: projectName,
     path: projectRoot,

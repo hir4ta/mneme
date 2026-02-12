@@ -64,6 +64,104 @@ interface InitResult {
   additionalContext: string;
 }
 
+/**
+ * Resolve the mneme session ID for a given Claude session ID by checking session-links.
+ * Returns the master session ID if linked, otherwise the original Claude session ID.
+ */
+function resolveSessionLink(
+  sessionLinksDir: string,
+  claudeSessionId: string,
+): string {
+  const fullPath = path.join(sessionLinksDir, `${claudeSessionId}.json`);
+  const shortPath =
+    claudeSessionId.length > 8
+      ? path.join(sessionLinksDir, `${claudeSessionId.slice(0, 8)}.json`)
+      : fullPath;
+
+  const linkPath = fs.existsSync(fullPath) ? fullPath : shortPath;
+  if (fs.existsSync(linkPath)) {
+    try {
+      const link = JSON.parse(fs.readFileSync(linkPath, "utf8"));
+      if (link.masterSessionId) {
+        return link.masterSessionId;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+  return claudeSessionId;
+}
+
+/**
+ * Handle pending-compact breadcrumb written by pre-compact.sh.
+ * Creates a session-link from the new (post-compact) Claude session to the
+ * master mneme session, then removes the breadcrumb file.
+ */
+function handlePendingCompact(
+  mnemeDir: string,
+  sessionLinksDir: string,
+  currentClaudeSessionId: string,
+): void {
+  const pendingFile = path.join(mnemeDir, ".pending-compact.json");
+  if (!fs.existsSync(pendingFile)) return;
+
+  try {
+    const pending = JSON.parse(fs.readFileSync(pendingFile, "utf8"));
+    const oldClaudeSessionId: string = pending.claudeSessionId || "";
+    const timestamp: string = pending.timestamp || "";
+
+    // Check staleness (5 minutes max)
+    if (timestamp) {
+      const age = Date.now() - new Date(timestamp).getTime();
+      if (age > 5 * 60 * 1000) {
+        fs.unlinkSync(pendingFile);
+        console.error("[mneme] Stale pending-compact removed");
+        return;
+      }
+    }
+
+    // Skip if same session or missing data
+    if (!oldClaudeSessionId || oldClaudeSessionId === currentClaudeSessionId) {
+      fs.unlinkSync(pendingFile);
+      return;
+    }
+
+    // Resolve old session's mneme session ID (follows session-link chain)
+    const masterSessionId = resolveSessionLink(
+      sessionLinksDir,
+      oldClaudeSessionId,
+    );
+
+    // Create session-link for current session → master
+    ensureDir(sessionLinksDir);
+    const linkFile = path.join(
+      sessionLinksDir,
+      `${currentClaudeSessionId}.json`,
+    );
+    if (!fs.existsSync(linkFile)) {
+      const linkData = {
+        masterSessionId,
+        claudeSessionId: currentClaudeSessionId,
+        linkedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(linkFile, JSON.stringify(linkData, null, 2));
+      console.error(
+        `[mneme] Compact continuation linked: ${currentClaudeSessionId} → ${masterSessionId}`,
+      );
+    }
+
+    // Clean up breadcrumb
+    fs.unlinkSync(pendingFile);
+  } catch (e) {
+    console.error(`[mneme] Error handling pending-compact: ${e}`);
+    try {
+      fs.unlinkSync(path.join(mnemeDir, ".pending-compact.json"));
+    } catch {
+      // Non-critical
+    }
+  }
+}
+
 function sessionInit(sessionId: string, cwd: string): InitResult {
   const pluginRoot = path.resolve(__dirname, "..", "..");
   const mnemeDir = path.join(cwd, ".mneme");
@@ -80,6 +178,9 @@ function sessionInit(sessionId: string, cwd: string): InitResult {
 
   const now = nowISO();
   const fileId = sessionId || "";
+
+  // Handle pending-compact breadcrumb (creates session-link before resolution)
+  handlePendingCompact(mnemeDir, sessionLinksDir, fileId);
 
   const git = getGitInfo(cwd);
   const repoInfo = getRepositoryInfo(cwd);

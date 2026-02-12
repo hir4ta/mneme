@@ -10,8 +10,17 @@ import {
   cleanupStaleUncommittedSessions,
   cleanupUncommittedSession,
 } from "./cleanup.js";
-import { getSaveState, initDatabase, updateSaveState } from "./db.js";
-import { getGitInfo, resolveMnemeSessionId } from "./git.js";
+import {
+  getSaveState,
+  initDatabase,
+  updateSaveState,
+  updateSaveStateMnemeSessionId,
+} from "./db.js";
+import {
+  findSessionFileById,
+  getGitInfo,
+  resolveMnemeSessionId,
+} from "./git.js";
 
 export {
   cleanupStaleUncommittedSessions,
@@ -39,6 +48,90 @@ const IGNORED_PREFIXES = [
   ".claude/",
 ];
 const IGNORED_FILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock"];
+
+/**
+ * Detect if this session is a compact continuation (plan mode → new session).
+ * Returns the master mneme session ID if detected, null otherwise.
+ */
+function detectCompactContinuation(
+  interactions: ParsedInteraction[],
+  projectPath: string,
+): string | null {
+  const compactInteraction = interactions.find((i) => i.isCompactSummary);
+  if (!compactInteraction?.user) return null;
+
+  // Extract old transcript UUID from "read the full transcript at: .../UUID.jsonl"
+  const match = compactInteraction.user.match(
+    /read the full transcript at:.*?\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl/,
+  );
+  if (!match) return null;
+
+  const oldClaudeSessionId = match[1];
+  return resolveMnemeSessionId(projectPath, oldClaudeSessionId);
+}
+
+/**
+ * Create a session link and update the master session's workPeriods.
+ */
+function linkToMasterSession(
+  projectPath: string,
+  claudeSessionId: string,
+  masterMnemeSessionId: string,
+): void {
+  // Create session-links directory
+  const sessionLinksDir = path.join(projectPath, ".mneme", "session-links");
+  if (!fs.existsSync(sessionLinksDir)) {
+    fs.mkdirSync(sessionLinksDir, { recursive: true });
+  }
+
+  // Write session link file
+  const linkFile = path.join(sessionLinksDir, `${claudeSessionId}.json`);
+  if (!fs.existsSync(linkFile)) {
+    fs.writeFileSync(
+      linkFile,
+      JSON.stringify(
+        {
+          masterSessionId: masterMnemeSessionId,
+          claudeSessionId,
+          linkedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+    );
+    console.error(
+      `[mneme] Compact continuation linked: ${claudeSessionId} → ${masterMnemeSessionId}`,
+    );
+  }
+
+  // Update master session's workPeriods
+  const masterFile = findSessionFileById(projectPath, masterMnemeSessionId);
+  if (masterFile && fs.existsSync(masterFile)) {
+    try {
+      const master = JSON.parse(fs.readFileSync(masterFile, "utf8"));
+      const workPeriods: Array<{
+        claudeSessionId: string;
+        startedAt: string;
+        endedAt: string | null;
+      }> = master.workPeriods || [];
+      const alreadyLinked = workPeriods.some(
+        (wp) => wp.claudeSessionId === claudeSessionId,
+      );
+      if (!alreadyLinked) {
+        workPeriods.push({
+          claudeSessionId,
+          startedAt: new Date().toISOString(),
+          endedAt: null,
+        });
+        master.workPeriods = workPeriods;
+        master.updatedAt = new Date().toISOString();
+        fs.writeFileSync(masterFile, JSON.stringify(master, null, 2));
+      }
+    } catch {
+      // Non-critical
+    }
+  }
+}
 
 function isIgnoredPath(relativePath: string): boolean {
   return (
@@ -111,7 +204,7 @@ export async function incrementalSave(
 
   const dbPath = path.join(projectPath, ".mneme", "local.db");
   const db = initDatabase(dbPath);
-  const mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
+  let mnemeSessionId = resolveMnemeSessionId(projectPath, claudeSessionId);
   const saveState = getSaveState(
     db,
     claudeSessionId,
@@ -123,7 +216,27 @@ export async function incrementalSave(
     saveState.lastSavedLine,
   );
 
+  // Detect compact continuation: link new Claude session → old mneme session
+  if (saveState.lastSavedLine === 0 && interactions.length > 0) {
+    const masterSessionId = detectCompactContinuation(
+      interactions,
+      projectPath,
+    );
+    if (masterSessionId && masterSessionId !== mnemeSessionId) {
+      linkToMasterSession(projectPath, claudeSessionId, masterSessionId);
+      mnemeSessionId = masterSessionId;
+      updateSaveStateMnemeSessionId(db, claudeSessionId, masterSessionId);
+    }
+  }
+
   if (interactions.length === 0) {
+    updateSaveState(
+      db,
+      claudeSessionId,
+      saveState.lastSavedTimestamp || "",
+      totalLines,
+    );
+    db.close();
     return {
       success: true,
       savedCount: 0,
@@ -156,6 +269,7 @@ export async function incrementalSave(
         toolsUsed: interaction.toolsUsed,
         toolDetails: interaction.toolDetails,
         ...(interaction.inPlanMode && { inPlanMode: true }),
+        ...(interaction.isContinuation && { isContinuation: true }),
         ...(interaction.slashCommand && {
           slashCommand: interaction.slashCommand,
         }),
@@ -167,28 +281,32 @@ export async function incrementalSave(
         }),
       });
 
-      insertStmt.run(
-        mnemeSessionId,
-        claudeSessionId,
-        projectPath,
-        repository,
-        repositoryUrl,
-        repositoryRoot,
-        owner,
-        "user",
-        interaction.user,
-        null,
-        metadata,
-        interaction.timestamp,
-        interaction.isCompactSummary ? 1 : 0,
-      );
-      insertedCount++;
+      // Skip user row for continuation interactions (orphaned assistant messages)
+      if (!interaction.isContinuation) {
+        insertStmt.run(
+          mnemeSessionId,
+          claudeSessionId,
+          projectPath,
+          repository,
+          repositoryUrl,
+          repositoryRoot,
+          owner,
+          "user",
+          interaction.user,
+          null,
+          metadata,
+          interaction.timestamp,
+          interaction.isCompactSummary ? 1 : 0,
+        );
+        insertedCount++;
+      }
 
-      if (interaction.assistant) {
+      if (interaction.assistant || interaction.thinking) {
         const assistantMetadata = JSON.stringify({
           toolsUsed: interaction.toolsUsed,
           toolDetails: interaction.toolDetails,
           ...(interaction.inPlanMode && { inPlanMode: true }),
+          ...(interaction.isContinuation && { isContinuation: true }),
           ...(interaction.toolResults?.length && {
             toolResults: interaction.toolResults,
           }),
@@ -206,7 +324,7 @@ export async function incrementalSave(
           repositoryRoot,
           owner,
           "assistant",
-          interaction.assistant,
+          interaction.assistant || "",
           interaction.thinking || null,
           assistantMetadata,
           interaction.timestamp,
