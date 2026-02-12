@@ -45,7 +45,7 @@ Always render missing required fields as blocking errors before write.
 
 **STOP. Before doing ANYTHING else, find the Claude Session ID.**
 
-Scan upward in this conversation for the SessionStart context block. It contains a line matching this exact format:
+The UserPromptSubmit hook injects the session ID into every prompt's context. Look for this exact line in the system-reminder messages above:
 
 ```
 **Claude Session ID:** <UUID>
@@ -54,8 +54,8 @@ Scan upward in this conversation for the SessionStart context block. It contains
 Copy the full UUID value (36 characters, e.g. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
 
 <required>
-- The Claude Session ID is ALREADY in this conversation — injected by the session-start hook at the very beginning
-- Search for the literal text `**Claude Session ID:**` in the messages above
+- The Claude Session ID is ALREADY in this conversation — injected by the UserPromptSubmit hook on every prompt
+- Search for the literal text `**Claude Session ID:**` in system-reminder messages above
 - Copy the full 36-character UUID that follows it
 - Do NOT run Bash, Glob, Grep, or any other tool to discover the session ID
 - Do NOT call `mneme_list_sessions` to find it (that is only for the fallback below)
