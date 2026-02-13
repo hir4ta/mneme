@@ -299,99 +299,86 @@ export function RuleDetailDialog({
             <RuleDetails item={item} accentColor={accentColor} />
           )}
 
-          {/* Metadata footer */}
-          <div className="border-t pt-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <Badge variant={statusVariant[item.status] || "default"}>
-                {t(`status.${item.status}`, item.status)}
-              </Badge>
-              {item.priority && (
-                <Badge variant="outline" className="text-xs font-mono">
-                  {item.priority}
+          {/* Tags */}
+          {item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {item.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-xs">
+                  {tag}
                 </Badge>
-              )}
-              <span className="text-xs text-muted-foreground font-mono">
-                {item.type}: {item.sourceFile}
-              </span>
+              ))}
             </div>
+          )}
 
-            {item.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {item.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+          {/* Metadata footer */}
+          <div className="border-t pt-4 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Badge variant={statusVariant[item.status] || "default"}>
+                  {t(`status.${item.status}`, item.status)}
+                </Badge>
+                <span className="text-xs text-muted-foreground font-mono truncate">
+                  {item.type}: {item.sourceFile}
+                </span>
               </div>
-            )}
-
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>
-                {t("detail.created")}: {formatDate(item.createdAt)}
+              <span className="text-xs text-muted-foreground shrink-0">
+                {formatDate(item.createdAt)}
               </span>
-              {item.updatedAt && (
-                <span>
-                  {t("detail.updated")}: {formatDate(item.updatedAt)}
-                </span>
-              )}
             </div>
 
-            {item.sessionRef && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">
-                  {t("detail.sourceSession")}:
-                </span>
-                <Link
-                  to={`/sessions/${item.sessionRef}`}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded font-mono transition-colors"
-                  onClick={() => onOpenChange(false)}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {item.sessionRef && (
+                  <Link
+                    to={`/sessions/${item.sessionRef}`}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-xs font-mono transition-colors"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    <Link2 className="h-3 w-3" />
+                    {item.sessionRef.slice(0, 8)}
+                  </Link>
+                )}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  disabled={processing || item.status === "approved"}
+                  onClick={async () => {
+                    setProcessing(true);
+                    try {
+                      await onStatusChange(item, "approved");
+                    } finally {
+                      setProcessing(false);
+                    }
+                  }}
                 >
-                  <Link2 className="h-3 w-3" />
-                  {item.sessionRef.slice(0, 8)}
-                </Link>
+                  {t("actions.approve")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={processing || item.status === "rejected"}
+                  onClick={async () => {
+                    setProcessing(true);
+                    try {
+                      await onStatusChange(item, "rejected");
+                    } finally {
+                      setProcessing(false);
+                    }
+                  }}
+                >
+                  {t("actions.reject")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                  disabled={processing}
+                  onClick={() => onRequestDelete(item)}
+                >
+                  {t("actions.delete")}
+                </Button>
               </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Button
-                size="sm"
-                disabled={processing || item.status === "approved"}
-                onClick={async () => {
-                  setProcessing(true);
-                  try {
-                    await onStatusChange(item, "approved");
-                  } finally {
-                    setProcessing(false);
-                  }
-                }}
-              >
-                {t("actions.approve")}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={processing || item.status === "rejected"}
-                onClick={async () => {
-                  setProcessing(true);
-                  try {
-                    await onStatusChange(item, "rejected");
-                  } finally {
-                    setProcessing(false);
-                  }
-                }}
-              >
-                {t("actions.reject")}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
-                disabled={processing}
-                onClick={() => onRequestDelete(item)}
-              >
-                {t("actions.delete")}
-              </Button>
             </div>
           </div>
         </div>

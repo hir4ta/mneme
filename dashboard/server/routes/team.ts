@@ -7,6 +7,7 @@ import {
 } from "../../../lib/index/manager.js";
 import {
   getMnemeDir,
+  listDatedJsonFiles,
   listJsonFiles,
   patternsDir,
   rulesDir,
@@ -232,6 +233,43 @@ team.get("/quality", async (c) => {
               acceptedCount: accepted,
             });
           }
+        }
+      }
+    }
+
+    // Patterns
+    const patDir = patternsDir();
+    if (fs.existsSync(patDir)) {
+      for (const filePath of listJsonFiles(patDir)) {
+        const doc = safeParseJsonFile<{
+          items?: Array<Record<string, unknown>>;
+          patterns?: Array<Record<string, unknown>>;
+        }>(filePath);
+        const entries = doc?.items || doc?.patterns || [];
+        for (const item of entries) {
+          totalRules++;
+          if (item.status === "approved") approvedRules++;
+        }
+      }
+    }
+
+    // Decisions
+    const decDir = path.join(getMnemeDir(), "decisions");
+    if (fs.existsSync(decDir)) {
+      for (const filePath of listDatedJsonFiles(decDir)) {
+        const doc = safeParseJsonFile<{
+          items?: Array<Record<string, unknown>>;
+        }>(filePath);
+        if (!doc) continue;
+        const raw = doc as Record<string, unknown>;
+        const entries: Array<Record<string, unknown>> = Array.isArray(raw.items)
+          ? (raw.items as Array<Record<string, unknown>>)
+          : raw.id
+            ? [raw]
+            : [];
+        for (const item of entries) {
+          totalRules++;
+          if (item.status === "approved") approvedRules++;
         }
       }
     }

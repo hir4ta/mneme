@@ -260,8 +260,27 @@ function buildGroupedInteractions(
       };
     } else if (interaction.role === "assistant") {
       if (current) {
-        // Append if assistant already has content (multiple assistant rows per turn)
-        if (current.assistant) {
+        const assistantMeta = parseInteractionMetadata(interaction.tool_calls);
+
+        if (current.assistant && assistantMeta.isContinuation) {
+          // Continuation: split into a separate group
+          grouped.push(current);
+          current = {
+            id: `int-${String(grouped.length + 1).padStart(3, "0")}`,
+            timestamp: interaction.timestamp,
+            user: "",
+            assistant: interaction.content,
+            thinking: interaction.thinking || null,
+            isCompactSummary: !!interaction.is_compact_summary,
+            isContinuation: true,
+            ...assistantMeta,
+            ...(interaction.agent_id && { agentId: interaction.agent_id }),
+            ...(interaction.agent_type && {
+              agentType: interaction.agent_type,
+            }),
+          };
+        } else if (current.assistant) {
+          // Normal multiple assistant rows: append
           current.assistant += `\n\n${interaction.content}`;
           if (interaction.thinking) {
             current.thinking = current.thinking

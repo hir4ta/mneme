@@ -4496,7 +4496,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.25.4";
+  const version = "0.25.5";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5189,7 +5189,24 @@ function buildGroupedInteractions(interactions) {
       };
     } else if (interaction.role === "assistant") {
       if (current) {
-        if (current.assistant) {
+        const assistantMeta = parseInteractionMetadata(interaction.tool_calls);
+        if (current.assistant && assistantMeta.isContinuation) {
+          grouped.push(current);
+          current = {
+            id: `int-${String(grouped.length + 1).padStart(3, "0")}`,
+            timestamp: interaction.timestamp,
+            user: "",
+            assistant: interaction.content,
+            thinking: interaction.thinking || null,
+            isCompactSummary: !!interaction.is_compact_summary,
+            isContinuation: true,
+            ...assistantMeta,
+            ...interaction.agent_id && { agentId: interaction.agent_id },
+            ...interaction.agent_type && {
+              agentType: interaction.agent_type
+            }
+          };
+        } else if (current.assistant) {
           current.assistant += `
 
 ${interaction.content}`;
@@ -5552,6 +5569,30 @@ team.get("/quality", async (c) => {
               acceptedCount: accepted
             });
           }
+        }
+      }
+    }
+    const patDir = patternsDir();
+    if (fs16.existsSync(patDir)) {
+      for (const filePath of listJsonFiles(patDir)) {
+        const doc = safeParseJsonFile(filePath);
+        const entries = doc?.items || doc?.patterns || [];
+        for (const item of entries) {
+          totalRules++;
+          if (item.status === "approved") approvedRules++;
+        }
+      }
+    }
+    const decDir = path15.join(getMnemeDir(), "decisions");
+    if (fs16.existsSync(decDir)) {
+      for (const filePath of listDatedJsonFiles(decDir)) {
+        const doc = safeParseJsonFile(filePath);
+        if (!doc) continue;
+        const raw2 = doc;
+        const entries = Array.isArray(raw2.items) ? raw2.items : raw2.id ? [raw2] : [];
+        for (const item of entries) {
+          totalRules++;
+          if (item.status === "approved") approvedRules++;
         }
       }
     }

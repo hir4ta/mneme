@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { DevRuleItem } from "@/lib/api";
+import { formatDate } from "@/lib/format-date";
 import { typeColors } from "@/pages/graph/types";
 
 type DevRuleStatus = DevRuleItem["status"];
@@ -84,15 +85,22 @@ export function RuleItem({
         </div>
 
         <div className="flex items-end justify-between gap-3 pl-6.5 mt-2">
-          <div className="flex flex-wrap gap-1">
-            <TypeBadge type={item.type} />
-            {item.tags.slice(0, 4).map((tag) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
-            {item.tags.length > 4 && (
-              <Badge variant="secondary">+{item.tags.length - 4}</Badge>
+          <div className="space-y-1">
+            <div className="flex flex-wrap gap-1">
+              <TypeBadge type={item.type} />
+              {item.tags.slice(0, 4).map((tag) => (
+                <Badge key={tag} variant="secondary">
+                  {tag}
+                </Badge>
+              ))}
+              {item.tags.length > 4 && (
+                <Badge variant="secondary">+{item.tags.length - 4}</Badge>
+              )}
+            </div>
+            {item.createdAt && (
+              <p className="text-xs text-muted-foreground">
+                {formatDate(item.createdAt)}
+              </p>
             )}
           </div>
           <div className="flex flex-wrap gap-2 shrink-0 justify-end">
