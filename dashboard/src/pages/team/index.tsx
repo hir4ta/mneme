@@ -255,6 +255,7 @@ export function TeamPage() {
   const totalSessions = members.reduce((sum, m) => sum + m.sessions, 0);
   const totalDecisions = members.reduce((sum, m) => sum + m.decisions, 0);
   const totalPatterns = members.reduce((sum, m) => sum + m.patterns, 0);
+  const totalRules = members.reduce((sum, m) => sum + m.rules, 0);
 
   return (
     <div className="space-y-4">
@@ -268,9 +269,10 @@ export function TeamPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {overviewLoading ? (
           <>
+            <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -282,6 +284,7 @@ export function TeamPage() {
             <StatCard title={t("totalSessions")} value={totalSessions} />
             <StatCard title={t("totalDecisions")} value={totalDecisions} />
             <StatCard title={t("totalPatterns")} value={totalPatterns} />
+            <StatCard title={t("totalRules")} value={totalRules} />
           </>
         )}
       </div>
@@ -348,6 +351,9 @@ export function TeamPage() {
                     <th className="pb-2 pr-4 text-right font-medium">
                       {t("patterns")}
                     </th>
+                    <th className="pb-2 pr-4 text-right font-medium">
+                      {t("rules")}
+                    </th>
                     <th className="pb-2 text-right font-medium">
                       {t("lastActive")}
                     </th>
@@ -380,6 +386,7 @@ export function TeamPage() {
                       <td className="py-2 pr-4 text-right">
                         {member.patterns}
                       </td>
+                      <td className="py-2 pr-4 text-right">{member.rules}</td>
                       <td className="py-2 text-right text-muted-foreground">
                         {member.lastActive
                           ? member.lastActive.split("T")[0]

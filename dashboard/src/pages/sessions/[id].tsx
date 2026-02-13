@@ -124,7 +124,7 @@ export function SessionDetailPage() {
                   {t("detail.sessionContext")}
                 </TabsTrigger>
                 <TabsTrigger value="interactions">
-                  {t("detail.interactions")} ({interactionCount})
+                  {t("detail.interactions")}
                 </TabsTrigger>
               </TabsList>
               <Link

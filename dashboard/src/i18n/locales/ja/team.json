@@ -6,6 +6,7 @@
   "totalSessions": "セッション",
   "totalDecisions": "決定",
   "totalPatterns": "パターン",
+  "totalRules": "ルール",
   "contributions": "貢献",
   "activityTimeline": "アクティビティタイムライン（30日間）",
   "memberTable": "メンバー",
@@ -13,6 +14,7 @@
   "sessions": "セッション",
   "decisions": "決定",
   "patterns": "パターン",
+  "rules": "ルール",
   "lastActive": "最終活動日",
   "quality": {
     "title": "ナレッジ品質",

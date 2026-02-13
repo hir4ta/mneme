@@ -1,4 +1,4 @@
-import { Bot, Play, Search, Wrench } from "lucide-react";
+import { Bot, Play, Search } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -74,6 +74,7 @@ export function InteractionCard({
 }) {
   const { t } = useTranslation("sessions");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isContinuationExpanded, setIsContinuationExpanded] = useState(false);
   const agentStyle = useBrandStyle(agentToken);
   const planStyle = useBrandStyle(planToken);
   const compactStyle = useBrandStyle(compactToken);
@@ -122,8 +123,10 @@ export function InteractionCard({
       {/* User message - right aligned (skip for continuation) */}
       {isContinuation ? (
         <div className="flex justify-center">
-          <div
-            className="text-xs px-3 py-1.5 rounded-full flex items-center gap-2"
+          <button
+            type="button"
+            onClick={() => setIsContinuationExpanded(!isContinuationExpanded)}
+            className="text-xs px-3 py-1.5 rounded-full flex items-center gap-2 transition-colors cursor-pointer"
             style={{
               border: `1px solid ${compactStyle.border}`,
               backgroundColor: compactStyle.badge,
@@ -134,7 +137,8 @@ export function InteractionCard({
             <span className="font-medium">
               {t("interaction.continuation", "Plan Implementation")}
             </span>
-          </div>
+            <span className="ml-1">{isContinuationExpanded ? "▲" : "▼"}</span>
+          </button>
         </div>
       ) : (
         <div className="flex flex-col items-end">
@@ -189,56 +193,45 @@ export function InteractionCard({
         </div>
       )}
 
-      {/* Tools used indicator */}
-      {!isInPlanMode &&
-        interaction.toolsUsed &&
-        interaction.toolsUsed.length > 0 && (
-          <div className="flex justify-center">
-            <div className="text-xs text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Wrench className="w-3 h-3" />
-              <span>{interaction.toolsUsed.slice(0, 4).join(", ")}</span>
-              {interaction.toolsUsed.length > 4 && (
-                <span>+{interaction.toolsUsed.length - 4}</span>
-              )}
+      {/* Assistant response + details (hidden for collapsed continuation) */}
+      {(!isContinuation || isContinuationExpanded) && (
+        <>
+          {interaction.assistant && (
+            <div className="flex flex-col items-start">
+              <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 ml-1">
+                {t("interaction.assistant")}
+              </span>
+              <div className="max-w-[85%] bg-[#F5F5F0] dark:bg-stone-800 text-stone-800 dark:text-stone-100 rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm border border-stone-200 dark:border-stone-700">
+                <MarkdownRenderer
+                  content={
+                    interaction.assistant.length > 500 && !isExpanded
+                      ? `${interaction.assistant.substring(0, 500)}...`
+                      : interaction.assistant
+                  }
+                  className="text-sm"
+                />
+                {interaction.assistant.length > 500 && !isExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded(true)}
+                    className="text-xs text-[#C15F3C] hover:underline mt-2"
+                  >
+                    {t("interaction.showMore")}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-      {/* Assistant response - left aligned */}
-      {interaction.assistant && (
-        <div className="flex flex-col items-start">
-          <span className="text-xs text-stone-500 dark:text-stone-400 mb-1 ml-1">
-            {t("interaction.assistant")}
-          </span>
-          <div className="max-w-[85%] bg-[#F5F5F0] dark:bg-stone-800 text-stone-800 dark:text-stone-100 rounded-2xl rounded-bl-sm px-4 py-2 shadow-sm border border-stone-200 dark:border-stone-700">
-            <MarkdownRenderer
-              content={
-                interaction.assistant.length > 500 && !isExpanded
-                  ? `${interaction.assistant.substring(0, 500)}...`
-                  : interaction.assistant
-              }
-              className="text-sm"
+          {hasThinking && <ThinkingSection interaction={interaction} />}
+          {hasToolDetails && <ToolDetailsSection interaction={interaction} />}
+          {hasToolResults && <ToolResultsSection interaction={interaction} />}
+          {hasProgressEvents && (
+            <ProgressEventsSection
+              filteredProgressEvents={filteredProgressEvents}
             />
-            {interaction.assistant.length > 500 && !isExpanded && (
-              <button
-                type="button"
-                onClick={() => setIsExpanded(true)}
-                className="text-xs text-[#C15F3C] hover:underline mt-2"
-              >
-                {t("interaction.showMore")}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {hasThinking && <ThinkingSection interaction={interaction} />}
-      {hasToolDetails && <ToolDetailsSection interaction={interaction} />}
-      {hasToolResults && <ToolResultsSection interaction={interaction} />}
-      {hasProgressEvents && (
-        <ProgressEventsSection
-          filteredProgressEvents={filteredProgressEvents}
-        />
+          )}
+        </>
       )}
     </div>
   );

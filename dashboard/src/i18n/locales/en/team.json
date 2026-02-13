@@ -6,6 +6,7 @@
   "totalSessions": "Sessions",
   "totalDecisions": "Decisions",
   "totalPatterns": "Patterns",
+  "totalRules": "Rules",
   "contributions": "Contributions",
   "activityTimeline": "Activity Timeline (30 days)",
   "memberTable": "Members",
@@ -13,6 +14,7 @@
   "sessions": "Sessions",
   "decisions": "Decisions",
   "patterns": "Patterns",
+  "rules": "Rules",
   "lastActive": "Last Active",
   "quality": {
     "title": "Knowledge Quality",

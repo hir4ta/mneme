@@ -329,14 +329,19 @@ export function RuleDetailDialog({
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 {item.sessionRef && (
-                  <Link
-                    to={`/sessions/${item.sessionRef}`}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-xs font-mono transition-colors"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    <Link2 className="h-3 w-3" />
-                    {item.sessionRef.slice(0, 8)}
-                  </Link>
+                  <>
+                    <span className="text-xs text-muted-foreground">
+                      {t("detail.sourceSession")}:
+                    </span>
+                    <Link
+                      to={`/sessions/${item.sessionRef}`}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-xs font-mono transition-colors"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      <Link2 className="h-3 w-3" />
+                      {item.sessionRef.slice(0, 8)}
+                    </Link>
+                  </>
                 )}
               </div>
               <div className="flex gap-2 shrink-0">

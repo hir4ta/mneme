@@ -4496,7 +4496,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.25.5";
+  const version = "0.25.6";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5472,7 +5472,16 @@ function collectTeamData(mnemeDir2) {
       totalPatterns += entries.length;
     }
   }
-  if (totalPatterns > 0 && memberMap.size > 0) {
+  const rDir = rulesDir();
+  let totalRulesCount = 0;
+  if (fs16.existsSync(rDir)) {
+    for (const ruleFile of ["dev-rules", "review-guidelines"]) {
+      const filePath = path15.join(rDir, `${ruleFile}.json`);
+      const doc = safeParseJsonFile(filePath);
+      if (doc?.items) totalRulesCount += doc.items.length;
+    }
+  }
+  if (memberMap.size > 0 && (totalPatterns > 0 || totalRulesCount > 0)) {
     let primaryMember = memberMap.values().next().value;
     for (const stats of memberMap.values()) {
       if (stats.sessions > (primaryMember?.sessions ?? 0)) {
@@ -5481,6 +5490,7 @@ function collectTeamData(mnemeDir2) {
     }
     if (primaryMember) {
       primaryMember.patterns = totalPatterns;
+      primaryMember.rules = totalRulesCount;
     }
   }
   return { memberMap, sessionsIndex, decisionsIndex };

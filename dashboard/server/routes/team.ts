@@ -96,8 +96,19 @@ function collectTeamData(mnemeDir: string) {
     }
   }
 
-  // Distribute pattern count to the primary member (most sessions)
-  if (totalPatterns > 0 && memberMap.size > 0) {
+  // Rules — count from rules dir
+  const rDir = rulesDir();
+  let totalRulesCount = 0;
+  if (fs.existsSync(rDir)) {
+    for (const ruleFile of ["dev-rules", "review-guidelines"]) {
+      const filePath = path.join(rDir, `${ruleFile}.json`);
+      const doc = safeParseJsonFile<{ items?: unknown[] }>(filePath);
+      if (doc?.items) totalRulesCount += doc.items.length;
+    }
+  }
+
+  // Distribute pattern + rule counts to the primary member (most sessions)
+  if (memberMap.size > 0 && (totalPatterns > 0 || totalRulesCount > 0)) {
     let primaryMember = memberMap.values().next().value;
     for (const stats of memberMap.values()) {
       if (stats.sessions > (primaryMember?.sessions ?? 0)) {
@@ -106,6 +117,7 @@ function collectTeamData(mnemeDir: string) {
     }
     if (primaryMember) {
       primaryMember.patterns = totalPatterns;
+      primaryMember.rules = totalRulesCount;
     }
   }
 
