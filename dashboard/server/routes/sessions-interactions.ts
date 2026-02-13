@@ -260,8 +260,18 @@ function buildGroupedInteractions(
       };
     } else if (interaction.role === "assistant") {
       if (current) {
-        current.assistant = interaction.content;
-        current.thinking = interaction.thinking || null;
+        // Append if assistant already has content (multiple assistant rows per turn)
+        if (current.assistant) {
+          current.assistant += `\n\n${interaction.content}`;
+          if (interaction.thinking) {
+            current.thinking = current.thinking
+              ? `${current.thinking}\n\n${interaction.thinking}`
+              : interaction.thinking;
+          }
+        } else {
+          current.assistant = interaction.content;
+          current.thinking = interaction.thinking || null;
+        }
       } else {
         // Orphaned assistant row (isContinuation: user row was skipped)
         const meta = parseInteractionMetadata(interaction.tool_calls);

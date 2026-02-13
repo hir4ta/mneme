@@ -4496,7 +4496,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.25.3";
+  const version = "0.25.4";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5189,8 +5189,19 @@ function buildGroupedInteractions(interactions) {
       };
     } else if (interaction.role === "assistant") {
       if (current) {
-        current.assistant = interaction.content;
-        current.thinking = interaction.thinking || null;
+        if (current.assistant) {
+          current.assistant += `
+
+${interaction.content}`;
+          if (interaction.thinking) {
+            current.thinking = current.thinking ? `${current.thinking}
+
+${interaction.thinking}` : interaction.thinking;
+          }
+        } else {
+          current.assistant = interaction.content;
+          current.thinking = interaction.thinking || null;
+        }
       } else {
         const meta = parseInteractionMetadata(interaction.tool_calls);
         current = {

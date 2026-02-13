@@ -132,39 +132,13 @@ export async function saveInteractions(
       // Ignore
     }
 
-    // Update session_save_state
+    // Fix mneme_session_id in save state (don't touch last_saved_line — stop hook manages it)
     try {
-      const parsed = await parseTranscript(transcriptPath);
-      const lastRow = database
+      database
         .prepare(
-          "SELECT MAX(timestamp) as ts FROM interactions WHERE claude_session_id = ?",
+          "UPDATE session_save_state SET mneme_session_id = ?, updated_at = datetime('now') WHERE claude_session_id = ?",
         )
-        .get(claudeSessionId) as { ts: string | null } | undefined;
-
-      const checkStmt = database.prepare(
-        "SELECT 1 FROM session_save_state WHERE claude_session_id = ?",
-      );
-      const exists = checkStmt.get(claudeSessionId);
-
-      if (exists) {
-        database
-          .prepare(
-            "UPDATE session_save_state SET last_saved_line = ?, last_saved_timestamp = ?, updated_at = datetime('now') WHERE claude_session_id = ?",
-          )
-          .run(parsed.totalLines, lastRow?.ts || null, claudeSessionId);
-      } else {
-        database
-          .prepare(
-            "INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, last_saved_line, last_saved_timestamp) VALUES (?, ?, ?, ?, ?)",
-          )
-          .run(
-            claudeSessionId,
-            sessionId,
-            projectPath,
-            parsed.totalLines,
-            lastRow?.ts || null,
-          );
-      }
+        .run(sessionId, claudeSessionId);
     } catch {
       // Ignore
     }
