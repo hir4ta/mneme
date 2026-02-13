@@ -3,13 +3,16 @@ import {
   BookOpen,
   GitFork,
   Lightbulb,
+  Link2,
   MessageSquare,
   ScrollText,
   Shield,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +23,8 @@ import type { DevRuleItem } from "@/lib/api";
 import { formatDate } from "@/lib/format-date";
 import { typeColors } from "@/pages/graph/types";
 import { statusVariant, TypeBadge } from "./rule-item";
+
+type DevRuleStatus = DevRuleItem["status"];
 
 function DetailSection({
   icon,
@@ -246,12 +251,17 @@ export function RuleDetailDialog({
   item,
   open,
   onOpenChange,
+  onStatusChange,
+  onRequestDelete,
 }: {
   item: DevRuleItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onStatusChange: (item: DevRuleItem, status: DevRuleStatus) => Promise<void>;
+  onRequestDelete: (item: DevRuleItem) => void;
 }) {
   const { t } = useTranslation("devRules");
+  const [processing, setProcessing] = useState(false);
   if (!item) return null;
 
   const accentColor = typeColors[item.type] || typeColors.unknown;
@@ -324,6 +334,64 @@ export function RuleDetailDialog({
                   {t("detail.updated")}: {formatDate(item.updatedAt)}
                 </span>
               )}
+            </div>
+
+            {item.sessionRef && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">
+                  {t("detail.sourceSession")}:
+                </span>
+                <Link
+                  to={`/sessions/${item.sessionRef}`}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded font-mono transition-colors"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <Link2 className="h-3 w-3" />
+                  {item.sessionRef.slice(0, 8)}
+                </Link>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                size="sm"
+                disabled={processing || item.status === "approved"}
+                onClick={async () => {
+                  setProcessing(true);
+                  try {
+                    await onStatusChange(item, "approved");
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+              >
+                {t("actions.approve")}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={processing || item.status === "rejected"}
+                onClick={async () => {
+                  setProcessing(true);
+                  try {
+                    await onStatusChange(item, "rejected");
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+              >
+                {t("actions.reject")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive border-destructive/50 hover:text-destructive hover:bg-destructive/10"
+                disabled={processing}
+                onClick={() => onRequestDelete(item)}
+              >
+                {t("actions.delete")}
+              </Button>
             </div>
           </div>
         </div>

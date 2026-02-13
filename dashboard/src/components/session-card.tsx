@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { formatDate } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 import type { Session, Tag } from "@/lib/types";
 
 export function SessionCard({
@@ -13,7 +13,7 @@ export function SessionCard({
   tags: Tag[];
 }) {
   const { t } = useTranslation("sessions");
-  const date = formatDate(session.createdAt);
+  const date = formatDateTime(session.createdAt);
 
   const getTagColor = (tagId: string) => {
     const tag = tags.find((t) => t.id === tagId);

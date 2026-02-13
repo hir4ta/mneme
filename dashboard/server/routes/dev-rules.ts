@@ -62,6 +62,7 @@ export function collectDevRules(): DevRuleItem[] {
         relatedSessions: Array.isArray(entry.relatedSessions)
           ? entry.relatedSessions.map((s) => String(s))
           : undefined,
+        sessionRef: entry.sessionRef ? String(entry.sessionRef) : undefined,
       });
     }
   }
@@ -99,6 +100,7 @@ export function collectDevRules(): DevRuleItem[] {
         patternType: entry.type ? String(entry.type) : undefined,
         pattern: entry.pattern ? String(entry.pattern) : undefined,
         sourceId: entry.sourceId ? String(entry.sourceId) : undefined,
+        sessionRef: entry.sessionRef ? String(entry.sessionRef) : undefined,
       });
     }
   }
@@ -142,6 +144,11 @@ export function collectDevRules(): DevRuleItem[] {
         rationale: entry.rationale ? String(entry.rationale) : undefined,
         category: entry.category ? String(entry.category) : undefined,
         sourceRef,
+        sessionRef: entry.sessionRef
+          ? String(entry.sessionRef)
+          : sourceRef?.type === "session"
+            ? sourceRef.id
+            : undefined,
         appliedCount:
           typeof entry.appliedCount === "number"
             ? entry.appliedCount

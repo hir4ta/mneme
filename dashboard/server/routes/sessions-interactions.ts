@@ -102,11 +102,24 @@ sessionsInteractions.get("/:id/interactions", async (c) => {
       sessionsDir,
     });
 
-    const interactions =
+    // Use both session_id and claude_session_id queries for complete history
+    // (pre-compact interactions may have a different claude_session_id)
+    const byClaudeId =
       claudeSessionIds.length > 0
         ? getInteractionsByClaudeSessionIds(db, claudeSessionIds)
-        : getInteractionsBySessionIds(db, sessionIds);
+        : [];
+    const bySessionId = getInteractionsBySessionIds(db, sessionIds);
     db.close();
+
+    // Merge and deduplicate by row id
+    const seen = new Set<number>();
+    const interactions = [];
+    for (const row of [...byClaudeId, ...bySessionId]) {
+      if (row.id != null && seen.has(row.id)) continue;
+      if (row.id != null) seen.add(row.id);
+      interactions.push(row);
+    }
+    interactions.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
     const groupedInteractions = buildGroupedInteractions(interactions);
 
@@ -130,8 +143,18 @@ function collectLinkedSessionIds(params: {
     params;
 
   let masterId = shortId;
-  const myLinkFile = path.join(sessionLinksDir, `${shortId}.json`);
-  if (fs.existsSync(myLinkFile)) {
+  // Try full UUID link file first, then short ID (link files use full UUIDs)
+  const fullLinkFile = primaryClaudeSessionId
+    ? path.join(sessionLinksDir, `${primaryClaudeSessionId}.json`)
+    : null;
+  const shortLinkFile = path.join(sessionLinksDir, `${shortId}.json`);
+  const myLinkFile =
+    fullLinkFile && fs.existsSync(fullLinkFile)
+      ? fullLinkFile
+      : fs.existsSync(shortLinkFile)
+        ? shortLinkFile
+        : null;
+  if (myLinkFile) {
     try {
       const myLinkData = JSON.parse(fs.readFileSync(myLinkFile, "utf-8"));
       if (myLinkData.masterSessionId) {

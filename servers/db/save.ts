@@ -2,10 +2,37 @@
  * Save interactions and mark session committed for mneme MCP Database Server
  */
 
+import * as fs from "node:fs";
 import * as os from "node:os";
+import * as path from "node:path";
 import { getTranscriptPath, parseTranscript } from "./transcript.js";
 import type { ParsedInteraction } from "./types.js";
 import { getDb, getProjectPath } from "./utils.js";
+
+/**
+ * Resolve mneme session ID via session-links directory.
+ */
+function resolveSessionLink(
+  projectPath: string,
+  claudeSessionId: string,
+): string {
+  const sessionLinksDir = path.join(projectPath, ".mneme", "session-links");
+  const fullPath = path.join(sessionLinksDir, `${claudeSessionId}.json`);
+  const shortPath = path.join(
+    sessionLinksDir,
+    `${claudeSessionId.slice(0, 8)}.json`,
+  );
+  const linkPath = fs.existsSync(fullPath) ? fullPath : shortPath;
+  if (fs.existsSync(linkPath)) {
+    try {
+      const link = JSON.parse(fs.readFileSync(linkPath, "utf8"));
+      if (link.masterSessionId) return link.masterSessionId;
+    } catch {
+      // Ignore
+    }
+  }
+  return claudeSessionId;
+}
 
 interface SaveInteractionsResult {
   success: boolean;
@@ -39,7 +66,8 @@ export async function saveInteractions(
   }
 
   const projectPath = getProjectPath();
-  const sessionId = mnemeSessionId || claudeSessionId;
+  const sessionId =
+    mnemeSessionId || resolveSessionLink(projectPath, claudeSessionId);
 
   let owner = "unknown";
   try {
@@ -78,6 +106,78 @@ export async function saveInteractions(
     // Not a git repo
   }
 
+  // Check if stop hook has already saved rich data (with tool_calls metadata)
+  const richCount =
+    (
+      database
+        .prepare(
+          "SELECT COUNT(*) as cnt FROM interactions WHERE claude_session_id = ? AND tool_calls IS NOT NULL",
+        )
+        .get(claudeSessionId) as { cnt: number } | undefined
+    )?.cnt || 0;
+
+  if (richCount > 0) {
+    // Rich metadata exists from stop hook — preserve it, just fix session_id
+    database
+      .prepare(
+        "UPDATE interactions SET session_id = ? WHERE claude_session_id = ?",
+      )
+      .run(sessionId, claudeSessionId);
+
+    try {
+      database
+        .prepare("DELETE FROM pre_compact_backups WHERE session_id = ?")
+        .run(sessionId);
+    } catch {
+      // Ignore
+    }
+
+    // Update session_save_state
+    try {
+      const parsed = await parseTranscript(transcriptPath);
+      const lastRow = database
+        .prepare(
+          "SELECT MAX(timestamp) as ts FROM interactions WHERE claude_session_id = ?",
+        )
+        .get(claudeSessionId) as { ts: string | null } | undefined;
+
+      const checkStmt = database.prepare(
+        "SELECT 1 FROM session_save_state WHERE claude_session_id = ?",
+      );
+      const exists = checkStmt.get(claudeSessionId);
+
+      if (exists) {
+        database
+          .prepare(
+            "UPDATE session_save_state SET last_saved_line = ?, last_saved_timestamp = ?, updated_at = datetime('now') WHERE claude_session_id = ?",
+          )
+          .run(parsed.totalLines, lastRow?.ts || null, claudeSessionId);
+      } else {
+        database
+          .prepare(
+            "INSERT INTO session_save_state (claude_session_id, mneme_session_id, project_path, last_saved_line, last_saved_timestamp) VALUES (?, ?, ?, ?, ?)",
+          )
+          .run(
+            claudeSessionId,
+            sessionId,
+            projectPath,
+            parsed.totalLines,
+            lastRow?.ts || null,
+          );
+      }
+    } catch {
+      // Ignore
+    }
+
+    return {
+      success: true,
+      savedCount: richCount,
+      mergedFromBackup: 0,
+      message: `Preserved ${richCount} interactions with metadata. Session ID updated to ${sessionId}.`,
+    };
+  }
+
+  // No rich data from stop hook — do full parse and insert
   const parsed = await parseTranscript(transcriptPath);
 
   let backupInteractions: ParsedInteraction[] = [];

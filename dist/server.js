@@ -3464,7 +3464,8 @@ function collectDevRules() {
         context: entry.context ? String(entry.context) : void 0,
         reasoning: entry.reasoning ? String(entry.reasoning) : void 0,
         alternatives: alts,
-        relatedSessions: Array.isArray(entry.relatedSessions) ? entry.relatedSessions.map((s) => String(s)) : void 0
+        relatedSessions: Array.isArray(entry.relatedSessions) ? entry.relatedSessions.map((s) => String(s)) : void 0,
+        sessionRef: entry.sessionRef ? String(entry.sessionRef) : void 0
       });
     }
   }
@@ -3494,7 +3495,8 @@ function collectDevRules() {
         context: entry.context ? String(entry.context) : void 0,
         patternType: entry.type ? String(entry.type) : void 0,
         pattern: entry.pattern ? String(entry.pattern) : void 0,
-        sourceId: entry.sourceId ? String(entry.sourceId) : void 0
+        sourceId: entry.sourceId ? String(entry.sourceId) : void 0,
+        sessionRef: entry.sessionRef ? String(entry.sessionRef) : void 0
       });
     }
   }
@@ -3526,6 +3528,7 @@ function collectDevRules() {
         rationale: entry.rationale ? String(entry.rationale) : void 0,
         category: entry.category ? String(entry.category) : void 0,
         sourceRef,
+        sessionRef: entry.sessionRef ? String(entry.sessionRef) : sourceRef?.type === "session" ? sourceRef.id : void 0,
         appliedCount: typeof entry.appliedCount === "number" ? entry.appliedCount : void 0,
         acceptedCount: typeof entry.acceptedCount === "number" ? entry.acceptedCount : void 0
       });
@@ -4493,7 +4496,7 @@ misc.get("/project", (c) => {
     }
   } catch {
   }
-  const version = "0.25.2";
+  const version = "0.25.3";
   return c.json({
     name: projectName,
     path: projectRoot,
@@ -5077,8 +5080,17 @@ sessionsInteractions.get("/:id/interactions", async (c) => {
       sessionLinksDir,
       sessionsDir
     });
-    const interactions = claudeSessionIds.length > 0 ? getInteractionsByClaudeSessionIds(db, claudeSessionIds) : getInteractionsBySessionIds(db, sessionIds);
+    const byClaudeId = claudeSessionIds.length > 0 ? getInteractionsByClaudeSessionIds(db, claudeSessionIds) : [];
+    const bySessionId = getInteractionsBySessionIds(db, sessionIds);
     db.close();
+    const seen = /* @__PURE__ */ new Set();
+    const interactions = [];
+    for (const row of [...byClaudeId, ...bySessionId]) {
+      if (row.id != null && seen.has(row.id)) continue;
+      if (row.id != null) seen.add(row.id);
+      interactions.push(row);
+    }
+    interactions.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
     const groupedInteractions = buildGroupedInteractions(interactions);
     return c.json({
       interactions: groupedInteractions,
@@ -5092,8 +5104,10 @@ sessionsInteractions.get("/:id/interactions", async (c) => {
 function collectLinkedSessionIds(params) {
   const { shortId, primaryClaudeSessionId, sessionLinksDir, sessionsDir } = params;
   let masterId = shortId;
-  const myLinkFile = path13.join(sessionLinksDir, `${shortId}.json`);
-  if (fs14.existsSync(myLinkFile)) {
+  const fullLinkFile = primaryClaudeSessionId ? path13.join(sessionLinksDir, `${primaryClaudeSessionId}.json`) : null;
+  const shortLinkFile = path13.join(sessionLinksDir, `${shortId}.json`);
+  const myLinkFile = fullLinkFile && fs14.existsSync(fullLinkFile) ? fullLinkFile : fs14.existsSync(shortLinkFile) ? shortLinkFile : null;
+  if (myLinkFile) {
     try {
       const myLinkData = JSON.parse(fs14.readFileSync(myLinkFile, "utf-8"));
       if (myLinkData.masterSessionId) {

@@ -110,6 +110,7 @@ export interface DevRuleItem {
   relatedSessions?: string[];
   sourceId?: string;
   sourceRef?: { type: string; id: string };
+  sessionRef?: string;
   appliedCount?: number;
   acceptedCount?: number;
 }

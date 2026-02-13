@@ -61,7 +61,8 @@
     "pattern": "パターン",
     "decisionDetail": "意思決定の詳細",
     "patternDetail": "パターンの詳細",
-    "ruleDetail": "ルールの詳細"
+    "ruleDetail": "ルールの詳細",
+    "sourceSession": "元セッション"
   },
   "deleteConfirm": {
     "title": "ルールを削除",

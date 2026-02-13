@@ -61,7 +61,8 @@
     "pattern": "Pattern",
     "decisionDetail": "Decision Detail",
     "patternDetail": "Pattern Detail",
-    "ruleDetail": "Rule Detail"
+    "ruleDetail": "Rule Detail",
+    "sourceSession": "Source Session"
   },
   "deleteConfirm": {
     "title": "Delete Rule",

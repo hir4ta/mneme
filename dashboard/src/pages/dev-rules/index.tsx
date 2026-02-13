@@ -259,6 +259,18 @@ export function DevRulesPage() {
         item={detailItem}
         open={!!detailItem}
         onOpenChange={(open) => !open && setDetailItem(null)}
+        onStatusChange={async (ruleItem, status) => {
+          await statusMutation.mutateAsync({ item: ruleItem, status });
+          setDetailItem((prev) =>
+            prev
+              ? { ...prev, status, updatedAt: new Date().toISOString() }
+              : null,
+          );
+        }}
+        onRequestDelete={(ruleItem) => {
+          setDetailItem(null);
+          setDeleteTarget(ruleItem);
+        }}
       />
 
       <ConfirmDialog

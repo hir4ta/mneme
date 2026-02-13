@@ -203,6 +203,7 @@ export interface DevRuleItem {
   category?: string;
   patternType?: string;
   pattern?: string;
+  sessionRef?: string;
 }
 
 export interface DevRulesResponse {
